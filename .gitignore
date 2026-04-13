@@ -11,3 +11,11 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+
+# Local / machine-specific (bukan bagian distribusi open source)
+.claude/settings.local.json
+.cursor/hooks/state/
+
+# Salinan backup VPS & eksperimen sementara (besar, tidak perlu di Hub)
+vps-backup/
+bank-tiranyx-temp/
