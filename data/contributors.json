@@ -1,0 +1,9 @@
+{
+  "maintainers": [
+    { "name": "Tiranyx / Galantara", "role": "Product & core", "link": "https://galantara.io" }
+  ],
+  "contributors": [
+    { "name": "Early contributors", "role": "Tambahkan nama di sini setelah PR merge", "link": "" }
+  ],
+  "note": "Edit berkas ini di repo; deploy folder data/ ke root situs bersama index.html."
+}

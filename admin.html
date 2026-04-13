@@ -1,0 +1,335 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Konsol maintainer — Galantara</title>
+  <meta name="robots" content="noindex, nofollow">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #07051a;
+      --panel: rgba(22, 14, 48, 0.9);
+      --line: rgba(167, 139, 250, 0.3);
+      --txt: #e7e5f5;
+      --muted: #9b94b8;
+      --accent: #5eead4;
+      --warn: #fbbf24;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      background: var(--bg);
+      color: var(--txt);
+      min-height: 100vh;
+      line-height: 1.5;
+    }
+    .top {
+      border-bottom: 1px solid var(--line);
+      padding: 16px 20px;
+      background: rgba(7, 5, 26, 0.95);
+    }
+    .top h1 { font-size: 1.15rem; font-weight: 900; }
+    .top p { font-size: 12px; color: var(--muted); margin-top: 4px; }
+    .wrap { max-width: 960px; margin: 0 auto; padding: 24px 20px 60px; }
+    .tabs {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 8px;
+      margin-bottom: 20px;
+    }
+    .tabs button {
+      padding: 10px 16px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: transparent;
+      color: var(--muted);
+      font-weight: 800;
+      font-size: 13px;
+      cursor: pointer;
+      font-family: inherit;
+    }
+    .tabs button.on {
+      background: rgba(94, 234, 212, 0.12);
+      color: var(--accent);
+      border-color: rgba(94, 234, 212, 0.4);
+    }
+    .panel {
+      display: none;
+      background: var(--panel);
+      border: 1px solid var(--line);
+      border-radius: 18px;
+      padding: 22px;
+    }
+    .panel.on { display: block; }
+    label { display: block; font-size: 12px; font-weight: 800; color: var(--muted); margin-bottom: 6px; }
+    input[type="password"], input[type="text"] {
+      width: 100%;
+      max-width: 420px;
+      padding: 12px 14px;
+      border-radius: 12px;
+      border: 1px solid var(--line);
+      background: rgba(7, 5, 26, 0.6);
+      color: var(--txt);
+      font-family: inherit;
+      margin-bottom: 12px;
+    }
+    .btn {
+      padding: 11px 20px;
+      border-radius: 12px;
+      border: none;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      background: linear-gradient(135deg, #7c3aed, #4f46e5);
+      color: #fff;
+    }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    pre {
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 12px;
+      padding: 14px;
+      font-size: 12px;
+      overflow: auto;
+      margin-top: 12px;
+      border: 1px solid var(--line);
+      color: #c4b5fd;
+    }
+    .grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 14px;
+    }
+    .stat {
+      padding: 14px;
+      border-radius: 14px;
+      background: rgba(0, 0, 0, 0.25);
+      border: 1px solid var(--line);
+    }
+    .stat b { font-size: 1.4rem; color: var(--accent); }
+    .stat span { font-size: 11px; color: var(--muted); display: block; margin-top: 4px; }
+    table { width: 100%; border-collapse: collapse; font-size: 13px; margin-top: 12px; }
+    th, td { text-align: left; padding: 8px 10px; border-bottom: 1px solid var(--line); }
+    th { color: var(--muted); font-size: 11px; text-transform: uppercase; }
+    a { color: var(--accent); font-weight: 800; }
+    .warn { color: var(--warn); font-size: 13px; margin-top: 12px; }
+  </style>
+</head>
+<body>
+  <div class="top">
+    <h1>Konsol maintainer</h1>
+    <p>Ringkasan multiplayer, opsional hitungan user Supabase — bukan CMS penuh. Token disimpan hanya di browser (sessionStorage).</p>
+  </div>
+  <div class="wrap">
+    <div class="tabs">
+      <button type="button" class="on" data-tab="auth">Akses</button>
+      <button type="button" data-tab="dash">Ringkasan</button>
+      <button type="button" data-tab="contrib">Kontributor</button>
+      <button type="button" data-tab="cms">Konten (manual)</button>
+    </div>
+
+    <div id="p-auth" class="panel on">
+      <label for="api-base">Base URL API server (galantara-server)</label>
+      <input type="text" id="api-base" placeholder="https://galantara.io atau http://localhost:3005" autocomplete="off">
+      <p style="font-size:12px;color:var(--muted);margin-bottom:14px">
+        Produksi: jika Nginx mem-proxy <code>/api</code> ke Node, isi origin situs (mis. <code>https://galantara.io</code>).
+        Jika belum, pakai <code>https://galantara.io:3005</code> (port harus terbuka / firewall).
+      </p>
+      <label for="token">ADMIN_API_TOKEN</label>
+      <input type="password" id="token" placeholder="Sama dengan env di server" autocomplete="current-password">
+      <button type="button" class="btn" id="save-auth">Simpan & uji</button>
+      <p class="warn">Jangan commit token ke Git. Set di aaPanel / systemd: <code>ADMIN_API_TOKEN=...</code></p>
+    </div>
+
+    <div id="p-dash" class="panel">
+      <button type="button" class="btn" id="refresh-dash">Muat ulang</button>
+      <div id="dash-stats" class="grid"></div>
+      <pre id="dash-raw">{}</pre>
+    </div>
+
+    <div id="p-contrib" class="panel">
+      <p style="font-size:14px;color:var(--muted);margin-bottom:10px">Dari <code>data/contributors.json</code> (deploy statis).</p>
+      <div id="contrib-list"></div>
+    </div>
+
+    <div id="p-cms" class="panel">
+      <p style="margin-bottom:12px">Belum ada editor database di sini. Alur yang disarankan:</p>
+      <ul style="margin-left:1.2rem;color:var(--muted);font-size:14px">
+        <li><strong>Changelog</strong> — edit <code>CHANGELOG.md</code> di repo, deploy + rebuild situs.</li>
+        <li><strong>Kontributor</strong> — edit <code>data/contributors.json</code>, deploy folder <code>data/</code>.</li>
+        <li><strong>User terdaftar</strong> — dashboard Supabase Auth (service role tidak boleh di frontend).</li>
+        <li><strong>Saran</strong> — kotak saran di <code>about.html</code> memakai mailto; nanti bisa webhook ke Discord/Notion.</li>
+      </ul>
+      <p style="margin-top:16px"><a href="about.html">← Kembali ke landing Tentang</a> · <a href="index.html">Masuk Oola</a></p>
+    </div>
+  </div>
+
+  <script>
+    (function () {
+      var TAB_KEY = 'galantara_admin_tab';
+      var BASE_KEY = 'galantara_admin_api_base';
+      var TOKEN_KEY = 'galantara_admin_token';
+
+      function defaultBase() {
+        var h = location.hostname;
+        if (h === 'localhost' || h === '127.0.0.1') return 'http://localhost:3005';
+        return location.origin;
+      }
+
+      document.getElementById('api-base').value =
+        localStorage.getItem(BASE_KEY) || defaultBase();
+      document.getElementById('token').value = sessionStorage.getItem(TOKEN_KEY) || '';
+
+      document.querySelectorAll('.tabs button').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var id = btn.getAttribute('data-tab');
+          document.querySelectorAll('.tabs button').forEach(function (b) {
+            b.classList.toggle('on', b === btn);
+          });
+          document.querySelectorAll('.panel').forEach(function (p) {
+            p.classList.remove('on');
+          });
+          document.getElementById('p-' + id).classList.add('on');
+          sessionStorage.setItem(TAB_KEY, id);
+          if (id === 'dash') loadDash();
+          if (id === 'contrib') loadContrib();
+        });
+      });
+
+      var saved = sessionStorage.getItem(TAB_KEY);
+      if (saved) {
+        var b = document.querySelector('.tabs button[data-tab="' + saved + '"]');
+        if (b) b.click();
+      }
+
+      document.getElementById('save-auth').addEventListener('click', function () {
+        var base = document.getElementById('api-base').value.trim().replace(/\/$/, '');
+        var tok = document.getElementById('token').value.trim();
+        localStorage.setItem(BASE_KEY, base);
+        sessionStorage.setItem(TOKEN_KEY, tok);
+        loadDash();
+        alert('Disimpan. Buka tab Ringkasan untuk melihat data.');
+      });
+
+      function authHeaders() {
+        var tok = sessionStorage.getItem(TOKEN_KEY);
+        return {
+          Authorization: 'Bearer ' + tok,
+          Accept: 'application/json',
+        };
+      }
+
+      function loadDash() {
+        var base = localStorage.getItem(BASE_KEY) || defaultBase();
+        var stats = document.getElementById('dash-stats');
+        var raw = document.getElementById('dash-raw');
+        stats.innerHTML = '<div class="stat"><b>…</b><span>Memuat</span></div>';
+        raw.textContent = 'Loading…';
+        fetch(base + '/api/admin/summary', { headers: authHeaders() })
+          .then(function (r) {
+            return r.json().then(function (j) {
+              return { ok: r.ok, status: r.status, body: j };
+            });
+          })
+          .then(function (_ref) {
+            var ok = _ref.ok,
+              status = _ref.status,
+              body = _ref.body;
+            raw.textContent = JSON.stringify(body, null, 2);
+            stats.innerHTML = '';
+            if (!ok) {
+              stats.innerHTML =
+                '<div class="stat"><b>!</b><span>' +
+                status +
+                ' — ' +
+                (body.error || 'Gagal') +
+                '</span></div>';
+              return;
+            }
+            if (body.rooms) {
+              body.rooms.forEach(function (room) {
+                var d = document.createElement('div');
+                d.className = 'stat';
+                d.innerHTML =
+                  '<b>' +
+                  room.count +
+                  '</b><span>Online di <code>' +
+                  room.id +
+                  '</code></span>';
+                stats.appendChild(d);
+              });
+            }
+            if (body.authUsers != null) {
+              var au = document.createElement('div');
+              au.className = 'stat';
+              au.innerHTML =
+                '<b>' +
+                body.authUsers +
+                '</b><span>User terdaftar (Supabase Auth, perkiraan)</span>';
+              stats.appendChild(au);
+            }
+            if (body.authUsersNote) {
+              var n = document.createElement('p');
+              n.className = 'warn';
+              n.textContent = body.authUsersNote;
+              stats.appendChild(n);
+            }
+          })
+          .catch(function (e) {
+            raw.textContent = String(e);
+            stats.innerHTML =
+              '<div class="stat"><b>✕</b><span>CORS atau server mati — cek base URL & firewall</span></div>';
+          });
+      }
+
+      document.getElementById('refresh-dash').addEventListener('click', loadDash);
+
+      function loadContrib() {
+        var el = document.getElementById('contrib-list');
+        el.innerHTML = 'Memuat…';
+        fetch('data/contributors.json', { cache: 'no-store' })
+          .then(function (r) {
+            return r.json();
+          })
+          .then(function (data) {
+            var rows = []
+              .concat(data.maintainers || [], data.contributors || [])
+              .map(function (p) {
+                return (
+                  '<tr><td>' +
+                  escapeHtml(p.name) +
+                  '</td><td>' +
+                  escapeHtml(p.role || '') +
+                  '</td><td>' +
+                  (p.link
+                    ? '<a href="' +
+                      escapeHtml(p.link) +
+                      '">link</a>'
+                    : '—') +
+                  '</td></tr>'
+                );
+              })
+              .join('');
+            el.innerHTML =
+              '<table><thead><tr><th>Nama</th><th>Peran</th><th></th></tr></thead><tbody>' +
+              rows +
+              '</tbody></table>';
+          })
+          .catch(function () {
+            el.innerHTML = '<p class="warn">Tidak bisa memuat contributors.json — deploy folder data/</p>';
+          });
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replace(/&/g, '&amp;')
+          .replace(/</g, '&lt;')
+          .replace(/>/g, '&gt;')
+          .replace(/"/g, '&quot;');
+      }
+    })();
+  </script>
+</body>
+</html>

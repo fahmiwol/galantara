@@ -1,0 +1,1412 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Mighan Wallet — Tiranyx</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;600;700;900&family=Space+Grotesk:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+  :root {
+    --bg: #05030F;
+    --bg2: #0A0618;
+    --bg3: #110D22;
+    --card: rgba(255,255,255,0.04);
+    --card-border: rgba(255,255,255,0.08);
+    --primary: #7C3AED;
+    --primary-light: #9F67FF;
+    --accent: #38BDF8;
+    --accent-dim: rgba(56,189,248,0.15);
+    --success: #10B981;
+    --warning: #F59E0B;
+    --danger: #EF4444;
+    --text: #F1F5F9;
+    --text-dim: #94A3B8;
+    --text-muted: #4B5563;
+    --gold: #F59E0B;
+    --silver: #94A3B8;
+    --bronze: #CD7F32;
+    --diamond: #38BDF8;
+    --nav-h: 68px;
+    --header-h: 60px;
+  }
+
+  html, body {
+    width: 100%; height: 100%;
+    background: #000;
+    overflow: hidden;
+    font-family: 'Space Grotesk', sans-serif;
+    color: var(--text);
+    -webkit-font-smoothing: antialiased;
+  }
+
+  .app {
+    width: 100%;
+    max-width: 430px;
+    height: 100vh;
+    margin: 0 auto;
+    background: var(--bg);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  /* ─── CANVAS BACKGROUND ─── */
+  #stars {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ─── HEADER ─── */
+  .header {
+    position: relative; z-index: 10;
+    height: var(--header-h);
+    padding: 0 20px;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: linear-gradient(180deg, rgba(5,3,15,0.95) 0%, transparent 100%);
+    flex-shrink: 0;
+  }
+  .header-logo {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    letter-spacing: 3px;
+    background: linear-gradient(135deg, var(--primary-light), var(--accent));
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+  }
+  .header-right { display: flex; gap: 12px; align-items: center; }
+  .icon-btn {
+    width: 36px; height: 36px;
+    border-radius: 50%;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    display: flex; align-items: center; justify-content: center;
+    cursor: pointer;
+    font-size: 16px;
+    transition: all 0.2s;
+  }
+  .icon-btn:active { transform: scale(0.9); }
+  .notif-dot {
+    width: 8px; height: 8px;
+    background: var(--danger);
+    border-radius: 50%;
+    position: absolute;
+    top: 6px; right: 6px;
+    border: 1px solid var(--bg);
+  }
+
+  /* ─── SCREENS ─── */
+  .screen {
+    flex: 1;
+    position: relative; z-index: 5;
+    overflow: hidden;
+    display: none;
+    padding: 0 16px;
+    padding-bottom: calc(var(--nav-h) + 8px);
+  }
+  .screen.active { display: flex; flex-direction: column; }
+
+  .screen-inner {
+    flex: 1;
+    overflow-y: auto;
+    overflow-x: hidden;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+  }
+  .screen-inner::-webkit-scrollbar { display: none; }
+
+  /* ─── BOTTOM NAV ─── */
+  .bottom-nav {
+    position: relative; z-index: 20;
+    height: var(--nav-h);
+    background: rgba(10,6,24,0.95);
+    border-top: 1px solid var(--card-border);
+    backdrop-filter: blur(20px);
+    display: flex;
+    align-items: stretch;
+    flex-shrink: 0;
+  }
+  .nav-item {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 4px;
+    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
+  }
+  .nav-item .nav-icon { font-size: 20px; transition: all 0.2s; }
+  .nav-item .nav-label {
+    font-size: 10px;
+    font-weight: 500;
+    color: var(--text-muted);
+    letter-spacing: 0.5px;
+    transition: color 0.2s;
+  }
+  .nav-item.active .nav-label { color: var(--primary-light); }
+  .nav-item.active .nav-icon { filter: drop-shadow(0 0 6px var(--primary)); }
+  .nav-item::after {
+    content: '';
+    position: absolute;
+    bottom: 0; left: 50%;
+    transform: translateX(-50%);
+    width: 0; height: 2px;
+    background: var(--primary-light);
+    border-radius: 2px 2px 0 0;
+    transition: width 0.3s;
+  }
+  .nav-item.active::after { width: 24px; }
+
+  /* ─── CARDS ─── */
+  .glass-card {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 16px;
+    backdrop-filter: blur(12px);
+    padding: 16px;
+  }
+
+  /* ─── BALANCE CARD ─── */
+  .balance-card {
+    background: linear-gradient(135deg, rgba(124,58,237,0.3) 0%, rgba(56,189,248,0.15) 50%, rgba(124,58,237,0.1) 100%);
+    border: 1px solid rgba(124,58,237,0.4);
+    border-radius: 20px;
+    padding: 20px;
+    position: relative;
+    overflow: hidden;
+    margin-bottom: 16px;
+  }
+  .balance-card::before {
+    content: '';
+    position: absolute;
+    top: -40px; right: -40px;
+    width: 120px; height: 120px;
+    border-radius: 50%;
+    background: radial-gradient(circle, rgba(124,58,237,0.3) 0%, transparent 70%);
+  }
+  .balance-label {
+    font-size: 11px;
+    font-weight: 500;
+    letter-spacing: 2px;
+    color: var(--text-dim);
+    text-transform: uppercase;
+    margin-bottom: 6px;
+  }
+  .balance-amount {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 32px;
+    font-weight: 700;
+    background: linear-gradient(135deg, #fff 0%, var(--accent) 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .balance-idr {
+    font-size: 13px;
+    color: var(--text-dim);
+    margin-bottom: 16px;
+  }
+  .balance-meta {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+  }
+  .wallet-id { font-size: 11px; color: var(--text-muted); font-family: 'Orbitron', sans-serif; letter-spacing: 1px; }
+  .vip-badge {
+    background: linear-gradient(135deg, var(--warning), #D97706);
+    color: #000;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 8px;
+    border-radius: 20px;
+  }
+
+  /* ─── QUICK ACTIONS ─── */
+  .quick-actions {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .qa-btn {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 6px;
+    cursor: pointer;
+    padding: 10px 4px;
+    border-radius: 12px;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    transition: all 0.2s;
+  }
+  .qa-btn:active { transform: scale(0.93); }
+  .qa-icon {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+  }
+  .qa-label { font-size: 11px; font-weight: 500; color: var(--text-dim); }
+  .qa-btn.topup .qa-icon { background: rgba(245,158,11,0.2); }
+  .qa-btn.send .qa-icon { background: rgba(124,58,237,0.2); }
+  .qa-btn.withdraw .qa-icon { background: rgba(16,185,129,0.2); }
+  .qa-btn.scan .qa-icon { background: rgba(56,189,248,0.2); }
+
+  /* ─── COIN CARDS GRID ─── */
+  .section-title {
+    font-size: 12px;
+    font-weight: 600;
+    letter-spacing: 2px;
+    text-transform: uppercase;
+    color: var(--text-dim);
+    margin: 4px 0 12px;
+  }
+  .coins-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .coin-card {
+    border-radius: 14px;
+    padding: 14px;
+    position: relative;
+    overflow: hidden;
+    cursor: pointer;
+    transition: transform 0.2s;
+  }
+  .coin-card:active { transform: scale(0.96); }
+  .coin-card.emas { background: linear-gradient(135deg, rgba(245,158,11,0.25), rgba(217,119,6,0.15)); border: 1px solid rgba(245,158,11,0.3); }
+  .coin-card.perak { background: linear-gradient(135deg, rgba(148,163,184,0.2), rgba(100,116,139,0.1)); border: 1px solid rgba(148,163,184,0.25); }
+  .coin-card.perunggu { background: linear-gradient(135deg, rgba(205,127,50,0.25), rgba(120,53,15,0.15)); border: 1px solid rgba(205,127,50,0.3); }
+  .coin-card.berlian { background: linear-gradient(135deg, rgba(56,189,248,0.2), rgba(14,165,233,0.1)); border: 1px solid rgba(56,189,248,0.25); }
+  .coin-icon { font-size: 22px; margin-bottom: 6px; }
+  .coin-name { font-size: 11px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; }
+  .coin-name.emas { color: var(--gold); }
+  .coin-name.perak { color: var(--silver); }
+  .coin-name.perunggu { color: var(--bronze); }
+  .coin-name.berlian { color: var(--diamond); }
+  .coin-amount {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    color: #fff;
+    margin: 2px 0;
+  }
+  .coin-value { font-size: 10px; color: var(--text-muted); }
+
+  /* ─── EARN SCREEN ─── */
+  .streak-card {
+    background: linear-gradient(135deg, rgba(245,158,11,0.2), rgba(16,185,129,0.1));
+    border: 1px solid rgba(245,158,11,0.3);
+    border-radius: 16px;
+    padding: 16px;
+    margin-bottom: 14px;
+    display: flex;
+    align-items: center;
+    gap: 14px;
+  }
+  .streak-flame { font-size: 36px; }
+  .streak-info {}
+  .streak-day {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--warning);
+    line-height: 1;
+  }
+  .streak-label { font-size: 12px; color: var(--text-dim); margin-top: 2px; }
+  .streak-dots {
+    display: flex;
+    gap: 5px;
+    margin-top: 8px;
+  }
+  .streak-dot {
+    width: 10px; height: 10px;
+    border-radius: 50%;
+    background: var(--text-muted);
+  }
+  .streak-dot.done { background: var(--warning); box-shadow: 0 0 6px var(--warning); }
+  .streak-dot.active { background: var(--success); box-shadow: 0 0 6px var(--success); animation: pulse 1s infinite; }
+
+  @keyframes pulse {
+    0%, 100% { transform: scale(1); opacity: 1; }
+    50% { transform: scale(1.3); opacity: 0.8; }
+  }
+
+  .missions-list { display: flex; flex-direction: column; gap: 8px; }
+  .mission-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .mission-item.done { opacity: 0.6; }
+  .mission-icon { font-size: 22px; flex-shrink: 0; }
+  .mission-info { flex: 1; min-width: 0; }
+  .mission-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .mission-progress-bar {
+    height: 4px;
+    background: var(--bg3);
+    border-radius: 2px;
+    overflow: hidden;
+  }
+  .mission-progress-fill {
+    height: 100%;
+    border-radius: 2px;
+    background: linear-gradient(90deg, var(--primary), var(--accent));
+    transition: width 0.5s;
+  }
+  .mission-progress-text { font-size: 10px; color: var(--text-muted); margin-top: 3px; }
+  .mission-reward {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    font-family: 'Orbitron', sans-serif;
+    font-size: 13px;
+    font-weight: 700;
+    color: var(--diamond);
+    flex-shrink: 0;
+  }
+
+  /* ─── SHOP SCREEN ─── */
+  .shop-filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 14px;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .shop-filters::-webkit-scrollbar { display: none; }
+  .filter-chip {
+    padding: 6px 14px;
+    border-radius: 20px;
+    font-size: 12px;
+    font-weight: 600;
+    white-space: nowrap;
+    cursor: pointer;
+    border: 1px solid var(--card-border);
+    background: var(--card);
+    color: var(--text-dim);
+    transition: all 0.2s;
+    flex-shrink: 0;
+  }
+  .filter-chip.active {
+    background: var(--primary);
+    border-color: var(--primary);
+    color: #fff;
+  }
+  .shop-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: 10px;
+  }
+  .shop-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 14px;
+    padding: 14px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .shop-item:active { transform: scale(0.96); }
+  .shop-item-icon { font-size: 28px; margin-bottom: 8px; }
+  .shop-item-name { font-size: 13px; font-weight: 600; margin-bottom: 4px; }
+  .shop-item-desc { font-size: 11px; color: var(--text-dim); margin-bottom: 10px; line-height: 1.4; }
+  .shop-item-price {
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    font-size: 13px;
+    font-weight: 700;
+  }
+  .shop-item-price.free { color: var(--success); }
+  .shop-item-price.paid { color: var(--gold); }
+  .shop-btn {
+    width: 100%;
+    padding: 8px;
+    border-radius: 8px;
+    border: none;
+    font-size: 12px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+    font-family: 'Space Grotesk', sans-serif;
+  }
+  .shop-btn:active { transform: scale(0.95); }
+  .shop-btn.free { background: rgba(16,185,129,0.2); color: var(--success); border: 1px solid rgba(16,185,129,0.3); }
+  .shop-btn.paid { background: linear-gradient(135deg, rgba(245,158,11,0.3), rgba(217,119,6,0.2)); color: var(--gold); border: 1px solid rgba(245,158,11,0.3); }
+
+  /* ─── HISTORY SCREEN ─── */
+  .history-filters {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+    overflow-x: auto;
+    scrollbar-width: none;
+    padding-bottom: 2px;
+  }
+  .history-filters::-webkit-scrollbar { display: none; }
+  .tx-list { display: flex; flex-direction: column; gap: 6px; }
+  .tx-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 14px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+  }
+  .tx-icon-wrap {
+    width: 40px; height: 40px;
+    border-radius: 12px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 18px;
+    flex-shrink: 0;
+  }
+  .tx-icon-wrap.income { background: rgba(16,185,129,0.15); }
+  .tx-icon-wrap.expense { background: rgba(239,68,68,0.15); }
+  .tx-icon-wrap.topup { background: rgba(245,158,11,0.15); }
+  .tx-icon-wrap.withdraw { background: rgba(56,189,248,0.15); }
+  .tx-info { flex: 1; min-width: 0; }
+  .tx-name { font-size: 13px; font-weight: 600; margin-bottom: 2px; }
+  .tx-date { font-size: 11px; color: var(--text-muted); }
+  .tx-right { text-align: right; }
+  .tx-amount {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 14px;
+    font-weight: 700;
+    margin-bottom: 3px;
+  }
+  .tx-amount.income { color: var(--success); }
+  .tx-amount.expense { color: var(--danger); }
+  .tx-amount.topup { color: var(--gold); }
+  .tx-amount.withdraw { color: var(--accent); }
+  .tx-status {
+    font-size: 10px;
+    padding: 2px 7px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .tx-status.success { background: rgba(16,185,129,0.2); color: var(--success); }
+  .tx-status.pending { background: rgba(245,158,11,0.2); color: var(--warning); }
+
+  /* ─── PROFILE SCREEN ─── */
+  .profile-card {
+    background: linear-gradient(135deg, rgba(124,58,237,0.25), rgba(56,189,248,0.1));
+    border: 1px solid rgba(124,58,237,0.35);
+    border-radius: 20px;
+    padding: 20px;
+    text-align: center;
+    margin-bottom: 14px;
+    position: relative;
+    overflow: hidden;
+  }
+  .avatar-wrap {
+    width: 70px; height: 70px;
+    border-radius: 50%;
+    background: linear-gradient(135deg, var(--primary), var(--accent));
+    margin: 0 auto 10px;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 30px;
+    box-shadow: 0 0 20px rgba(124,58,237,0.4);
+  }
+  .profile-name { font-size: 18px; font-weight: 700; margin-bottom: 4px; }
+  .profile-uid { font-size: 11px; color: var(--text-muted); font-family: 'Orbitron', sans-serif; letter-spacing: 1px; margin-bottom: 10px; }
+  .profile-vip {
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    background: linear-gradient(135deg, var(--warning), #D97706);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    padding: 4px 12px;
+    border-radius: 20px;
+    letter-spacing: 1px;
+  }
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 14px;
+  }
+  .stat-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+  }
+  .stat-value {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 18px;
+    font-weight: 700;
+    color: var(--accent);
+    line-height: 1;
+    margin-bottom: 4px;
+  }
+  .stat-label { font-size: 10px; color: var(--text-muted); line-height: 1.3; }
+  .menu-list { display: flex; flex-direction: column; gap: 6px; }
+  .menu-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s;
+  }
+  .menu-item:active { background: rgba(255,255,255,0.06); }
+  .menu-icon { font-size: 18px; width: 20px; text-align: center; }
+  .menu-label { flex: 1; font-size: 14px; font-weight: 500; }
+  .menu-arrow { color: var(--text-muted); font-size: 12px; }
+  .menu-item.danger .menu-label { color: var(--danger); }
+
+  /* ─── MODAL ─── */
+  .modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(8px);
+    z-index: 100;
+    display: flex;
+    align-items: flex-end;
+    justify-content: center;
+    opacity: 0;
+    pointer-events: none;
+    transition: opacity 0.3s;
+  }
+  .modal-overlay.show {
+    opacity: 1;
+    pointer-events: all;
+  }
+  .modal-sheet {
+    width: 100%;
+    max-width: 430px;
+    background: var(--bg2);
+    border: 1px solid var(--card-border);
+    border-radius: 24px 24px 0 0;
+    padding: 20px;
+    padding-bottom: 36px;
+    transform: translateY(100%);
+    transition: transform 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+  }
+  .modal-overlay.show .modal-sheet {
+    transform: translateY(0);
+  }
+  .modal-handle {
+    width: 36px; height: 4px;
+    background: var(--card-border);
+    border-radius: 2px;
+    margin: 0 auto 16px;
+  }
+  .modal-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    text-align: center;
+    margin-bottom: 20px;
+    letter-spacing: 1px;
+  }
+  .modal-input {
+    width: 100%;
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 14px 16px;
+    color: var(--text);
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 14px;
+    margin-bottom: 12px;
+    outline: none;
+    transition: border-color 0.2s;
+  }
+  .modal-input:focus { border-color: var(--primary); }
+  .modal-input::placeholder { color: var(--text-muted); }
+  .modal-btn {
+    width: 100%;
+    padding: 14px;
+    border-radius: 14px;
+    border: none;
+    font-family: 'Space Grotesk', sans-serif;
+    font-size: 15px;
+    font-weight: 700;
+    cursor: pointer;
+    background: linear-gradient(135deg, var(--primary), var(--primary-light));
+    color: #fff;
+    letter-spacing: 1px;
+    transition: all 0.2s;
+  }
+  .modal-btn:active { transform: scale(0.97); }
+  .modal-close {
+    position: absolute;
+    top: 14px; right: 20px;
+    font-size: 20px;
+    cursor: pointer;
+    color: var(--text-muted);
+    width: 28px; height: 28px;
+    display: flex; align-items: center; justify-content: center;
+  }
+
+  /* ─── TOPUP PACKS ─── */
+  .pack-grid {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: 8px;
+    margin-bottom: 16px;
+  }
+  .pack-item {
+    background: var(--card);
+    border: 1px solid var(--card-border);
+    border-radius: 12px;
+    padding: 12px 8px;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+  .pack-item.selected {
+    border-color: var(--primary);
+    background: rgba(124,58,237,0.15);
+  }
+  .pack-coin { font-size: 20px; margin-bottom: 4px; }
+  .pack-amount { font-family: 'Orbitron', sans-serif; font-size: 14px; font-weight: 700; color: var(--gold); }
+  .pack-price { font-size: 10px; color: var(--text-muted); margin-top: 2px; }
+
+  /* ─── UTILS ─── */
+  .row { display: flex; align-items: center; justify-content: space-between; }
+  .gap-8 { gap: 8px; }
+  .mb-12 { margin-bottom: 12px; }
+  .mb-16 { margin-bottom: 16px; }
+  .mt-8 { margin-top: 8px; }
+
+  .badge {
+    font-size: 10px;
+    padding: 2px 8px;
+    border-radius: 10px;
+    font-weight: 600;
+  }
+  .badge-primary { background: rgba(124,58,237,0.2); color: var(--primary-light); }
+  .badge-accent { background: rgba(56,189,248,0.15); color: var(--accent); }
+</style>
+</head>
+<body>
+
+<canvas id="stars"></canvas>
+
+<div class="app">
+  <!-- HEADER -->
+  <div class="header">
+    <div class="header-logo">MIGHAN</div>
+    <div class="header-right">
+      <div class="icon-btn" onclick="showModal('notif')">
+        🔔
+        <div class="notif-dot"></div>
+      </div>
+      <div class="icon-btn" onclick="switchTab('profil')">👤</div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ SCREEN: DOMPET ═══════════════════════════ -->
+  <div class="screen active" id="screen-dompet">
+    <div class="screen-inner">
+      <!-- Balance Card -->
+      <div class="balance-card" style="margin-top: 4px;">
+        <div class="balance-label">Saldo Aktif</div>
+        <div class="balance-amount">12,450</div>
+        <div class="balance-idr">≈ Rp 99.600.000</div>
+        <div class="balance-meta">
+          <div class="wallet-id">WRC • 7F3A•9D2E</div>
+          <div class="vip-badge">⚡ VIP 1</div>
+        </div>
+      </div>
+
+      <!-- Quick Actions -->
+      <div class="quick-actions">
+        <div class="qa-btn topup" onclick="showModal('topup')">
+          <div class="qa-icon">💰</div>
+          <div class="qa-label">Top-up</div>
+        </div>
+        <div class="qa-btn send" onclick="showModal('send')">
+          <div class="qa-icon">📤</div>
+          <div class="qa-label">Kirim</div>
+        </div>
+        <div class="qa-btn withdraw" onclick="showModal('withdraw')">
+          <div class="qa-icon">🏦</div>
+          <div class="qa-label">Tarik</div>
+        </div>
+        <div class="qa-btn scan" onclick="showModal('scan')">
+          <div class="qa-icon">📷</div>
+          <div class="qa-label">Scan</div>
+        </div>
+      </div>
+
+      <!-- Coin Cards -->
+      <div class="section-title">Koin Saya</div>
+      <div class="coins-grid">
+        <div class="coin-card emas">
+          <div class="coin-icon">🥇</div>
+          <div class="coin-name emas">EMAS</div>
+          <div class="coin-amount">320</div>
+          <div class="coin-value">Rp 10.000 / koin</div>
+        </div>
+        <div class="coin-card perak">
+          <div class="coin-icon">🥈</div>
+          <div class="coin-name perak">PERAK</div>
+          <div class="coin-amount">8,450</div>
+          <div class="coin-value">Rp 8.000 / koin</div>
+        </div>
+        <div class="coin-card perunggu">
+          <div class="coin-icon">🥉</div>
+          <div class="coin-name perunggu">PERUNGGU</div>
+          <div class="coin-amount">1,280</div>
+          <div class="coin-value">Rp 5.000 / koin ↑ Tarik</div>
+        </div>
+        <div class="coin-card berlian">
+          <div class="coin-icon">💎</div>
+          <div class="coin-name berlian">BERLIAN</div>
+          <div class="coin-amount">2,400</div>
+          <div class="coin-value">Dari engagement</div>
+        </div>
+      </div>
+
+      <!-- Recent Tx -->
+      <div class="row mb-12">
+        <div class="section-title" style="margin-bottom:0">Terbaru</div>
+        <span style="font-size:12px; color:var(--accent); cursor:pointer" onclick="switchTab('riwayat')">Lihat semua →</span>
+      </div>
+      <div class="tx-list">
+        <div class="tx-item">
+          <div class="tx-icon-wrap topup">💰</div>
+          <div class="tx-info">
+            <div class="tx-name">Top-up Emas</div>
+            <div class="tx-date">Hari ini, 14:32</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount topup">+50 GLD</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap expense">📤</div>
+          <div class="tx-info">
+            <div class="tx-name">Bayar Jasa Design</div>
+            <div class="tx-date">Kemarin, 09:15</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount expense">-5 SLV</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+      </div>
+      <div style="height: 8px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ SCREEN: EARN ═══════════════════════════ -->
+  <div class="screen" id="screen-earn">
+    <div class="screen-inner" style="padding-top: 4px;">
+      <!-- Daily Streak -->
+      <div class="streak-card">
+        <div class="streak-flame">🔥</div>
+        <div class="streak-info">
+          <div class="streak-day">4 Hari</div>
+          <div class="streak-label">Streak aktif beruntun</div>
+          <div class="streak-dots">
+            <div class="streak-dot done"></div>
+            <div class="streak-dot done"></div>
+            <div class="streak-dot done"></div>
+            <div class="streak-dot active"></div>
+            <div class="streak-dot"></div>
+            <div class="streak-dot"></div>
+            <div class="streak-dot"></div>
+          </div>
+        </div>
+      </div>
+
+      <div class="section-title">Misi Harian</div>
+      <div class="missions-list">
+        <div class="mission-item done">
+          <div class="mission-icon">📺</div>
+          <div class="mission-info">
+            <div class="mission-name">Tonton 3 video</div>
+            <div class="mission-progress-bar">
+              <div class="mission-progress-fill" style="width: 100%"></div>
+            </div>
+            <div class="mission-progress-text">3/3 selesai ✓</div>
+          </div>
+          <div class="mission-reward">+15 💎</div>
+        </div>
+        <div class="mission-item">
+          <div class="mission-icon">🔗</div>
+          <div class="mission-info">
+            <div class="mission-name">Share 2 konten</div>
+            <div class="mission-progress-bar">
+              <div class="mission-progress-fill" style="width: 50%"></div>
+            </div>
+            <div class="mission-progress-text">1/2 selesai</div>
+          </div>
+          <div class="mission-reward">+20 💎</div>
+        </div>
+        <div class="mission-item">
+          <div class="mission-icon">🧩</div>
+          <div class="mission-info">
+            <div class="mission-name">Ikuti kuis harian</div>
+            <div class="mission-progress-bar">
+              <div class="mission-progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="mission-progress-text">0/1 selesai</div>
+          </div>
+          <div class="mission-reward">+30 💎</div>
+        </div>
+        <div class="mission-item">
+          <div class="mission-icon">🎮</div>
+          <div class="mission-info">
+            <div class="mission-name">Main mini game</div>
+            <div class="mission-progress-bar">
+              <div class="mission-progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="mission-progress-text">0/1 selesai</div>
+          </div>
+          <div class="mission-reward">+25 💎</div>
+        </div>
+        <div class="mission-item done">
+          <div class="mission-icon">👥</div>
+          <div class="mission-info">
+            <div class="mission-name">Undang 1 teman</div>
+            <div class="mission-progress-bar">
+              <div class="mission-progress-fill" style="width: 100%"></div>
+            </div>
+            <div class="mission-progress-text">1/1 selesai ✓</div>
+          </div>
+          <div class="mission-reward">+50 💎</div>
+        </div>
+        <div class="mission-item">
+          <div class="mission-icon">🛍️</div>
+          <div class="mission-info">
+            <div class="mission-name">Transaksi pertama hari ini</div>
+            <div class="mission-progress-bar">
+              <div class="mission-progress-fill" style="width: 0%"></div>
+            </div>
+            <div class="mission-progress-text">0/1 selesai</div>
+          </div>
+          <div class="mission-reward">+10 💎</div>
+        </div>
+      </div>
+      <div style="height: 8px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ SCREEN: TOKO ═══════════════════════════ -->
+  <div class="screen" id="screen-toko">
+    <div class="screen-inner" style="padding-top: 4px;">
+      <div class="shop-filters">
+        <div class="filter-chip active" onclick="filterShop(this,'semua')">Semua</div>
+        <div class="filter-chip" onclick="filterShop(this,'gratis')">Gratis</div>
+        <div class="filter-chip" onclick="filterShop(this,'premium')">Premium</div>
+        <div class="filter-chip" onclick="filterShop(this,'koin')">Coin Pack</div>
+      </div>
+
+      <div class="section-title">Tersedia Untukmu</div>
+      <div class="shop-grid">
+        <div class="shop-item" data-cat="gratis">
+          <div class="shop-item-icon">⚡</div>
+          <div class="shop-item-name">Boost Post</div>
+          <div class="shop-item-desc">Viral-kan postinganmu 2x lebih cepat</div>
+          <div class="shop-item-price free">✦ GRATIS</div>
+          <button class="shop-btn free" onclick="showModal('buy-free')">Klaim</button>
+        </div>
+        <div class="shop-item" data-cat="premium">
+          <div class="shop-item-icon">🎨</div>
+          <div class="shop-item-name">Frame Profil</div>
+          <div class="shop-item-desc">Frame eksklusif Galantara Season 1</div>
+          <div class="shop-item-price paid">🥇 50 EMAS</div>
+          <button class="shop-btn paid" onclick="showModal('buy-paid')">Beli</button>
+        </div>
+        <div class="shop-item" data-cat="premium">
+          <div class="shop-item-icon">🏷️</div>
+          <div class="shop-item-name">Badge Tribe</div>
+          <div class="shop-item-desc">Tampilkan identitas tribemu</div>
+          <div class="shop-item-price paid">🥇 30 EMAS</div>
+          <button class="shop-btn paid" onclick="showModal('buy-paid')">Beli</button>
+        </div>
+        <div class="shop-item" data-cat="gratis">
+          <div class="shop-item-icon">🌟</div>
+          <div class="shop-item-name">Efek Nama</div>
+          <div class="shop-item-desc">Nama berkilau di semua chat</div>
+          <div class="shop-item-price free">💎 200 BERLIAN</div>
+          <button class="shop-btn free" onclick="showModal('buy-free')">Klaim</button>
+        </div>
+      </div>
+
+      <div class="section-title mt-8">Mighan Coin Pack</div>
+      <div class="pack-grid">
+        <div class="pack-item" onclick="selectPack(this)">
+          <div class="pack-coin">🥇</div>
+          <div class="pack-amount">10</div>
+          <div class="pack-price">Rp 100.000</div>
+        </div>
+        <div class="pack-item selected" onclick="selectPack(this)">
+          <div class="pack-coin">🥇</div>
+          <div class="pack-amount">50</div>
+          <div class="pack-price">Rp 500.000</div>
+        </div>
+        <div class="pack-item" onclick="selectPack(this)">
+          <div class="pack-coin">🥇</div>
+          <div class="pack-amount">100</div>
+          <div class="pack-price">Rp 950.000</div>
+        </div>
+        <div class="pack-item" onclick="selectPack(this)">
+          <div class="pack-coin">🥇</div>
+          <div class="pack-amount">250</div>
+          <div class="pack-price">Rp 2,3 Jt</div>
+        </div>
+        <div class="pack-item" onclick="selectPack(this)">
+          <div class="pack-coin">🥇</div>
+          <div class="pack-amount">500</div>
+          <div class="pack-price">Rp 4,5 Jt</div>
+        </div>
+        <div class="pack-item" onclick="selectPack(this)">
+          <div class="pack-coin">🥇</div>
+          <div class="pack-amount">1000</div>
+          <div class="pack-price">Rp 8 Jt</div>
+        </div>
+      </div>
+      <button class="modal-btn" onclick="showModal('topup')">Beli Sekarang</button>
+      <div style="height: 8px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ SCREEN: RIWAYAT ═══════════════════════════ -->
+  <div class="screen" id="screen-riwayat">
+    <div class="screen-inner" style="padding-top: 4px;">
+      <div class="history-filters">
+        <div class="filter-chip active" onclick="filterHistory(this)">Semua</div>
+        <div class="filter-chip" onclick="filterHistory(this)">Top-up</div>
+        <div class="filter-chip" onclick="filterHistory(this)">Kirim</div>
+        <div class="filter-chip" onclick="filterHistory(this)">Terima</div>
+        <div class="filter-chip" onclick="filterHistory(this)">Tarik</div>
+      </div>
+
+      <div class="tx-list">
+        <div class="tx-item">
+          <div class="tx-icon-wrap topup">💰</div>
+          <div class="tx-info">
+            <div class="tx-name">Top-up Emas</div>
+            <div class="tx-date">9 Apr 2026, 14:32</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount topup">+50 GLD</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap expense">📤</div>
+          <div class="tx-info">
+            <div class="tx-name">Bayar Jasa Design</div>
+            <div class="tx-date">8 Apr 2026, 09:15</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount expense">-5 SLV</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap income">📥</div>
+          <div class="tx-info">
+            <div class="tx-name">Terima dari Budi_W</div>
+            <div class="tx-date">7 Apr 2026, 16:44</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount income">+12 BRZ</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap withdraw">🏦</div>
+          <div class="tx-info">
+            <div class="tx-name">Tarik ke BCA ****3421</div>
+            <div class="tx-date">5 Apr 2026, 11:00</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount withdraw">-30 BRZ</div>
+            <span class="tx-status pending">Proses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap topup">💰</div>
+          <div class="tx-info">
+            <div class="tx-name">Top-up Emas</div>
+            <div class="tx-date">4 Apr 2026, 10:05</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount topup">+100 GLD</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap expense">📤</div>
+          <div class="tx-info">
+            <div class="tx-name">Beli Frame Profil</div>
+            <div class="tx-date">3 Apr 2026, 20:30</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount expense">-50 GLD</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+        <div class="tx-item">
+          <div class="tx-icon-wrap income">📥</div>
+          <div class="tx-info">
+            <div class="tx-name">Reward Misi Harian</div>
+            <div class="tx-date">2 Apr 2026, 23:59</div>
+          </div>
+          <div class="tx-right">
+            <div class="tx-amount income">+45 DIA</div>
+            <span class="tx-status success">Sukses</span>
+          </div>
+        </div>
+      </div>
+      <div style="height: 8px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ SCREEN: PROFIL ═══════════════════════════ -->
+  <div class="screen" id="screen-profil">
+    <div class="screen-inner" style="padding-top: 4px;">
+      <div class="profile-card">
+        <div class="avatar-wrap">🧑‍🚀</div>
+        <div class="profile-name">Fahmi Tiranyx</div>
+        <div class="profile-uid">UID • 7F3A9D2E</div>
+        <div class="profile-vip">⚡ VIP 1 — Nexus Member</div>
+      </div>
+
+      <div class="stats-grid">
+        <div class="stat-item">
+          <div class="stat-value">247</div>
+          <div class="stat-label">Total Transaksi</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">1.2K</div>
+          <div class="stat-label">Koin Diterima</div>
+        </div>
+        <div class="stat-item">
+          <div class="stat-value">14</div>
+          <div class="stat-label">Streak Terpanjang</div>
+        </div>
+      </div>
+
+      <div class="section-title">Pengaturan</div>
+      <div class="menu-list">
+        <div class="menu-item">
+          <div class="menu-icon">⚙️</div>
+          <div class="menu-label">Pengaturan Akun</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">🔐</div>
+          <div class="menu-label">Keamanan & PIN</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">🏦</div>
+          <div class="menu-label">Rekening Bank</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">🎟️</div>
+          <div class="menu-label">Referral & Invite</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item">
+          <div class="menu-icon">❓</div>
+          <div class="menu-label">Bantuan & FAQ</div>
+          <div class="menu-arrow">›</div>
+        </div>
+        <div class="menu-item danger" onclick="showModal('logout')">
+          <div class="menu-icon">🚪</div>
+          <div class="menu-label">Keluar</div>
+          <div class="menu-arrow">›</div>
+        </div>
+      </div>
+      <div style="height: 8px;"></div>
+    </div>
+  </div>
+
+  <!-- ═══════════════════════════ BOTTOM NAV ═══════════════════════════ -->
+  <nav class="bottom-nav">
+    <div class="nav-item active" id="nav-dompet" onclick="switchTab('dompet')">
+      <div class="nav-icon">💳</div>
+      <div class="nav-label">Dompet</div>
+    </div>
+    <div class="nav-item" id="nav-earn" onclick="switchTab('earn')">
+      <div class="nav-icon">🎯</div>
+      <div class="nav-label">Earn</div>
+    </div>
+    <div class="nav-item" id="nav-toko" onclick="switchTab('toko')">
+      <div class="nav-icon">🛍️</div>
+      <div class="nav-label">Toko</div>
+    </div>
+    <div class="nav-item" id="nav-riwayat" onclick="switchTab('riwayat')">
+      <div class="nav-icon">📋</div>
+      <div class="nav-label">Riwayat</div>
+    </div>
+    <div class="nav-item" id="nav-profil" onclick="switchTab('profil')">
+      <div class="nav-icon">👤</div>
+      <div class="nav-label">Profil</div>
+    </div>
+  </nav>
+</div>
+
+<!-- ═══════════════════════════ MODALS ═══════════════════════════ -->
+
+<!-- Modal: Top-up -->
+<div class="modal-overlay" id="modal-topup" onclick="closeModal('topup')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--gold)">💰 TOP-UP EMAS</div>
+    <p style="font-size:13px; color:var(--text-dim); text-align:center; margin-bottom:16px;">Pilih jumlah koin Emas yang ingin dibeli</p>
+    <div class="pack-grid" style="margin-bottom:16px;">
+      <div class="pack-item selected" onclick="selectPack(this)">
+        <div class="pack-coin">🥇</div>
+        <div class="pack-amount">10</div>
+        <div class="pack-price">Rp 100rb</div>
+      </div>
+      <div class="pack-item" onclick="selectPack(this)">
+        <div class="pack-coin">🥇</div>
+        <div class="pack-amount">50</div>
+        <div class="pack-price">Rp 500rb</div>
+      </div>
+      <div class="pack-item" onclick="selectPack(this)">
+        <div class="pack-coin">🥇</div>
+        <div class="pack-amount">100</div>
+        <div class="pack-price">Rp 950rb</div>
+      </div>
+    </div>
+    <button class="modal-btn" style="background: linear-gradient(135deg, var(--gold), #D97706); color:#000;" onclick="closeModal('topup')">Bayar Sekarang</button>
+  </div>
+</div>
+
+<!-- Modal: Send -->
+<div class="modal-overlay" id="modal-send" onclick="closeModal('send')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">📤 KIRIM KOIN</div>
+    <input class="modal-input" placeholder="ID Penerima atau @username" type="text">
+    <input class="modal-input" placeholder="Jumlah koin" type="number">
+    <input class="modal-input" placeholder="Catatan (opsional)" type="text">
+    <button class="modal-btn" onclick="closeModal('send')">Kirim Sekarang</button>
+  </div>
+</div>
+
+<!-- Modal: Withdraw -->
+<div class="modal-overlay" id="modal-withdraw" onclick="closeModal('withdraw')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--success)">🏦 TARIK KE REKENING</div>
+    <p style="font-size:12px; color:var(--text-dim); text-align:center; margin-bottom:12px;">Min. 10 koin Perunggu (≈ Rp 50.000)</p>
+    <div style="background:var(--card); border:1px solid var(--card-border); border-radius:12px; padding:12px; margin-bottom:12px;">
+      <div style="display:flex; justify-content:space-between; align-items:center;">
+        <span style="font-size:12px; color:var(--text-dim)">Saldo Perunggu</span>
+        <span style="font-family:'Orbitron',sans-serif; font-size:14px; color:var(--bronze); font-weight:700;">1,280 BRZ</span>
+      </div>
+    </div>
+    <input class="modal-input" placeholder="Jumlah koin Perunggu" type="number">
+    <input class="modal-input" placeholder="No. Rekening Bank" type="text">
+    <button class="modal-btn" style="background:linear-gradient(135deg,var(--success),#059669);" onclick="closeModal('withdraw')">Ajukan Penarikan</button>
+  </div>
+</div>
+
+<!-- Modal: Scan -->
+<div class="modal-overlay" id="modal-scan" onclick="closeModal('scan')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--accent)">📷 SCAN QR</div>
+    <div style="width:200px; height:200px; margin:0 auto 16px; background:var(--card); border:2px dashed var(--accent); border-radius:16px; display:flex; align-items:center; justify-content:center; font-size:48px;">📸</div>
+    <p style="text-align:center; font-size:13px; color:var(--text-dim); margin-bottom:16px;">Arahkan kamera ke QR Code penerima</p>
+    <button class="modal-btn" style="background:linear-gradient(135deg,var(--accent),#0EA5E9); color:#000;" onclick="closeModal('scan')">Buka Kamera</button>
+  </div>
+</div>
+
+<!-- Modal: Notif -->
+<div class="modal-overlay" id="modal-notif" onclick="closeModal('notif')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title">🔔 NOTIFIKASI</div>
+    <div class="tx-list">
+      <div class="tx-item" style="background:rgba(124,58,237,0.1); border-color:rgba(124,58,237,0.3);">
+        <div class="tx-icon-wrap" style="background:rgba(124,58,237,0.2);">🎯</div>
+        <div class="tx-info">
+          <div class="tx-name">Misi harian tersedia!</div>
+          <div class="tx-date">Sekarang</div>
+        </div>
+      </div>
+      <div class="tx-item">
+        <div class="tx-icon-wrap topup">💰</div>
+        <div class="tx-info">
+          <div class="tx-name">Top-up berhasil +50 GLD</div>
+          <div class="tx-date">2 jam lalu</div>
+        </div>
+      </div>
+      <div class="tx-item">
+        <div class="tx-icon-wrap income">📥</div>
+        <div class="tx-info">
+          <div class="tx-name">Terima koin dari Budi_W</div>
+          <div class="tx-date">Kemarin</div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- Modal: Buy Free -->
+<div class="modal-overlay" id="modal-buy-free" onclick="closeModal('buy-free')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--success)">⚡ KLAIM ITEM</div>
+    <div style="text-align:center; padding: 16px 0;">
+      <div style="font-size:48px; margin-bottom:8px;">⚡</div>
+      <div style="font-size:18px; font-weight:700; margin-bottom:4px;">Boost Post</div>
+      <div style="font-size:13px; color:var(--text-dim);">Viral-kan postinganmu 2x lebih cepat selama 24 jam</div>
+    </div>
+    <button class="modal-btn" style="background:linear-gradient(135deg,var(--success),#059669);" onclick="closeModal('buy-free')">Klaim Gratis</button>
+  </div>
+</div>
+
+<!-- Modal: Buy Paid -->
+<div class="modal-overlay" id="modal-buy-paid" onclick="closeModal('buy-paid')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--gold)">🥇 BELI ITEM</div>
+    <div style="text-align:center; padding: 16px 0;">
+      <div style="font-size:48px; margin-bottom:8px;">🎨</div>
+      <div style="font-size:18px; font-weight:700; margin-bottom:4px;">Frame Profil Eksklusif</div>
+      <div style="font-size:13px; color:var(--text-dim); margin-bottom:12px;">Frame Galantara Season 1 — Limited</div>
+      <div style="font-family:'Orbitron',sans-serif; font-size:24px; font-weight:700; color:var(--gold);">50 GLD</div>
+      <div style="font-size:12px; color:var(--text-muted);">= Rp 500.000</div>
+    </div>
+    <button class="modal-btn" style="background:linear-gradient(135deg,var(--gold),#D97706); color:#000;" onclick="closeModal('buy-paid')">Konfirmasi Pembelian</button>
+  </div>
+</div>
+
+<!-- Modal: Logout -->
+<div class="modal-overlay" id="modal-logout" onclick="closeModal('logout')">
+  <div class="modal-sheet" onclick="event.stopPropagation()">
+    <div class="modal-handle"></div>
+    <div class="modal-title" style="color:var(--danger)">🚪 KELUAR</div>
+    <p style="text-align:center; color:var(--text-dim); font-size:14px; margin-bottom:20px;">Yakin ingin keluar dari akun Mighan Wallet?</p>
+    <button class="modal-btn" style="background:linear-gradient(135deg,var(--danger),#DC2626);" onclick="closeModal('logout')">Ya, Keluar</button>
+    <button onclick="closeModal('logout')" style="width:100%; padding:12px; background:transparent; border:1px solid var(--card-border); border-radius:14px; color:var(--text-dim); font-family:'Space Grotesk',sans-serif; font-size:14px; cursor:pointer; margin-top:8px;">Batal</button>
+  </div>
+</div>
+
+<script>
+// ─── STARS BACKGROUND ───
+const canvas = document.getElementById('stars');
+const ctx = canvas.getContext('2d');
+function resize() {
+  canvas.width = window.innerWidth;
+  canvas.height = window.innerHeight;
+}
+resize();
+window.addEventListener('resize', resize);
+
+const stars = Array.from({length: 160}, () => ({
+  x: Math.random(), y: Math.random(),
+  r: Math.random() * 1.2 + 0.3,
+  a: Math.random(),
+  da: (Math.random() - 0.5) * 0.008
+}));
+
+// Nebula blobs
+const nebulas = [
+  { x: 0.2, y: 0.3, r: 200, c: 'rgba(124,58,237,0.08)' },
+  { x: 0.8, y: 0.6, r: 180, c: 'rgba(56,189,248,0.06)' },
+  { x: 0.5, y: 0.8, r: 220, c: 'rgba(124,58,237,0.05)' },
+];
+
+function drawStars() {
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+  // nebulas
+  nebulas.forEach(n => {
+    const grd = ctx.createRadialGradient(n.x*canvas.width, n.y*canvas.height, 0, n.x*canvas.width, n.y*canvas.height, n.r);
+    grd.addColorStop(0, n.c);
+    grd.addColorStop(1, 'transparent');
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.arc(n.x*canvas.width, n.y*canvas.height, n.r, 0, Math.PI*2);
+    ctx.fill();
+  });
+  // stars
+  stars.forEach(s => {
+    s.a += s.da;
+    if (s.a > 1 || s.a < 0) s.da *= -1;
+    ctx.beginPath();
+    ctx.arc(s.x * canvas.width, s.y * canvas.height, s.r, 0, Math.PI * 2);
+    ctx.fillStyle = `rgba(255,255,255,${s.a * 0.8})`;
+    ctx.fill();
+  });
+  requestAnimationFrame(drawStars);
+}
+drawStars();
+
+// ─── TAB SWITCHING ───
+function switchTab(tab) {
+  document.querySelectorAll('.screen').forEach(s => s.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n => n.classList.remove('active'));
+  document.getElementById('screen-' + tab).classList.add('active');
+  document.getElementById('nav-' + tab).classList.add('active');
+}
+
+// ─── MODALS ───
+function showModal(id) {
+  document.getElementById('modal-' + id).classList.add('show');
+}
+function closeModal(id) {
+  document.getElementById('modal-' + id).classList.remove('show');
+}
+
+// ─── SHOP FILTER ───
+function filterShop(el, cat) {
+  document.querySelectorAll('.shop-filters .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─── HISTORY FILTER ───
+function filterHistory(el) {
+  document.querySelectorAll('.history-filters .filter-chip').forEach(c => c.classList.remove('active'));
+  el.classList.add('active');
+}
+
+// ─── PACK SELECT ───
+function selectPack(el) {
+  el.closest('.pack-grid').querySelectorAll('.pack-item').forEach(p => p.classList.remove('selected'));
+  el.classList.add('selected');
+}
+</script>
+</body>
+</html>

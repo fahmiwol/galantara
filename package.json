@@ -1,0 +1,14 @@
+{
+  "name": "galantara-repo",
+  "version": "0.5.1",
+  "private": true,
+  "description": "Galantara — static web (Three.js + ES modules) + Socket.io multiplayer server",
+  "engines": {
+    "node": ">=18"
+  },
+  "scripts": {
+    "install:server": "cd galantara-server && npm install",
+    "server": "cd galantara-server && npm start",
+    "server:dev": "cd galantara-server && npm run dev"
+  }
+}

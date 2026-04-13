@@ -1,0 +1,59 @@
+{
+  "name": "Oola Island",
+  "version": "1.0",
+  "environment": {
+    "skyColor": "0x87CEEB",
+    "groundColor": "0x7BC67E"
+  },
+  "objects": [
+    {
+      "id": "landmark_purple_tree",
+      "type": "native",
+      "method": "_buildPurpleTree",
+      "pos": { "x": 0, "y": 0, "z": 0 }
+    },
+    {
+      "id": "warp_portal",
+      "type": "native",
+      "method": "_buildWarpPortal",
+      "pos": { "x": -7, "y": 0, "z": -2 }
+    },
+    {
+      "id": "info_board",
+      "type": "native",
+      "method": "_buildInfoBoard",
+      "pos": { "x": 1, "y": 0, "z": 0 }
+    },
+    {
+      "id": "suggestion_box",
+      "type": "native",
+      "method": "_buildSuggestionBox",
+      "pos": { "x": -9, "y": 0, "z": 3 }
+    },
+    {
+      "id": "dev_hub",
+      "type": "native",
+      "method": "_buildDevHub",
+      "pos": { "x": 8, "y": 0, "z": -2.5 }
+    },
+    {
+      "id": "bench_1",
+      "type": "native",
+      "method": "_buildBench",
+      "pos": { "x": 3, "y": 0.2, "z": -2 }
+    },
+    {
+      "id": "bench_2",
+      "type": "native",
+      "method": "_buildBench",
+      "pos": { "x": -4, "y": 0.2, "z": 1 }
+    },
+    {
+      "id": "bench_3",
+      "type": "native",
+      "method": "_buildBench",
+      "pos": { "x": 0, "y": 0.2, "z": -6 }
+    }
+  ],
+  "procedural_props": []
+}

@@ -1,0 +1,742 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Galantara — Pasar malam digital Indonesia</title>
+  <meta name="description" content="Bukan marketplace. Bukan social media. Dunia virtual di peta Indonesia — masih awal, dibangun bareng. Coba Oola, kasih saran, atau ikut bangun.">
+  <meta property="og:title" content="Galantara — Pasar malam digital Indonesia">
+  <meta property="og:description" content="Movement masih kecil. Kamu bisa jadi yang pertama.">
+  <meta property="og:url" content="https://galantara.io/about.html">
+  <meta property="og:type" content="website">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Syne:wght@600;700;800&family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --void: #030208;
+      --deep: #0a0618;
+      --panel: rgba(12, 8, 32, 0.78);
+      --stroke: rgba(139, 92, 246, 0.35);
+      --cyan: #22d3ee;
+      --cyan-dim: rgba(34, 211, 238, 0.15);
+      --vio: #a78bfa;
+      --vio-hot: #8b5cf6;
+      --gold: #fbbf24;
+      --ink: #f1f0f7;
+      --muted: #9088a8;
+      --danger: #fb7185;
+    }
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+    html { scroll-behavior: smooth; }
+    @media (prefers-reduced-motion: reduce) {
+      html { scroll-behavior: auto; }
+      .reveal { animation: none !important; opacity: 1 !important; transform: none !important; }
+    }
+    body {
+      font-family: 'Nunito', system-ui, sans-serif;
+      color: var(--ink);
+      background: radial-gradient(120% 80% at 50% -20%, #1e1b4b 0%, var(--void) 45%, #020617 100%);
+      line-height: 1.55;
+      font-size: 17px;
+      min-height: 100vh;
+    }
+    #fx-canvas {
+      position: fixed;
+      inset: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 0;
+      pointer-events: none;
+      display: block;
+    }
+    .page { position: relative; z-index: 1; min-height: 100vh; }
+    .grain {
+      position: fixed;
+      inset: 0;
+      z-index: 2;
+      pointer-events: none;
+      opacity: 0.035;
+      background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+    }
+    .grid-bg {
+      position: fixed;
+      inset: 0;
+      z-index: 1;
+      pointer-events: none;
+      opacity: 0.04;
+      background-image: linear-gradient(rgba(139,92,246,0.5) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(139,92,246,0.5) 1px, transparent 1px);
+      background-size: 48px 48px;
+    }
+    nav {
+      position: sticky;
+      top: 0;
+      z-index: 40;
+      background: linear-gradient(180deg, rgba(3,2,8,0.92) 0%, rgba(3,2,8,0.65) 100%);
+      backdrop-filter: blur(16px);
+      border-bottom: 1px solid var(--stroke);
+    }
+    nav .inner {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 14px 22px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+    nav .brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.05rem;
+      letter-spacing: 0.06em;
+      background: linear-gradient(90deg, var(--cyan), var(--vio), var(--gold));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    nav .links {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px 18px;
+      font-size: 12px;
+      font-weight: 800;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    nav a {
+      color: var(--muted);
+      text-decoration: none;
+    }
+    nav a:hover { color: var(--cyan); }
+    nav .nav-cta {
+      padding: 8px 16px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, var(--vio-hot), #6366f1);
+      color: #fff !important;
+      font-size: 11px;
+    }
+    nav .nav-cta:hover { filter: brightness(1.08); color: #fff !important; }
+    .wrap { max-width: 720px; margin: 0 auto; padding: 0 22px 120px; }
+    .wrap-wide { max-width: 900px; margin: 0 auto; padding: 0 22px; }
+    /* Hero */
+    .hero {
+      text-align: center;
+      padding: min(12vh, 100px) 0 56px;
+    }
+    .hero .kicker {
+      font-size: 10px;
+      font-weight: 900;
+      letter-spacing: 0.28em;
+      text-transform: uppercase;
+      color: var(--cyan);
+      margin-bottom: 20px;
+      text-shadow: 0 0 40px rgba(34, 211, 238, 0.5);
+    }
+    .hero h1 {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(2rem, 6.5vw, 3.35rem);
+      line-height: 1.05;
+      letter-spacing: -0.03em;
+      margin-bottom: 20px;
+      color: #fff;
+    }
+    .hero h1 .line-accent {
+      display: block;
+      background: linear-gradient(135deg, #fff 0%, var(--vio) 50%, var(--cyan) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+    .hero .sub {
+      font-size: clamp(1rem, 2.8vw, 1.2rem);
+      font-weight: 700;
+      color: var(--muted);
+      max-width: 520px;
+      margin: 0 auto 10px;
+    }
+    .hero .sub strong { color: #e9d5ff; }
+    .hero .micro {
+      font-size: 13px;
+      color: var(--muted);
+      margin-bottom: 28px;
+      font-weight: 600;
+    }
+    .cta-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: center;
+      align-items: center;
+    }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      padding: 14px 24px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 13px;
+      border: none;
+      cursor: pointer;
+      font-family: inherit;
+      text-decoration: none;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+      transition: transform 0.15s, filter 0.15s, box-shadow 0.2s;
+    }
+    .btn:active { transform: scale(0.97); }
+    .btn-pri {
+      background: linear-gradient(135deg, #7c3aed, #4f46e5, #2563eb);
+      color: #fff;
+      box-shadow: 0 0 40px rgba(124, 58, 237, 0.45), 0 4px 24px rgba(0,0,0,0.4);
+    }
+    .btn-pri:hover { filter: brightness(1.1); }
+    .btn-sec {
+      background: transparent;
+      color: var(--cyan);
+      border: 1px solid rgba(34, 211, 238, 0.5);
+      box-shadow: 0 0 24px var(--cyan-dim);
+    }
+    .btn-sec:hover { background: var(--cyan-dim); }
+    .btn-ghost {
+      background: rgba(255,255,255,0.05);
+      color: var(--ink);
+      border: 1px solid var(--stroke);
+    }
+    .btn-ghost:hover { border-color: var(--vio); color: var(--vio); }
+    /* Sections */
+    section { margin-top: clamp(56px, 10vw, 88px); }
+    .reveal {
+      opacity: 0;
+      transform: translateY(22px);
+      animation: rise 0.85s ease forwards;
+    }
+    .reveal.d1 { animation-delay: 0.08s; }
+    .reveal.d2 { animation-delay: 0.16s; }
+    @keyframes rise {
+      to { opacity: 1; transform: translateY(0); }
+    }
+    .block-punch {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: clamp(1.35rem, 4vw, 1.85rem);
+      line-height: 1.35;
+      color: #fff;
+      text-align: center;
+      padding: 36px 0;
+      border-top: 1px solid var(--stroke);
+      border-bottom: 1px solid var(--stroke);
+    }
+    .block-punch p { margin-bottom: 0.85em; }
+    .block-punch p:last-child { margin-bottom: 0; }
+    .block-punch .hot { color: var(--danger); font-weight: 800; }
+    h2.section-title {
+      font-family: 'Syne', sans-serif;
+      font-size: clamp(1.15rem, 3vw, 1.4rem);
+      font-weight: 800;
+      letter-spacing: 0.02em;
+      margin-bottom: 16px;
+      color: var(--cyan);
+    }
+    .card {
+      background: var(--panel);
+      border-radius: 22px;
+      padding: 26px 28px;
+      border: 1px solid var(--stroke);
+      box-shadow: 0 20px 60px rgba(0, 0, 0, 0.4);
+      backdrop-filter: blur(14px);
+    }
+    .card p { color: #c4b8dc; margin-bottom: 14px; }
+    .card p:last-child { margin-bottom: 0; }
+    .card strong { color: #fff; }
+    ul.strike {
+      list-style: none;
+      margin: 16px 0 0;
+    }
+    ul.strike li {
+      position: relative;
+      padding-left: 1.35rem;
+      margin-bottom: 12px;
+      color: #c4b8dc;
+      font-weight: 600;
+    }
+    ul.strike li::before {
+      content: '→';
+      position: absolute;
+      left: 0;
+      color: var(--cyan);
+      font-weight: 900;
+    }
+    .gate {
+      margin-top: 72px;
+      padding: 28px 24px;
+      text-align: center;
+      border-radius: 20px;
+      border: 1px dashed rgba(251, 113, 133, 0.35);
+      background: rgba(251, 113, 133, 0.06);
+    }
+    .gate p {
+      font-family: 'Syne', sans-serif;
+      font-weight: 700;
+      font-size: 1.05rem;
+      color: #fda4af;
+      margin-bottom: 8px;
+    }
+    .gate span { font-size: 14px; color: var(--muted); font-weight: 600; }
+    .fomo-fin {
+      text-align: center;
+      padding: 48px 20px 32px;
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: clamp(1.2rem, 3.5vw, 1.55rem);
+      line-height: 1.4;
+      color: #fff;
+      text-shadow: 0 0 60px rgba(167, 139, 250, 0.35);
+    }
+    table.ch {
+      width: 100%;
+      border-collapse: collapse;
+      font-size: 13px;
+      margin-top: 8px;
+    }
+    table.ch th, table.ch td {
+      text-align: left;
+      padding: 10px 8px;
+      border-bottom: 1px solid rgba(139, 92, 246, 0.12);
+    }
+    table.ch th {
+      font-size: 10px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--muted);
+    }
+    .note { font-size: 12px; color: var(--muted); margin-top: 14px; font-weight: 600; }
+    .contrib-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .contrib-card {
+      padding: 14px 16px;
+      border-radius: 14px;
+      background: rgba(3, 2, 8, 0.55);
+      border: 1px solid var(--stroke);
+    }
+    .contrib-card strong { display: block; color: #fff; margin-bottom: 4px; font-size: 15px; }
+    .contrib-card span { font-size: 12px; color: var(--muted); }
+    #form-saran textarea {
+      width: 100%;
+      min-height: 120px;
+      padding: 16px;
+      border-radius: 16px;
+      border: 1px solid var(--stroke);
+      font-family: inherit;
+      font-size: 15px;
+      resize: vertical;
+      background: rgba(3, 2, 8, 0.65);
+      color: var(--ink);
+    }
+    #form-saran .btn { margin-top: 12px; }
+    footer {
+      margin-top: 80px;
+      padding: 36px 22px 48px;
+      border-top: 1px solid var(--stroke);
+      text-align: center;
+    }
+    footer .foot-brand {
+      font-family: 'Syne', sans-serif;
+      font-weight: 800;
+      font-size: 1.1rem;
+      letter-spacing: 0.12em;
+      color: var(--vio);
+      margin-bottom: 16px;
+    }
+    footer .social { margin: 16px 0; font-size: 14px; font-weight: 700; }
+    footer .social a { color: var(--cyan); text-decoration: none; margin: 0 10px; }
+    footer .social a:hover { text-decoration: underline; }
+    footer .social .soon { color: var(--muted); margin: 0 10px; cursor: default; }
+    footer .tiny { font-size: 12px; color: var(--muted); margin-top: 20px; }
+    footer .tiny a { color: var(--vio); }
+    code { font-size: 0.88em; color: var(--gold); }
+  </style>
+</head>
+<body>
+  <canvas id="fx-canvas" aria-hidden="true"></canvas>
+  <div class="grid-bg" aria-hidden="true"></div>
+  <div class="grain" aria-hidden="true"></div>
+  <div class="page">
+    <nav>
+      <div class="inner">
+        <span class="brand">GALANTARA</span>
+        <div class="links">
+          <a href="#punch">Gerakan</a>
+          <a href="#beda">Beda</a>
+          <a href="#kontribusi">Bangun</a>
+          <a href="#changelog">Progress</a>
+          <a href="#kotak-saran">Saran</a>
+        </div>
+        <a class="nav-cta" href="index.html">Coba Oola</a>
+      </div>
+    </nav>
+
+    <div class="wrap-wide">
+      <header class="hero reveal">
+        <p class="kicker">Early movement · belum ramai — sengaja</p>
+        <h1>
+          Internet bikin semua cepat.
+          <span class="line-accent">Banyak yang dingin.</span>
+        </h1>
+        <p class="sub">
+          Bukan marketplace. Bukan social media.<br>
+          Ini <strong>pasar malam digital Indonesia</strong> — nongkrong, jualan, live, di peta.
+        </p>
+        <p class="micro">Prototype sudah jalan di browser. Nama kotanya: <strong>Oola</strong>. Sisanya? Kita bangun bareng.</p>
+        <div class="cta-row">
+          <a class="btn btn-pri" href="index.html">Masuk sekarang</a>
+          <a class="btn btn-sec" href="mailto:hello@galantara.io?subject=Galantara%20—%20early%20interest">Join early</a>
+          <a class="btn btn-ghost" href="#kontribusi">Ikut bangun</a>
+        </div>
+      </header>
+    </div>
+
+    <div class="wrap">
+      <div id="punch" class="block-punch reveal d1">
+        <p>Marketplace bikin semua jadi <span class="hot">transaksi</span>.</p>
+        <p>Social media bikin semua jadi <span class="hot">tontonan</span>.</p>
+        <p style="margin-top:1.2em;color:#c4b8dc;font-family:'Nunito',sans-serif;font-size:clamp(0.95rem,2.5vw,1.05rem);font-weight:700">
+          Tapi manusia? Masih butuh nongkrong. Masih butuh ketemu. Masih butuh ngobrol.
+        </p>
+      </div>
+
+      <section id="shift" class="reveal d2">
+        <h2 class="section-title">Ini solusinya (tanpa basa-basi)</h2>
+        <div class="card">
+          <p>Kami nggak bikin “aplikasi” doang. Kami naruh <strong>dunia</strong> di depan kamu.</p>
+          <p>Buka <strong>peta Indonesia</strong>. Klik satu titik. Masuk.</p>
+          <p>Ada orang. Ada suara. Ada yang jualan. Ada yang live. Itu <strong>Galantara</strong>.</p>
+        </div>
+      </section>
+
+      <section id="beda">
+        <h2 class="section-title">Kenapa ini beda</h2>
+        <div class="card">
+          <p>Ini bukan sekadar visual cantik. Ini yang <strong>hidup</strong> — atau setidaknya arahnya ke sana.</p>
+          <ul class="strike">
+            <li><strong>Lokasi nyata</strong> → trust bukan fiksi</li>
+            <li><strong>Orang beneran</strong> → bukan bot ngobrol ke kamu</li>
+            <li><strong>Dunia bisa dibangun</strong> → developer &amp; artist punya tempat</li>
+            <li><strong>Platform</strong> → bukan game sekali main lalu selesai</li>
+          </ul>
+        </div>
+      </section>
+
+      <section id="siapa">
+        <h2 class="section-title">Ini buat siapa</h2>
+        <div class="card">
+          <p>Kalau kamu:</p>
+          <ul class="strike">
+            <li>udah bosan marketplace yang mati rasa</li>
+            <li>ngerasa social media makin <em>fake</em></li>
+            <li>pengen <strong>bikin</strong> sesuatu, bukan cuma konsumsi</li>
+          </ul>
+          <p style="margin-top:18px">Mungkin ini tempat kamu.</p>
+        </div>
+      </section>
+
+      <section id="status">
+        <h2 class="section-title">Status: jujur aja</h2>
+        <div class="card">
+          <p>Ini masih <strong>awal</strong>. Prototype jalan. Core system masih ditempa. Banyak yang belum jadi.</p>
+          <p>Dan itu justru kenapa kamu harus <strong>masuk sekarang</strong> — bukan nanti pas semua rapi (karena pas rapi, kamu cuma jadi penonton).</p>
+        </div>
+      </section>
+
+      <section id="build">
+        <h2 class="section-title">Build in public</h2>
+        <div class="card">
+          <p>Kami nggak pura-pura sempurna. Kami bikin, rusak, benerin, ulang.</p>
+          <p>Catatan rilis &amp; arah teknis ada di repo — mulai dari <code>CHANGELOG.md</code> &amp; <code>docs/AGENT_SHARED_KNOWLEDGE.md</code>.</p>
+          <p class="note">Mau lihat proses? Scroll ke <a href="#changelog" style="color:var(--cyan)">progress</a> atau langsung coba <a href="index.html" style="color:var(--cyan)">Oola</a>.</p>
+        </div>
+      </section>
+
+      <section id="kontribusi">
+        <h2 class="section-title">Kami butuh orang gila</h2>
+        <div class="card">
+          <p>Serius.</p>
+          <ul class="strike">
+            <li>Developer — Three.js, web, backend</li>
+            <li>3D artist — low poly / stylized</li>
+            <li>Designer &amp; builder</li>
+            <li>yang punya ide <strong>liar</strong> tapi masuk akal</li>
+          </ul>
+          <p style="margin-top:20px">Cuma mau jadi user? <strong>Nggak apa-apa</strong> — tapi yang kami cari sekarang: yang mau <strong>ikut ngebangun</strong>.</p>
+          <div class="cta-row" style="margin-top:22px; justify-content:flex-start">
+            <a class="btn btn-pri" href="#kotak-saran">Kasih ide / minat</a>
+            <a class="btn btn-sec" href="mailto:hello@galantara.io?subject=Kontributor%20Galantara">Jadi kontributor</a>
+            <span class="btn btn-ghost" style="cursor:default;opacity:0.75" title="Repo publik menyusul">GitHub soon</span>
+          </div>
+          <p class="note">Visi open source (MIT untuk core) sedang disiapkan bersama struktur repo publik.</p>
+        </div>
+      </section>
+
+      <section id="dewan">
+        <h2 class="section-title">Yang udah nempel di depan</h2>
+        <div class="card">
+          <p>Early names — dari <code>data/contributors.json</code> (update + deploy bareng situs).</p>
+          <div id="contrib-mount" class="contrib-grid">
+            <div class="contrib-card"><strong>Memuat…</strong><span></span></div>
+          </div>
+          <p class="note">Maintainer: <a href="admin.html">konsol ringkas</a> (token server).</p>
+        </div>
+      </section>
+
+      <section id="money">
+        <h2 class="section-title">Uang? Iya, kita butuh</h2>
+        <div class="card">
+          <p>Project ini belum gede. Belum funding gede. Belum tim gede.</p>
+          <p>Tapi punya <strong>arah</strong>. Kalau kamu lihat potensi yang sama kayak kami lihat:</p>
+          <ul class="strike">
+            <li>bantu <strong>development</strong> &amp; infrastruktur</li>
+            <li>jadi <strong>partner</strong> awal</li>
+            <li>atau sekadar <strong>donasi</strong> biar server tetap nyala</li>
+          </ul>
+          <div class="cta-row" style="margin-top:22px; justify-content:flex-start">
+            <a class="btn btn-pri" href="mailto:hello@galantara.io?subject=Support%20%2F%20Partner%20Galantara">Support / partner</a>
+            <a class="btn btn-ghost" href="#kotak-saran">Tanya dulu</a>
+          </div>
+          <p class="note">Kanal donasi publik (Trakteer / Saweria) akan dipasang — sementara email dulu.</p>
+        </div>
+      </section>
+
+      <section id="changelog">
+        <h2 class="section-title">Progress nyata</h2>
+        <div class="card">
+          <p>Beberapa langkah terakhir (detail di <code>CHANGELOG.md</code>):</p>
+          <table class="ch">
+            <thead><tr><th>Versi</th><th>Tanggal</th><th>Sorotan</th></tr></thead>
+            <tbody>
+              <tr><td>v0.5.7</td><td>2026-04-13</td><td>Landing + konsol maintainer + API admin.</td></tr>
+              <tr><td>v0.5.6</td><td>2026-04-13</td><td>Menu &amp; zona → halaman tentang.</td></tr>
+              <tr><td>v0.5.1</td><td>2026-04-13</td><td>Multiplayer tamu; chat &amp; voice untuk user login.</td></tr>
+              <tr><td>v0.5.0</td><td>2026-04-12</td><td>Chat sidebar, proximity voice.</td></tr>
+            </tbody>
+          </table>
+          <p class="note">Wallet Mighan &amp; ekonomi penuh: masih jalan — lihat <code>TODO.md</code>.</p>
+        </div>
+      </section>
+
+      <section id="fomo">
+        <p class="fomo-fin">
+          Ini masih kecil. Sepi. Belum banyak yang tahu.<br>
+          Tapi kalau ini jadi besar —<br>
+          <span style="color:var(--cyan)">yang di sini sekarang, yang pertama.</span>
+        </p>
+      </section>
+
+      <section id="kotak-saran">
+        <h2 class="section-title">Kotak saran · kasih kami kenyataan</h2>
+        <div class="card">
+          <p>Ide, roast yang membangun, bug, atau “gue mau bantu” — kirim lewat email.</p>
+          <form id="form-saran" onsubmit="return false;">
+            <textarea id="saran-body" placeholder="Tulis di sini. Jangan filter terlalu keras."></textarea>
+            <button type="button" class="btn btn-pri" id="saran-send">Kirim</button>
+          </form>
+        </div>
+      </section>
+
+      <div class="gate">
+        <p>Bukan buat semua orang.</p>
+        <span>Cari yang udah jadi &amp; rapi? Tutup tab ini.<br>Mau ikut bikin dari nol? <strong>Scroll balik ke atas</strong> — masuk Oola.</span>
+      </div>
+    </div>
+
+    <footer>
+      <p class="foot-brand">GALANTARA</p>
+      <p class="social">
+        <a href="mailto:hello@galantara.io">Email</a>
+        <span class="soon" title="Segera">Discord</span>
+        <span class="soon" title="Setelah repo publik">GitHub</span>
+      </p>
+      <p><a class="btn btn-sec" href="index.html">← Masuk Oola</a></p>
+      <p class="tiny">Pasar malam digital Indonesia · <a href="admin.html">maintainer</a></p>
+    </footer>
+  </div>
+
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+  <script>
+    (function oolaSky() {
+      if (typeof THREE === 'undefined') return;
+      var canvas = document.getElementById('fx-canvas');
+      var renderer = new THREE.WebGLRenderer({ canvas: canvas, alpha: true, antialias: true });
+      renderer.setClearColor(0x000000, 0);
+      renderer.setPixelRatio(Math.min(window.devicePixelRatio || 1, 2));
+      var scene = new THREE.Scene();
+      var camera = new THREE.PerspectiveCamera(48, 1, 0.1, 120);
+      camera.position.set(0, 5.5, 20);
+      scene.add(new THREE.AmbientLight(0x4c1d95, 0.4));
+      var hemi = new THREE.HemisphereLight(0x818cf8, 0x020617, 0.9);
+      scene.add(hemi);
+      var dir = new THREE.DirectionalLight(0x67e8f9, 0.35);
+      dir.position.set(5, 18, 10);
+      scene.add(dir);
+      var island = new THREE.Group();
+      var base = new THREE.Mesh(
+        new THREE.CylinderGeometry(5.2, 6.8, 1.8, 8, 1),
+        new THREE.MeshStandardMaterial({ color: 0x312e81, roughness: 0.88, metalness: 0.12 })
+      );
+      base.position.y = -0.2;
+      island.add(base);
+      var top = new THREE.Mesh(
+        new THREE.CylinderGeometry(4.3, 5.1, 0.55, 10, 1),
+        new THREE.MeshStandardMaterial({
+          color: 0x134e4a,
+          roughness: 0.75,
+          emissive: 0x115e59,
+          emissiveIntensity: 0.25,
+        })
+      );
+      top.position.y = 0.95;
+      island.add(top);
+      var orb = new THREE.Mesh(
+        new THREE.IcosahedronGeometry(0.5, 1),
+        new THREE.MeshStandardMaterial({
+          color: 0x22d3ee,
+          emissive: 0x06b6d4,
+          emissiveIntensity: 0.55,
+          metalness: 0.4,
+          roughness: 0.2,
+        })
+      );
+      orb.position.set(0, 2.9, 0);
+      island.add(orb);
+      for (var i = 0; i < 4; i++) {
+        var tr = new THREE.Mesh(
+          new THREE.ConeGeometry(0.45, 1.35, 6),
+          new THREE.MeshStandardMaterial({ color: 0x0d9488, flatShading: true })
+        );
+        var ang = (i / 4) * Math.PI * 2 + 0.4;
+        tr.position.set(Math.cos(ang) * 3.4, 1.15, Math.sin(ang) * 3.4);
+        island.add(tr);
+      }
+      scene.add(island);
+      var N = 100;
+      var positions = new Float32Array(N * 3);
+      for (var j = 0; j < N; j++) {
+        positions[j * 3] = (Math.random() - 0.5) * 70;
+        positions[j * 3 + 1] = Math.random() * 28 + 2;
+        positions[j * 3 + 2] = (Math.random() - 0.5) * 70;
+      }
+      var pGeo = new THREE.BufferGeometry();
+      pGeo.setAttribute('position', new THREE.BufferAttribute(positions, 3));
+      var fireflies = new THREE.Points(
+        pGeo,
+        new THREE.PointsMaterial({
+          color: 0xa78bfa,
+          size: 0.11,
+          transparent: true,
+          opacity: 0.72,
+          depthWrite: false,
+        })
+      );
+      scene.add(fireflies);
+      var tx = 0,
+        ty = 0,
+        mx = 0,
+        my = 0;
+      window.addEventListener(
+        'pointermove',
+        function (e) {
+          tx = (e.clientX / window.innerWidth) * 2 - 1;
+          ty = (e.clientY / window.innerHeight) * 2 - 1;
+        },
+        { passive: true }
+      );
+      function resize() {
+        var w = window.innerWidth,
+          h = window.innerHeight;
+        renderer.setSize(w, h, false);
+        camera.aspect = w / h;
+        camera.updateProjectionMatrix();
+      }
+      window.addEventListener('resize', resize);
+      resize();
+      var clock = new THREE.Clock();
+      function tick() {
+        var t = clock.getElapsedTime();
+        mx += (tx - mx) * 0.045;
+        my += (ty - my) * 0.045;
+        island.rotation.y = t * 0.07 + mx * 0.4;
+        island.rotation.x = my * 0.1;
+        orb.position.y = 2.9 + Math.sin(t * 1.5) * 0.22;
+        orb.rotation.y = t * 0.6;
+        fireflies.rotation.y = t * 0.018;
+        renderer.render(scene, camera);
+        requestAnimationFrame(tick);
+      }
+      tick();
+    })();
+
+    (function contributors() {
+      var mount = document.getElementById('contrib-mount');
+      function card(name, role, link) {
+        var d = document.createElement('div');
+        d.className = 'contrib-card';
+        var strong = document.createElement('strong');
+        strong.textContent = name;
+        d.appendChild(strong);
+        var span = document.createElement('span');
+        span.textContent = role || '';
+        d.appendChild(span);
+        if (link) {
+          var a = document.createElement('a');
+          a.href = link;
+          a.textContent = 'Tautan';
+          a.style.display = 'block';
+          a.style.marginTop = '8px';
+          a.style.fontSize = '12px';
+          a.style.color = 'var(--cyan)';
+          d.appendChild(a);
+        }
+        return d;
+      }
+      function fallback() {
+        mount.innerHTML = '';
+        mount.appendChild(card('Kamu?', 'Update data/contributors.json', ''));
+      }
+      fetch('data/contributors.json', { cache: 'no-store' })
+        .then(function (r) {
+          if (!r.ok) throw new Error();
+          return r.json();
+        })
+        .then(function (data) {
+          mount.innerHTML = '';
+          var lists = [].concat(data.maintainers || [], data.contributors || []);
+          if (!lists.length) return fallback();
+          lists.forEach(function (p) {
+            mount.appendChild(card(p.name, p.role, p.link));
+          });
+        })
+        .catch(fallback);
+    })();
+
+    (function mailto() {
+      var FEEDBACK_EMAIL = 'hello@galantara.io';
+      document.getElementById('saran-send').addEventListener('click', function () {
+        var body = document.getElementById('saran-body').value.trim();
+        if (!body) {
+          alert('Isi dulu. Sejujur itu aja.');
+          return;
+        }
+        var sub = encodeURIComponent('[Galantara] Saran / kontribusi');
+        window.location.href =
+          'mailto:' + FEEDBACK_EMAIL + '?subject=' + sub + '&body=' + encodeURIComponent(body);
+      });
+    })();
+  </script>
+</body>
+</html>

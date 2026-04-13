@@ -1,0 +1,1673 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Galantara — Pasar Malam Digital Indonesia</title>
+<meta name="description" content="Galantara adalah platform social-commerce hyperlocal berbasis peta Indonesia. Nongkrong, jualan, ngamen, live streaming — semua di satu dunia virtual.">
+<meta property="og:title" content="Galantara — Pasar Malam Digital Indonesia">
+<meta property="og:description" content="Masuk ke Oola, jalan-jalan di dunia virtual Indonesia. Gratis, tanpa download.">
+<meta property="og:url" content="https://galantara.io">
+<meta property="og:type" content="website">
+<!-- Google Analytics -->
+<script async src="https://www.googletagmanager.com/gtag/js?id=G-WNDQL8J455"></script>
+<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-WNDQL8J455');</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js"></script>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap');
+*{box-sizing:border-box;margin:0;padding:0}
+html,body{width:100%;height:100%;overflow:hidden;font-family:'Nunito',sans-serif;background:#87CEEB}
+canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!important}
+
+#hud{position:absolute;top:0;left:0;right:0;height:50px;background:rgba(255,255,255,0.2);backdrop-filter:blur(12px);border-bottom:1px solid rgba(255,255,255,0.4);display:flex;align-items:center;justify-content:space-between;padding:0 14px;z-index:50}
+.logo{font-size:18px;font-weight:900;background:linear-gradient(90deg,#7C3AED,#38BDF8);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.hud-mid{font-size:11px;font-weight:700;color:rgba(30,16,64,0.55);display:flex;align-items:center;gap:5px}
+.hud-r{display:flex;align-items:center;gap:7px}
+.pill{border-radius:20px;padding:5px 11px;font-size:11px;font-weight:800;display:flex;align-items:center;gap:5px;cursor:pointer;border:1px solid}
+.pill-green{background:rgba(34,197,94,0.12);border-color:rgba(34,197,94,0.3);color:#15803d}
+.pill-amber{background:rgba(255,255,255,0.8);border-color:rgba(245,158,11,0.3);color:#B45309;display:none}
+.pill-amber:hover{background:#fff}
+.hud-btn{background:rgba(255,255,255,0.7);border:1px solid rgba(255,255,255,0.5);border-radius:20px;padding:5px 13px;font-size:11px;font-weight:700;color:#4B5563;cursor:pointer;font-family:'Nunito',sans-serif}
+.hud-btn:hover{background:#fff}
+.od{width:6px;height:6px;border-radius:50%;background:#22C55E;animation:pu 1.5s infinite}
+@keyframes pu{0%,100%{opacity:1}50%{opacity:.35}}
+
+/* BOTTOM */
+#login-gate{position:absolute;bottom:0;left:0;right:0;height:58px;background:rgba(255,255,255,0.9);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.6);display:flex;align-items:center;justify-content:center;gap:10px;z-index:50}
+#bottom-bar{position:absolute;bottom:0;left:0;right:0;height:68px;background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.6);display:none;align-items:center;justify-content:space-around;padding:0 8px 4px;z-index:50}
+#bottom-bar.on{display:flex}
+.bb{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:5px 8px;border-radius:12px;border:none;background:transparent;font-family:'Nunito',sans-serif;transition:all .15s}
+.bb:hover{background:rgba(124,58,237,0.08);transform:translateY(-2px)}
+.bb-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
+.bb-t{font-size:9px;font-weight:800;color:#6B7280}
+.bb.act .bb-t{color:#7C3AED}
+.bb.act .bb-ic{background:rgba(124,58,237,0.12)}
+.lg-t{font-size:12px;color:#6B7280;font-weight:600}
+.lg-b{background:linear-gradient(135deg,#7C3AED,#6366F1);border:none;border-radius:20px;padding:8px 18px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif}
+
+/* DPAD */
+#dpad{position:absolute;bottom:70px;right:14px;z-index:50;display:grid;grid-template:repeat(3,44px)/repeat(3,44px);gap:4px}
+.dp{background:rgba(255,255,255,0.72);border:2px solid rgba(255,255,255,0.9);border-radius:11px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:17px;color:#4B5563;user-select:none;-webkit-user-select:none;box-shadow:0 2px 6px rgba(0,0,0,0.1);transition:all .1s}
+.dp:active,.dp.pr{background:rgba(124,58,237,0.22);border-color:rgba(124,58,237,0.5);transform:scale(.93)}
+.dp-c{background:rgba(124,58,237,0.1);border-color:rgba(124,58,237,0.3);color:#7C3AED;font-size:10px;font-weight:900}
+
+/* ORBIT — 2 buttons only, left side, subtle */
+#orbit{position:absolute;bottom:70px;left:14px;z-index:50;display:flex;flex-direction:column;gap:5px}
+.ob-row{display:flex;gap:5px}
+.ob{width:38px;height:38px;background:rgba(255,255,255,0.65);border:1px solid rgba(255,255,255,0.85);border-radius:10px;display:flex;align-items:center;justify-content:center;cursor:pointer;font-size:15px;color:#6B7280;box-shadow:0 2px 5px rgba(0,0,0,0.08);user-select:none;-webkit-user-select:none;transition:all .1s}
+.ob:hover{background:rgba(255,255,255,.9)}
+.ob:active{transform:scale(.93);background:rgba(124,58,237,.15)}
+
+/* PROX HINT */
+#prox{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(124,58,237,.88);border-radius:20px;padding:7px 18px;font-size:12px;font-weight:700;color:#fff;z-index:55;opacity:0;transition:opacity .3s;pointer-events:none;white-space:nowrap;max-width:90vw;text-align:center}
+#prox.on{opacity:1}
+
+/* LABELS */
+#lbl-layer{position:absolute;inset:0;pointer-events:none;z-index:30;overflow:hidden}
+.av-n{position:absolute;transform:translateX(-50%);font-size:9px;font-weight:800;color:#fff;background:rgba(0,0,0,.38);padding:2px 7px;border-radius:8px;white-space:nowrap;pointer-events:none}
+.npc-chat{position:absolute;transform:translateX(-50%);background:#fff;border-radius:11px 11px 11px 2px;padding:5px 9px;font-size:9px;font-weight:700;color:#1E1040;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.12);pointer-events:none;animation:bi .3s ease}
+@keyframes bi{from{opacity:0;transform:translateX(-50%) translateY(5px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+
+/* TOAST */
+#toast{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(30,16,64,.88);border-radius:20px;padding:8px 18px;font-size:12px;font-weight:700;color:#fff;z-index:120;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none;max-width:88vw;text-align:center}
+#toast.on{opacity:1}
+#toast.g{background:rgba(22,163,74,.9)}
+#toast.a{background:rgba(180,83,9,.9)}
+
+/* PANELS */
+.panel{position:absolute;inset:0;z-index:200;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.28);backdrop-filter:blur(5px)}
+.panel.on{display:flex}
+.pbox{background:#fff;border-radius:26px;width:92%;max-width:440px;max-height:86vh;overflow:hidden;display:flex;flex-direction:column}
+.ph{padding:18px 20px 13px;border-bottom:1px solid rgba(0,0,0,.06)}
+.ph-t{font-size:16px;font-weight:900;color:#1E1040;display:flex;align-items:center;gap:7px}
+.ph-s{font-size:11px;color:#6B7280;margin-top:3px;line-height:1.4}
+.pb{padding:14px 20px;overflow-y:auto;flex:1}
+.pc{border:none;background:rgba(0,0,0,.05);padding:13px;font-size:12px;font-weight:700;color:#6B7280;cursor:pointer;font-family:'Nunito',sans-serif;width:100%}
+.pc:hover{background:rgba(0,0,0,.08)}
+.sec{font-size:9px;font-weight:700;color:#9CA3AF;letter-spacing:.07em;text-transform:uppercase;margin:10px 0 6px}
+.spot-r{display:flex;align-items:center;gap:9px;padding:9px 11px;border-radius:13px;cursor:pointer;border:1.5px solid transparent;margin-bottom:5px;transition:all .15s}
+.spot-r:hover{background:rgba(124,58,237,.05);border-color:rgba(124,58,237,.2)}
+.sr-d{width:9px;height:9px;border-radius:50%;flex-shrink:0}
+.sr-i{flex:1;min-width:0}
+.sr-n{font-size:12px;font-weight:800;color:#1E1040}
+.sr-m{font-size:9px;color:#9CA3AF;margin-top:1px}
+.sr-t{font-size:9px;font-weight:700;padding:2px 7px;border-radius:7px;white-space:nowrap}
+.fi{width:100%;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.1);border-radius:11px;padding:9px 12px;font-size:12px;font-family:'Nunito',sans-serif;outline:none;margin-bottom:8px}
+.fi:focus{border-color:rgba(124,58,237,.4)}
+textarea.fi{resize:vertical;min-height:80px}
+.btn-p{width:100%;background:linear-gradient(135deg,#7C3AED,#6366F1);border:none;border-radius:13px;padding:13px;color:#fff;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;margin-bottom:7px}
+.btn-p:hover{opacity:.9}
+.btn-g{width:100%;background:rgba(0,0,0,.04);border:none;border-radius:13px;padding:11px;color:#6B7280;font-size:12px;font-weight:700;cursor:pointer;font-family:'Nunito',sans-serif}
+.radio-r{display:flex;align-items:center;gap:8px;padding:8px 0;cursor:pointer;border-bottom:.5px solid rgba(0,0,0,.05)}
+.rd{width:14px;height:14px;border-radius:50%;border:2px solid #D1D5DB;flex-shrink:0;display:flex;align-items:center;justify-content:center;transition:all .15s}
+.rd.on{border-color:#7C3AED;background:rgba(124,58,237,.12)}
+.rd.on::after{content:'';width:5px;height:5px;border-radius:50%;background:#7C3AED}
+.duo{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:12px}
+.duo-card{border:1.5px solid rgba(0,0,0,.09);border-radius:13px;padding:13px;text-align:center;cursor:pointer;transition:all .15s}
+.duo-card:hover{border-color:rgba(124,58,237,.3);background:rgba(124,58,237,.04)}
+.duo-ic{font-size:22px;margin-bottom:5px}
+.duo-n{font-size:11px;font-weight:800;color:#374151}
+.duo-s{font-size:9px;color:#9CA3AF;margin-top:2px}
+.info-block{background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.14);border-radius:11px;padding:11px;margin-bottom:9px}
+
+/* AVATAR PRESETS */
+.av-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-bottom:14px}
+.av-opt{border-radius:12px;padding:10px 6px;text-align:center;cursor:pointer;border:2px solid rgba(0,0,0,.07);transition:all .15s}
+.av-opt:hover{border-color:rgba(124,58,237,.3);transform:scale(1.04)}
+.av-opt.sel{border-color:#7C3AED;background:rgba(124,58,237,.08);transform:scale(1.04)}
+.av-swatch{width:34px;height:34px;border-radius:50%;margin:0 auto 6px;box-shadow:0 2px 6px rgba(0,0,0,.15)}
+.av-lbl{font-size:9px;font-weight:800;color:#6B7280}
+.av-opt.sel .av-lbl{color:#7C3AED}
+
+/* CHAT BAR */
+#chat-bar{position:absolute;bottom:68px;left:0;right:0;padding:7px 10px;background:rgba(255,255,255,.96);backdrop-filter:blur(14px);border-top:1px solid rgba(0,0,0,.07);display:none;align-items:center;gap:8px;z-index:48}
+#chat-bar.on{display:flex}
+#chat-in{flex:1;background:rgba(0,0,0,.04);border:1px solid rgba(0,0,0,.09);border-radius:20px;padding:8px 14px;font-size:12px;font-family:'Nunito',sans-serif;outline:none;color:#1E1040}
+#chat-in:focus{border-color:rgba(124,58,237,.4);background:#fff}
+#chat-send{background:linear-gradient(135deg,#7C3AED,#6366F1);border:none;border-radius:20px;padding:8px 16px;font-size:12px;font-weight:800;color:#fff;cursor:pointer;font-family:'Nunito',sans-serif;white-space:nowrap}
+#chat-send:hover{opacity:.9}
+
+/* SOUND TOGGLE */
+#snd-btn{position:absolute;top:12px;left:140px;z-index:60;background:rgba(255,255,255,.85);backdrop-filter:blur(8px);border:1.5px solid rgba(0,0,0,.08);border-radius:20px;padding:5px 12px;font-size:13px;cursor:pointer;font-family:'Nunito',sans-serif;transition:all .15s}
+#snd-btn:hover{background:rgba(255,255,255,1)}
+
+/* DUNGEON COUNTDOWN */
+#dungeon-hud{position:absolute;top:52px;left:50%;transform:translateX(-50%);z-index:55;background:linear-gradient(135deg,rgba(139,92,246,.92),rgba(99,102,241,.92));backdrop-filter:blur(12px);border-radius:14px;padding:8px 18px;display:none;align-items:center;gap:10px;box-shadow:0 4px 20px rgba(139,92,246,.35);animation:dungPulse 2s ease infinite;font-family:'Nunito',sans-serif}
+#dungeon-hud.on{display:flex}
+@keyframes dungPulse{0%,100%{box-shadow:0 4px 20px rgba(139,92,246,.35)}50%{box-shadow:0 4px 30px rgba(139,92,246,.6)}}
+.dg-icon{font-size:18px;animation:dgSpin 3s linear infinite}
+@keyframes dgSpin{0%{transform:rotate(0deg)}100%{transform:rotate(360deg)}}
+.dg-txt{color:#fff;font-size:11px;font-weight:700;line-height:1.3}
+.dg-timer{color:#FDE68A;font-size:16px;font-weight:900;font-variant-numeric:tabular-nums}
+
+/* NPC DIALOG */
+#npc-dialog{position:absolute;bottom:80px;left:50%;transform:translateX(-50%);width:340px;max-width:92vw;background:rgba(255,255,255,.97);backdrop-filter:blur(18px);border-radius:18px;box-shadow:0 8px 40px rgba(0,0,0,.18);padding:0;z-index:55;display:none;overflow:hidden;font-family:'Nunito',sans-serif;animation:slideUp .25s ease}
+#npc-dialog.on{display:block}
+@keyframes slideUp{from{opacity:0;transform:translateX(-50%) translateY(16px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
+.nd-head{padding:14px 16px 10px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(0,0,0,.06)}
+.nd-ava{width:38px;height:38px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:18px;color:#fff;font-weight:900}
+.nd-name{font-size:14px;font-weight:800;color:#1F2937}
+.nd-role{font-size:10px;color:#9CA3AF;font-weight:600}
+.nd-body{padding:12px 16px}
+.nd-msg{font-size:12px;color:#374151;line-height:1.7;margin-bottom:12px}
+.nd-choices{display:flex;flex-direction:column;gap:6px}
+.nd-btn{background:rgba(124,58,237,.08);border:1.5px solid rgba(124,58,237,.18);border-radius:10px;padding:9px 13px;font-size:11px;font-weight:700;color:#7C3AED;cursor:pointer;text-align:left;transition:all .15s;font-family:'Nunito',sans-serif}
+.nd-btn:hover{background:rgba(124,58,237,.15);border-color:rgba(124,58,237,.35)}
+.nd-close{background:none;border:none;padding:6px 13px;font-size:10px;font-weight:700;color:#9CA3AF;cursor:pointer;margin-top:4px;font-family:'Nunito',sans-serif}
+.nd-close:hover{color:#6B7280}
+
+/* LOGIN MODAL */
+#lm{position:absolute;inset:0;z-index:300;display:none;align-items:center;justify-content:center;background:rgba(0,0,0,.35);backdrop-filter:blur(6px)}
+#lm.on{display:flex}
+.lmb{background:#fff;border-radius:22px;padding:26px 22px;width:290px;text-align:center}
+.lm-ic{font-size:36px;margin-bottom:9px}
+.lm-t{font-size:16px;font-weight:900;color:#1E1040;margin-bottom:5px}
+.lm-s{font-size:11px;color:#6B7280;line-height:1.5;margin-bottom:16px}
+.lm-btn{width:100%;border:none;border-radius:13px;padding:12px;font-size:12px;font-weight:800;cursor:pointer;font-family:'Nunito',sans-serif;margin-bottom:7px;display:flex;align-items:center;justify-content:center;gap:7px}
+.lm-main{background:linear-gradient(135deg,#7C3AED,#6366F1);color:#fff}
+.lm-sec{background:rgba(124,58,237,.08);border:1px solid rgba(124,58,237,.2);color:#7C3AED}
+.lm-ph{background:rgba(0,0,0,.05);color:#374151}
+.lm-skip{width:100%;background:none;border:none;color:#9CA3AF;font-size:11px;font-weight:600;cursor:pointer;font-family:'Nunito',sans-serif;padding:4px;margin-top:2px}
+.lm-div{display:flex;align-items:center;gap:8px;margin:8px 0;font-size:10px;color:#D1D5DB}
+.lm-div::before,.lm-div::after{content:'';flex:1;height:1px;background:#E5E7EB}
+</style>
+</head>
+<body>
+
+<!-- HUD -->
+<div id="hud">
+  <span class="logo">Galantara</span>
+  <div class="hud-mid">🏙 Oola</div>
+  <div class="hud-r">
+    <div class="pill pill-green"><div class="od"></div><span id="oc">128</span></div>
+    <div class="pill pill-amber" id="tok-pill" onclick="openPanel('token-panel')">🪙 <span id="tok-n">0</span></div>
+    <button class="hud-btn" id="hud-login" onclick="openLM('semua fitur')">Masuk</button>
+  </div>
+</div>
+
+<button id="snd-btn" onclick="toggleSound()">🔇</button>
+
+<div id="dungeon-hud">
+  <div class="dg-icon">🌀</div>
+  <div>
+    <div class="dg-txt">Dungeon tersembunyi muncul!</div>
+    <div class="dg-timer" id="dg-timer">--:--</div>
+  </div>
+</div>
+
+<canvas id="c"></canvas>
+<div id="lbl-layer"></div>
+<div id="prox"></div>
+
+<!-- ORBIT — kiri bawah, kanan kiri + atas sedikit -->
+<div id="orbit">
+  <div class="ob-row">
+    <div class="ob" onpointerdown="orb('L')" onpointerup="orb(null)" onpointerleave="orb(null)">↺</div>
+    <div class="ob" onpointerdown="orb('R')" onpointerup="orb(null)" onpointerleave="orb(null)">↻</div>
+    <div class="ob" onclick="resetCam()">⊙</div>
+  </div>
+  <div class="ob-row">
+    <div class="ob" onpointerdown="orb('U')" onpointerup="orb(null)" onpointerleave="orb(null)">↑</div>
+    <div class="ob" onpointerdown="orb('D')" onpointerup="orb(null)" onpointerleave="orb(null)">↓</div>
+  </div>
+</div>
+
+<!-- DPAD -->
+<div id="dpad">
+  <div></div>
+  <div class="dp" onpointerdown="mv('u')" onpointerup="sm('u')" onpointerleave="sm('u')">▲</div>
+  <div></div>
+  <div class="dp" onpointerdown="mv('l')" onpointerup="sm('l')" onpointerleave="sm('l')">◀</div>
+  <div class="dp dp-c">●</div>
+  <div class="dp" onpointerdown="mv('r')" onpointerup="sm('r')" onpointerleave="sm('r')">▶</div>
+  <div></div>
+  <div class="dp" onpointerdown="mv('d')" onpointerup="sm('d')" onpointerleave="sm('d')">▼</div>
+  <div></div>
+</div>
+
+<!-- CHAT BAR -->
+<div id="chat-bar">
+  <input id="chat-in" placeholder="Ketik pesan..." maxlength="60"
+         onkeydown="if(event.key==='Enter')sendChat()">
+  <button id="chat-send" onclick="sendChat()">Kirim →</button>
+</div>
+
+<!-- LOGIN GATE -->
+<div id="login-gate">
+  <span class="lg-t">Login untuk chat, beli, dan fitur lengkap</span>
+  <button class="lg-b" onclick="openLM('semua fitur')">Masuk / Daftar</button>
+</div>
+
+<!-- BOTTOM BAR (after login) -->
+<div id="bottom-bar">
+  <button class="bb act" onclick="toast('Oola — kamu di sini! 🌟')">
+    <div class="bb-ic" style="background:rgba(124,58,237,.12)">🏙</div>
+    <span class="bb-t" style="color:#7C3AED">Oola</span>
+  </button>
+  <button class="bb" onclick="openPanel('map-panel')">
+    <div class="bb-ic">🗺</div><span class="bb-t">Peta</span>
+  </button>
+  <button class="bb" onclick="toast('Notifikasi — coming soon 🔔')">
+    <div class="bb-ic">🔔</div><span class="bb-t">Notif</span>
+  </button>
+  <button class="bb" onclick="openPanel('token-panel')">
+    <div class="bb-ic">🪙</div><span class="bb-t">Token</span>
+  </button>
+  <button class="bb" onclick="openProfile()">
+    <div class="bb-ic">👤</div><span class="bb-t">Profil</span>
+  </button>
+</div>
+
+<!-- MAP PANEL -->
+<div class="panel" id="map-panel">
+  <div class="pbox">
+    <div class="ph"><div class="ph-t">🗺 Pilih Galantara Spot</div><div class="ph-s">Spot aktif di sekitar lokasi kamu. Tap untuk teleport.</div></div>
+    <div class="pb">
+      <svg width="100%" viewBox="0 0 420 195" style="border-radius:14px;overflow:hidden;margin-bottom:14px;display:block">
+        <rect width="420" height="195" fill="#1B3F6B"/>
+        <path d="M20,82 Q55,62 95,68 Q130,58 165,64 Q195,60 215,68 Q205,78 185,82 Q155,86 120,82 Q85,86 50,84 Q32,88 18,90Z" fill="#4A8C3F"/>
+        <path d="M220,60 Q260,50 295,54 Q318,52 332,60 Q322,70 300,72 Q272,74 245,68Z" fill="#4A8C3F"/>
+        <path d="M138,82 Q148,80 158,85 Q163,94 157,102 Q147,107 137,102 Q128,95 131,87Z" fill="#4A8C3F"/>
+        <path d="M160,83 Q170,80 180,85 Q185,93 179,101 Q170,106 160,102 Q152,94 155,87Z" fill="#4A8C3F"/>
+        <path d="M330,56 Q358,50 378,58 Q388,66 382,76 Q366,80 348,76 Q330,72 326,64Z" fill="#4A8C3F"/>
+        <path d="M380,64 Q395,60 408,70 Q412,78 403,83 Q392,85 381,80 Q372,73 374,67Z" fill="#4A8C3F"/>
+        <circle cx="150" cy="88" r="13" fill="rgba(139,92,246,.15)" stroke="rgba(139,92,246,.45)" stroke-width="1.5" stroke-dasharray="3 2"/>
+        <circle cx="150" cy="88" r="8" fill="rgba(139,92,246,.25)" stroke="rgba(139,92,246,.6)" stroke-width="1"/>
+        <circle cx="150" cy="88" r="4" fill="#8B5CF6"/>
+        <circle cx="139" cy="92" r="6" fill="rgba(239,68,68,.18)" stroke="#EF4444" stroke-width="1.2"/>
+        <circle cx="139" cy="92" r="3.5" fill="#EF4444"/>
+        <circle cx="158" cy="84" r="5" fill="rgba(34,197,94,.18)" stroke="#22C55E" stroke-width="1.2"/>
+        <circle cx="158" cy="84" r="3" fill="#22C55E"/>
+        <circle cx="175" cy="90" r="4" fill="rgba(156,163,175,.4)" stroke="#9CA3AF" stroke-width="1"/>
+        <circle cx="308" cy="60" r="5" fill="rgba(156,163,175,.3)" stroke="#9CA3AF" stroke-width="1"/>
+        <text x="150" y="107" text-anchor="middle" fill="rgba(255,255,255,.55)" font-size="6" font-family="sans-serif">Kamu</text>
+        <text x="132" y="104" text-anchor="middle" fill="#FCA5A5" font-size="6" font-family="sans-serif">Alun2 Bogor</text>
+        <text x="163" y="78" text-anchor="middle" fill="#86EFAC" font-size="6" font-family="sans-serif">Kebun Raya</text>
+        <text x="308" y="53" text-anchor="middle" fill="rgba(255,255,255,.3)" font-size="6" font-family="sans-serif">Makassar</text>
+        <circle cx="14" cy="178" r="3" fill="#EF4444"/><text x="22" y="182" fill="rgba(255,255,255,.55)" font-size="6" font-family="sans-serif">Ada event</text>
+        <circle cx="72" cy="178" r="3" fill="#22C55E"/><text x="80" y="182" fill="rgba(255,255,255,.55)" font-size="6" font-family="sans-serif">Dalam radius</text>
+        <circle cx="145" cy="178" r="3" fill="#9CA3AF"/><text x="153" y="182" fill="rgba(255,255,255,.55)" font-size="6" font-family="sans-serif">Travel fee</text>
+        <circle cx="220" cy="178" r="3" fill="#8B5CF6"/><text x="228" y="182" fill="rgba(255,255,255,.55)" font-size="6" font-family="sans-serif">Posisimu</text>
+      </svg>
+      <div class="sec">📍 Dalam Radiusmu — Bogor</div>
+      <div class="spot-r" onclick="tpTo('Alun-alun Bogor')"><div class="sr-d" style="background:#EF4444"></div><div class="sr-i"><div class="sr-n">Alun-alun Bogor Spot</div><div class="sr-m">320m · 18 online · 3 merchant · Ada event</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">🏪 Kuliner · 🎤 2 performer live · 🏆 Quest aktif</div></div><span class="sr-t" style="background:rgba(239,68,68,.1);color:#DC2626">● Live</span></div>
+      <div class="spot-r" onclick="tpTo('Kebun Raya')"><div class="sr-d" style="background:#22C55E"></div><div class="sr-i"><div class="sr-n">Kebun Raya Spot</div><div class="sr-m">1.2km · 9 online · 1 merchant</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">🌿 Wisata · 🎨 Galeri foto · NPC Botanis</div></div><span class="sr-t" style="background:rgba(34,197,94,.1);color:#15803D">Aktif</span></div>
+      <div class="sec">✈️ Traveling (Travel Fee) <span style="font-size:9px;color:#9CA3AF;font-weight:400">— masuk sebagai Tourist</span></div>
+      <div class="spot-r" onclick="tpPaid('Monas Spot','Rp 5.000')"><div class="sr-d" style="background:#F59E0B"></div><div class="sr-i"><div class="sr-n">🏛 Monas Galantara Spot</div><div class="sr-m">Jakarta · 60km · 34 online · 8 merchant</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">🏪 UMKM · 🍜 Kuliner · 🎤 5 performer · 🌀 Dungeon aktif!</div></div><span class="sr-t" style="background:rgba(245,158,11,.1);color:#B45309">Rp 5k/hari</span></div>
+      <div class="spot-r" onclick="tpPaid('Kuta Beach','Rp 15.000')"><div class="sr-d" style="background:#F59E0B"></div><div class="sr-i"><div class="sr-n">🏖 Kuta Beach Spot</div><div class="sr-m">Bali · 1.200km · 62 online · 12 merchant</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">🛍 Oleh-oleh · 🎵 Pengamen pantai · 🌅 Golden hour vibe</div></div><span class="sr-t" style="background:rgba(245,158,11,.1);color:#B45309">Rp 15k/hari</span></div>
+      <div class="spot-r" onclick="tpPaid('Malioboro','Rp 8.000')"><div class="sr-d" style="background:#F59E0B"></div><div class="sr-i"><div class="sr-n">🏪 Malioboro Spot</div><div class="sr-m">Yogya · 450km · 28 online · 15 merchant</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">👘 Batik · 🎭 Budaya · 🍲 Street food · Becak virtual</div></div><span class="sr-t" style="background:rgba(245,158,11,.1);color:#B45309">Rp 8k/hari</span></div>
+      <div class="spot-r" onclick="tpPaid('Braga Bandung','Rp 5.000')"><div class="sr-d" style="background:#F59E0B"></div><div class="sr-i"><div class="sr-n">☕ Braga Spot</div><div class="sr-m">Bandung · 120km · 15 online · 6 merchant</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">🎨 Art deco · ☕ Kafe · 🖼 Mural · Vibes sore dingin</div></div><span class="sr-t" style="background:rgba(245,158,11,.1);color:#B45309">Rp 5k/hari</span></div>
+      <div class="spot-r" onclick="tpPaid('Losari Makassar','Rp 12.000')"><div class="sr-d" style="background:#F59E0B"></div><div class="sr-i"><div class="sr-n">⛵ Losari Spot</div><div class="sr-m">Makassar · 1.600km · 11 online · 4 merchant</div><div style="font-size:9px;color:#9CA3AF;margin-top:2px">🚢 Pinisi · 🌅 Sunset · 🦐 Seafood · Dermaga virtual</div></div><span class="sr-t" style="background:rgba(245,158,11,.1);color:#B45309">Rp 12k/hari</span></div>
+      <div class="spot-r" onclick="toast('Peta penuh Indonesia — coming soon! 🗺','a')"><div class="sr-d" style="background:#8B5CF6"></div><div class="sr-i"><div class="sr-n">🗺 Lihat seluruh peta →</div><div class="sr-m">30+ Spot di seluruh Indonesia</div></div></div>
+    </div>
+    <button class="pc" onclick="closePanel('map-panel')">Tutup Peta</button>
+  </div>
+</div>
+
+<!-- INFO PANEL -->
+<div class="panel" id="info-panel">
+  <div class="pbox">
+    <div class="ph"><div class="ph-t">📋 Tentang Galantara</div><div class="ph-s">Platform & informasi untuk developer</div></div>
+    <div class="pb">
+      <div class="sec">🌏 Tentang Platform</div>
+      <p style="font-size:12px;color:#4B5563;line-height:1.7;margin-bottom:12px">Galantara adalah platform social-commerce hyperlocal berbasis peta Indonesia. Setiap Galantara Spot adalah ruang virtual isometrik yang terhubung ke lokasi fisik nyata — bisa untuk nongkrong, jualan, live, dating, dan event.</p>
+      <div class="sec">👨‍💻 Untuk Developer & Kontributor</div>
+      <div class="info-block">
+        <div style="font-size:11px;font-weight:800;color:#7C3AED;margin-bottom:4px">📦 Module Marketplace</div>
+        <div style="font-size:11px;color:#6B7280;line-height:1.6">Bangun modul, mini-game, integrasi layanan, atau tema visual. Jual di Marketplace atau bagikan gratis. Developer ambil 70% dari setiap penjualan.</div>
+      </div>
+      <div class="sec">⚡ Update Terbaru</div>
+      <div style="font-size:11px;color:#6B7280;line-height:2">• Oola — kota onboarding Galantara live 🎉<br>• Developer SDK v0.1 tersedia di GitHub<br>• 3 Spot baru: Bogor, Malang, Surabaya<br>• Dungeon event perdana bulan depan<br>• Module Marketplace open beta Q2 2026</div>
+    </div>
+    <button class="pc" onclick="closePanel('info-panel')">Tutup</button>
+  </div>
+</div>
+
+<!-- SARAN PANEL -->
+<div class="panel" id="saran-panel">
+  <div class="pbox">
+    <div class="ph"><div class="ph-t">📮 Kotak Saran</div><div class="ph-s">Kirim masukan, lapor bug, atau hubungi admin</div></div>
+    <div class="pb">
+      <div class="sec">Jenis Pesan</div>
+      <div class="radio-r" onclick="pickRadio(this)"><div class="rd on"></div><div><div style="font-size:12px;font-weight:700;color:#374151">Saran / Ide Fitur</div><div style="font-size:9px;color:#9CA3AF">Punya ide untuk platform?</div></div></div>
+      <div class="radio-r" onclick="pickRadio(this)"><div class="rd"></div><div><div style="font-size:12px;font-weight:700;color:#374151">Lapor Bug</div><div style="font-size:9px;color:#9CA3AF">Ada yang error?</div></div></div>
+      <div class="radio-r" onclick="pickRadio(this)"><div class="rd"></div><div><div style="font-size:12px;font-weight:700;color:#374151">Hubungi Admin</div><div style="font-size:9px;color:#9CA3AF">Kerjasama, bisnis, dll</div></div></div>
+      <div style="margin-top:13px">
+        <input class="fi" placeholder="Nama kamu (opsional)" id="s-name"/>
+        <textarea class="fi" placeholder="Tulis pesanmu..." id="s-msg"></textarea>
+        <button class="btn-p" onclick="submitSaran()">Kirim ✉️</button>
+        <button class="btn-g" onclick="closePanel('saran-panel')">Batal</button>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- DEV PANEL -->
+<div class="panel" id="dev-panel">
+  <div class="pbox">
+    <div class="ph"><div class="ph-t">💻 Developer Hub</div><div class="ph-s">Kelola Spot privat atau daftar jadi kontributor</div></div>
+    <div class="pb">
+      <div class="duo">
+        <div class="duo-card" onclick="doPrivateEntry()"><div class="duo-ic">🔒</div><div class="duo-n">Masuk Private Spot</div><div class="duo-s">Punya link atau kode?</div></div>
+        <div class="duo-card" onclick="doCreateSpot()"><div class="duo-ic">🏗</div><div class="duo-n">Buat Private Spot</div><div class="duo-s">Virtual office, event</div></div>
+      </div>
+      <div class="sec">👨‍💻 Daftar Kontributor</div>
+      <div class="info-block" style="background:rgba(245,158,11,.05);border-color:rgba(245,158,11,.2)">
+        <div style="font-size:11px;font-weight:800;color:#B45309;margin-bottom:3px">Apa yang bisa kamu buat?</div>
+        <div style="font-size:11px;color:#6B7280;line-height:1.6">Mini-game · Commerce integration · NPC AI · Dungeon template · Visual theme · Utility module</div>
+      </div>
+      <input class="fi" placeholder="Nama / Studio" id="d-name"/>
+      <input class="fi" placeholder="Email" id="d-email"/>
+      <textarea class="fi" placeholder="Skill & yang mau kamu buat..." id="d-desc" style="min-height:70px"></textarea>
+      <button class="btn-p" onclick="submitDev()">Daftar Kontributor →</button>
+      <div class="sec" style="margin-top:4px">🎨 Tools Developer</div>
+      <button class="btn-p" style="background:linear-gradient(135deg,#0EA5E9,#38BDF8)" onclick="openStudio()">🎨 Buka AI 3D Studio →</button>
+      <button class="btn-g" onclick="closePanel('dev-panel')">Tutup</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOKEN PANEL -->
+<div class="panel" id="token-panel">
+  <div class="pbox">
+    <div class="ph"><div class="ph-t">🪙 Token & Koin</div><div class="ph-s">Kelola token Galantara kamu</div></div>
+    <div class="pb">
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-bottom:14px">
+        <div style="background:rgba(245,158,11,.07);border:1px solid rgba(245,158,11,.2);border-radius:13px;padding:14px;text-align:center"><div style="font-size:24px;font-weight:900;color:#B45309">250</div><div style="font-size:9px;color:#9CA3AF;font-weight:700;margin-top:2px">WRC — Token</div><div style="font-size:8px;color:#D97706">bisa diuangkan</div></div>
+        <div style="background:rgba(124,58,237,.07);border:1px solid rgba(124,58,237,.2);border-radius:13px;padding:14px;text-align:center"><div style="font-size:24px;font-weight:900;color:#7C3AED">840</div><div style="font-size:9px;color:#9CA3AF;font-weight:700;margin-top:2px">WRP — Reward</div><div style="font-size:8px;color:#A78BFA">tukar hadiah</div></div>
+      </div>
+      <button class="btn-p" onclick="toast('Top Up — gateway pembayaran coming soon','a')">💳 Top Up WRC</button>
+      <div class="sec" style="margin-top:8px">Riwayat</div>
+      <div style="font-size:11px;color:#9CA3AF;text-align:center;padding:10px 0">Belum ada transaksi</div>
+    </div>
+    <button class="pc" onclick="closePanel('token-panel')">Tutup</button>
+  </div>
+</div>
+
+<!-- PROFILE PANEL -->
+<div class="panel" id="profile-panel">
+  <div class="pbox">
+    <div class="ph">
+      <div class="ph-t">👤 Profil Kamu</div>
+      <div class="ph-s">Atur nama tampil dan warna avatar</div>
+    </div>
+    <div class="pb">
+      <div class="sec">Nama Tampil</div>
+      <input class="fi" id="p-name" placeholder="Nama kamu (maks. 16 karakter)..." maxlength="16">
+      <div class="sec" style="margin-top:4px">Pilih Avatar</div>
+      <div class="av-grid" id="av-grid"></div>
+      <button class="btn-p" onclick="saveProfile()">✓ Simpan Profil</button>
+      <button class="btn-g" onclick="closePanel('profile-panel')">Batal</button>
+    </div>
+  </div>
+</div>
+
+<!-- NPC DIALOG -->
+<div id="npc-dialog">
+  <div class="nd-head">
+    <div class="nd-ava" id="nd-ava">G</div>
+    <div><div class="nd-name" id="nd-name">Guide</div><div class="nd-role" id="nd-role">NPC</div></div>
+  </div>
+  <div class="nd-body">
+    <div class="nd-msg" id="nd-msg"></div>
+    <div class="nd-choices" id="nd-choices"></div>
+    <button class="nd-close" onclick="closeNpcDialog()">Tutup</button>
+  </div>
+</div>
+
+<!-- LOGIN MODAL -->
+<div id="lm">
+  <div class="lmb">
+    <div class="lm-ic">🌏</div>
+    <div class="lm-t">Masuk ke Galantara</div>
+    <div class="lm-s" id="lm-s">Login untuk chat, transaksi, dan fitur lengkap lainnya.</div>
+    <button class="lm-btn lm-main" onclick="doLogin('google')">
+      <svg width="15" height="15" viewBox="0 0 24 24"><path d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z" fill="#4285F4"/><path d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z" fill="#34A853"/><path d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.07H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.93l2.85-2.22.81-.62z" fill="#FBBC05"/><path d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.07l3.66 2.84c.87-2.6 3.3-4.53 6.16-4.53z" fill="#EA4335"/></svg>
+      Masuk dengan Google
+    </button>
+    <div class="lm-div">atau</div>
+    <button class="lm-btn lm-sec" onclick="doLogin('email')">📧 Daftar dengan Email</button>
+    <button class="lm-btn lm-ph" onclick="doLogin('phone')">📱 No. HP</button>
+    <button class="lm-skip" onclick="closeLM()">Lanjut jalan-jalan dulu →</button>
+  </div>
+</div>
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════
+// STATE
+// ═══════════════════════════════════════════════════════
+const G = {
+  loggedIn: false,
+  mv: {},
+  // Camera spherical coords
+  theta: Math.PI * 0.3,   // horizontal rotation — unlimited
+  phi: Math.PI * 0.3,     // vertical tilt — CLAMPED
+  radius: 16,
+  orbDir: null,
+  orbTimer: null,
+  drag: false,
+  lastMX: 0, lastMY: 0,
+  lastZone: null,
+};
+
+// Camera vertical limits — metaverse style: slight tilt only
+const PHI_MIN = Math.PI * 0.18;  // ~32° — can't look straight down
+const PHI_MAX = Math.PI * 0.42;  // ~76° — can't go below horizon
+
+const SPEED = 0.09;
+const ISLAND_R = 18;
+
+const ZONES = [
+  { id:'warp',  x:-7,  z:-2,   r:3.0, hint:'🌀 Warp Portal — masuk ke Spot publik' },
+  { id:'info',  x:1,   z:0,    r:2.5, hint:'📋 Papan Informasi — tentang platform' },
+  { id:'saran', x:-9,  z:3,    r:2.2, hint:'📮 Kotak Saran — kirim masukan ke admin' },
+  { id:'dev',   x:8,   z:-2.5, r:3.0, hint:'💻 Developer Hub — kelola Spot & daftar kontributor' },
+  { id:'dev2',  x:12,  z:2,    r:2.2, hint:'📌 Contributor Office — daftar pengembang' },
+];
+
+const NPCS = [
+  { name:'Guide', color:0xF97316, x:2,   z:4,   msg:'Selamat datang! 🌟' },
+  { name:'Budi',  color:0x06B6D4, x:-3,  z:5,   msg:'Nama saya Budi 👋' },
+  { name:'Maya',  color:0xEC4899, x:5,   z:3,   msg:'Mau ke Spot mana?' },
+  { name:'Sari',  color:0x8B5CF6, x:-5,  z:-3,  msg:'Ada dungeon baru! 🌀' },
+  { name:'Dev',   color:0x10B981, x:9,   z:3,   msg:'Join contributor? 💻' },
+  { name:'Andi ✈',color:0xF59E0B, x:3,   z:-5,  msg:'Tourist dari Jakarta!' },
+  { name:'Rafi',  color:0x3B82F6, x:-8,  z:-4,  msg:'Quest: GLNT2026 🔑' },
+  { name:'Dewi',  color:0xEF4444, x:6,   z:-7,  msg:'Promo Kuta Spot! 🏖' },
+];
+
+// ═══════════════════════════════════════════════════════
+// AVATAR PRESETS (PRD BAB 4 art direction colors)
+// ═══════════════════════════════════════════════════════
+const AV_PRESETS = [
+  { name:'Lavender', color:0x8B5CF6, hex:'#8B5CF6' },
+  { name:'Biru',     color:0x38BDF8, hex:'#38BDF8' },
+  { name:'Sunset',   color:0xF97316, hex:'#F97316' },
+  { name:'Rose',     color:0xEC4899, hex:'#EC4899' },
+  { name:'Hijau',    color:0x10B981, hex:'#10B981' },
+  { name:'Amber',    color:0xF59E0B, hex:'#F59E0B' },
+  { name:'Coral',    color:0xEF4444, hex:'#EF4444' },
+  { name:'Teal',     color:0x06B6D4, hex:'#06B6D4' },
+];
+G.displayName = 'Kamu';
+G.selPreset   = 0;  // index ke AV_PRESETS
+
+// ═══════════════════════════════════════════════════════
+// THREE INIT
+// ═══════════════════════════════════════════════════════
+let scene, camera, renderer, clock;
+let myAvatar, npcMeshes = [];
+let warpRings = [], haloMesh = null;
+let skyMesh = null, ambLight = null, sunLight = null, fillLight = null;
+let dnFrame = 0; // day-night update counter
+const CAM_TGT = new THREE.Vector3(0, 0.5, 0);
+
+function init() {
+  scene = new THREE.Scene();
+  clock  = new THREE.Clock();
+
+  const W = window.innerWidth, H = window.innerHeight;
+
+  renderer = new THREE.WebGLRenderer({ canvas: document.getElementById('c'), antialias: true });
+  renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+  renderer.setSize(W, H);
+  renderer.shadowMap.enabled = true;
+  renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+  renderer.setClearColor(0x87CEEB, 1);
+
+  camera = new THREE.PerspectiveCamera(45, W / H, 0.1, 300);
+  applyCamera();
+
+  buildWorld();
+  buildNPCs();
+  myAvatar = makeAvatar(0x8B5CF6);
+  myAvatar.position.set(0, 0, 5);
+  scene.add(myAvatar);
+
+  // ── Lights (refs stored globally for day/night cycle) ──
+  ambLight = new THREE.AmbientLight(0xFFF8E0, 0.9);
+  scene.add(ambLight);
+
+  sunLight = new THREE.DirectionalLight(0xFFF0CC, 1.3);
+  sunLight.position.set(10, 25, 10);
+  sunLight.castShadow = true;
+  sunLight.shadow.mapSize.set(1024, 1024);
+  scene.add(sunLight);
+
+  fillLight = new THREE.DirectionalLight(0xC0D8FF, 0.25);
+  fillLight.position.set(-8, 6, -8);
+  scene.add(fillLight);
+
+  // ── Events ──
+  const cvs = renderer.domElement;
+  let clickStart = null;
+  cvs.addEventListener('mousedown',  e => { G.drag = true; G.lastMX = e.clientX; G.lastMY = e.clientY; clickStart = {x:e.clientX, y:e.clientY}; });
+  cvs.addEventListener('mousemove',  onDrag);
+  cvs.addEventListener('mouseup',    e => { G.drag = false; if(clickStart && Math.abs(e.clientX-clickStart.x)<4 && Math.abs(e.clientY-clickStart.y)<4) onCanvasClick(e); clickStart=null; });
+  cvs.addEventListener('mouseleave', () => { G.drag = false; clickStart=null; });
+  let touchStart = null;
+  cvs.addEventListener('touchstart', e => { if (e.touches.length===1){ G.drag=true; G.lastMX=e.touches[0].clientX; G.lastMY=e.touches[0].clientY; touchStart={x:e.touches[0].clientX,y:e.touches[0].clientY}; } }, {passive:true});
+  cvs.addEventListener('touchmove',  e => { if(e.touches.length===1) onDragTouch(e); }, {passive:true});
+  cvs.addEventListener('touchend',   e => { G.drag=false; if(touchStart && e.changedTouches[0]){ const t=e.changedTouches[0]; if(Math.abs(t.clientX-touchStart.x)<10&&Math.abs(t.clientY-touchStart.y)<10) onCanvasClick(t); } touchStart=null; });
+  cvs.addEventListener('wheel',      e => { G.radius = clamp(G.radius + e.deltaY * 0.012, 9, 26); applyCamera(); }, {passive:true});
+
+  window.addEventListener('resize', () => {
+    camera.aspect = window.innerWidth / window.innerHeight;
+    camera.updateProjectionMatrix();
+    renderer.setSize(window.innerWidth, window.innerHeight);
+  });
+  window.addEventListener('keydown', e => {
+    const m = {ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r'};
+    if(m[e.key]) mv(m[e.key]);
+  });
+  window.addEventListener('keyup', e => {
+    const m = {ArrowUp:'u',ArrowDown:'d',ArrowLeft:'l',ArrowRight:'r',w:'u',s:'d',a:'l',d:'r'};
+    if(m[e.key]) sm(m[e.key]);
+  });
+
+  updateDayNight(); // set initial sky/light to current time
+  animate();
+  setTimeout(() => startChat(), 2500);
+}
+
+// ═══════════════════════════════════════════════════════
+// CAMERA MATH
+// ═══════════════════════════════════════════════════════
+function applyCamera() {
+  // Clamp vertical — this is what prevents flipping
+  G.phi = clamp(G.phi, PHI_MIN, PHI_MAX);
+  // No clamp on theta — full 360° horizontal rotation
+
+  const sinP = Math.sin(G.phi);
+  const cosP = Math.cos(G.phi);
+  camera.position.set(
+    CAM_TGT.x + G.radius * sinP * Math.sin(G.theta),
+    CAM_TGT.y + G.radius * cosP,
+    CAM_TGT.z + G.radius * sinP * Math.cos(G.theta)
+  );
+  camera.lookAt(CAM_TGT);
+}
+
+function resetCam() {
+  G.theta  = Math.PI * 0.3;
+  G.phi    = Math.PI * 0.3;
+  G.radius = 16;
+  applyCamera();
+}
+
+function onDrag(e) {
+  if (!G.drag) return;
+  const dx = (e.clientX - G.lastMX) * 0.007;
+  const dy = (e.clientY - G.lastMY) * 0.004;
+  G.theta -= dx;           // horizontal: unlimited
+  G.phi   += dy;           // vertical: will be clamped in applyCamera
+  G.lastMX = e.clientX; G.lastMY = e.clientY;
+  applyCamera();
+}
+function onDragTouch(e) {
+  const dx = (e.touches[0].clientX - G.lastMX) * 0.007;
+  const dy = (e.touches[0].clientY - G.lastMY) * 0.004;
+  G.theta -= dx;
+  G.phi   += dy;
+  G.lastMX = e.touches[0].clientX; G.lastMY = e.touches[0].clientY;
+  applyCamera();
+}
+
+// Orbit buttons — horizontal rotates freely, vertical very limited
+function orb(dir) {
+  clearInterval(G.orbTimer);
+  G.orbDir = dir;
+  if (!dir) return;
+  G.orbTimer = setInterval(() => {
+    if (G.orbDir === 'L') G.theta -= 0.025;
+    if (G.orbDir === 'R') G.theta += 0.025;
+    if (G.orbDir === 'U') G.phi -= 0.018;
+    if (G.orbDir === 'D') G.phi += 0.018;
+    applyCamera();
+  }, 16);
+}
+
+// ═══════════════════════════════════════════════════════
+// WORLD
+// ═══════════════════════════════════════════════════════
+function buildWorld() {
+  // Sky (ref stored globally for day/night cycle)
+  skyMesh = new THREE.Mesh(
+    new THREE.SphereGeometry(200, 16, 8),
+    new THREE.MeshBasicMaterial({ color: 0x87CEEB, side: THREE.BackSide })
+  );
+  scene.add(skyMesh);
+
+  // Clouds
+  for (let i = 0; i < 12; i++) {
+    const a = (i / 12) * Math.PI * 2;
+    const r = 45 + Math.random() * 35;
+    scene.add(makeCloud(Math.cos(a)*r, 18+Math.random()*8, Math.sin(a)*r));
+  }
+
+  // Island body
+  const isl = new THREE.Mesh(
+    new THREE.CylinderGeometry(ISLAND_R, ISLAND_R * 0.87, 1.4, 48),
+    new THREE.MeshLambertMaterial({ color: 0x52A837 })
+  );
+  isl.position.y = -0.7;
+  isl.receiveShadow = true;
+  scene.add(isl);
+
+  // Dirt rim
+  const rim = new THREE.Mesh(
+    new THREE.CylinderGeometry(ISLAND_R, ISLAND_R * 0.86, 0.42, 48),
+    new THREE.MeshLambertMaterial({ color: 0x8B6914 })
+  );
+  rim.position.y = -1.31;
+  scene.add(rim);
+
+  // Grass top
+  const grs = new THREE.Mesh(
+    new THREE.CylinderGeometry(ISLAND_R - 0.15, ISLAND_R - 0.15, 0.06, 48),
+    new THREE.MeshLambertMaterial({ color: 0x68C83A })
+  );
+  grs.position.y = 0.03;
+  scene.add(grs);
+
+  // Grid tiles
+  for (let x = -16; x <= 16; x++) {
+    for (let z = -16; z <= 16; z++) {
+      if (Math.sqrt(x*x+z*z) > ISLAND_R-1) continue;
+      if ((x+z)%2 === 0) {
+        const t = new THREE.Mesh(
+          new THREE.PlaneGeometry(0.96, 0.96),
+          new THREE.MeshLambertMaterial({ color: 0x5EC234, transparent:true, opacity:0.45 })
+        );
+        t.rotation.x = -Math.PI/2;
+        t.position.set(x, 0.04, z);
+        scene.add(t);
+      }
+    }
+  }
+
+  // Ring path around center
+  const ring = new THREE.Mesh(
+    new THREE.RingGeometry(1.9, 2.9, 48),
+    new THREE.MeshLambertMaterial({ color: 0xD4B87A, side: THREE.DoubleSide })
+  );
+  ring.rotation.x = -Math.PI/2;
+  ring.position.y = 0.05;
+  scene.add(ring);
+
+  // Radial paths
+  [0, 0.42, 0.78, Math.PI, 1.28, 1.72].forEach(a => {
+    const p = new THREE.Mesh(
+      new THREE.PlaneGeometry(0.65, 13),
+      new THREE.MeshLambertMaterial({ color: 0xC8A86A, side: THREE.DoubleSide })
+    );
+    p.rotation.x = -Math.PI/2;
+    p.rotation.z = a;
+    p.position.set(Math.sin(a)*7.5, 0.05, Math.cos(a)*7.5);
+    scene.add(p);
+  });
+
+  // Stones
+  for (let i = 0; i < 20; i++) {
+    const a = (i/20)*Math.PI*2 + 0.4;
+    const r = 4 + Math.random()*12;
+    if (r > ISLAND_R-1.5) continue;
+    const s = new THREE.Mesh(
+      new THREE.SphereGeometry(0.1+Math.random()*0.11, 5, 4),
+      new THREE.MeshLambertMaterial({ color: 0xA0A0A0 })
+    );
+    s.position.set(Math.cos(a)*r, 0.08, Math.sin(a)*r);
+    scene.add(s);
+  }
+
+  // Center tree
+  buildCenterTree();
+
+  // Warp portal
+  buildWarpPortal(-7, 0, -2);
+
+  // Papan info
+  buildPapanInfo(1, 0, 0);
+
+  // Kotak saran
+  buildKotakSaran(-9, 0, 3);
+
+  // Dev hub
+  buildDevHub(8, 0, -2.5);
+
+  // Contributor office
+  buildContribOffice(12, 0, 2);
+
+  // Benches
+  [[-3,2],[3,2],[-3,-2],[3,-2],[0,3],[0,-3],[-6,1],[6,1],[-2,-6],[2,6]].forEach(([bx,bz]) => {
+    if (Math.sqrt(bx*bx+bz*bz) > ISLAND_R-1.5) return;
+    const ok = !ZONES.some(z => Math.sqrt((bx-z.x)**2+(bz-z.z)**2) < z.r+1.2);
+    if (!ok) return;
+    const b = new THREE.Mesh(new THREE.BoxGeometry(0.9,0.08,0.35), new THREE.MeshLambertMaterial({color:0x8B6914}));
+    b.position.set(bx, 0.38, bz);
+    scene.add(b);
+    [[-0.35,0],[0.35,0]].forEach(([lx]) => {
+      const leg = new THREE.Mesh(new THREE.BoxGeometry(0.1,0.38,0.08), new THREE.MeshLambertMaterial({color:0x6B5014}));
+      leg.position.set(bx+lx, 0.19, bz);
+      scene.add(leg);
+    });
+  });
+
+  // Edge trees
+  for (let i = 0; i < 32; i++) {
+    const a = (i/32)*Math.PI*2 + (i%3)*0.15;
+    const r = ISLAND_R-1.4-Math.random()*2.2;
+    const tx = Math.cos(a)*r, tz = Math.sin(a)*r;
+    if (ZONES.some(z => Math.sqrt((tx-z.x)**2+(tz-z.z)**2) < z.r+1.5)) continue;
+    const sc = 0.5+Math.random()*0.55;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12*sc,0.16*sc,0.9*sc,6), new THREE.MeshLambertMaterial({color:0x5C4A1E}));
+    trunk.position.set(tx, 0.45*sc, tz);
+    scene.add(trunk);
+    const top = new THREE.Mesh(new THREE.SphereGeometry(0.55*sc,8,6), new THREE.MeshLambertMaterial({color:[0x2d7d1a,0x388E3C,0x1B5E20][i%3]}));
+    top.position.set(tx, 1.2*sc, tz);
+    scene.add(top);
+  }
+
+  // Interior trees
+  for (let i = 0; i < 8; i++) {
+    const a = (i/8)*Math.PI*2+1.1;
+    const r = 8+Math.random()*5;
+    const tx = Math.cos(a)*r, tz = Math.sin(a)*r;
+    if (ZONES.some(z => Math.sqrt((tx-z.x)**2+(tz-z.z)**2) < z.r+1.5)) continue;
+    const sc = 0.6+Math.random()*0.4;
+    const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.12*sc,0.15*sc,0.85*sc,6), new THREE.MeshLambertMaterial({color:0x5C4A1E}));
+    trunk.position.set(tx, 0.42*sc, tz);
+    scene.add(trunk);
+    const top = new THREE.Mesh(new THREE.SphereGeometry(0.5*sc,8,6), new THREE.MeshLambertMaterial({color:0x2d7d1a}));
+    top.position.set(tx, 1.1*sc, tz);
+    scene.add(top);
+  }
+
+  // Flowers
+  for (let i = 0; i < 45; i++) {
+    const a = Math.random()*Math.PI*2, r = 2+Math.random()*14;
+    const fx = Math.cos(a)*r, fz = Math.sin(a)*r;
+    if (Math.sqrt(fx*fx+fz*fz)>ISLAND_R-1.3) continue;
+    if (ZONES.some(z=>Math.sqrt((fx-z.x)**2+(fz-z.z)**2)<z.r+0.6)) continue;
+    const f = new THREE.Mesh(new THREE.SphereGeometry(0.11,5,4), new THREE.MeshLambertMaterial({color:[0xF472B6,0xFBBF24,0xF87171,0xA78BFA][i%4]}));
+    f.position.set(fx, 0.11, fz);
+    scene.add(f);
+  }
+
+  // Lamps
+  [[-4,-4],[4,-4],[-4,4],[4,4],[0,6],[0,-6],[-7,0],[7,0]].forEach(([lx,lz]) => {
+    const pole = new THREE.Mesh(new THREE.CylinderGeometry(0.07,0.07,1.6,6), new THREE.MeshLambertMaterial({color:0x888888}));
+    pole.position.set(lx, 0.8, lz);
+    scene.add(pole);
+    const head = new THREE.Mesh(new THREE.SphereGeometry(0.14,6,5), new THREE.MeshLambertMaterial({color:0xFFE88A,emissive:0xFFE066,emissiveIntensity:0.5}));
+    head.position.set(lx, 1.7, lz);
+    scene.add(head);
+    const pl = new THREE.PointLight(0xFFE066, 0.45, 5);
+    pl.position.set(lx, 1.7, lz);
+    scene.add(pl);
+  });
+}
+
+// ── CENTER TREE ──────────────────────────────────────────
+function buildCenterTree() {
+  const trunk = new THREE.Mesh(new THREE.CylinderGeometry(0.28,0.36,3,8), new THREE.MeshLambertMaterial({color:0x8B5E3C}));
+  trunk.position.set(0,1.5,0);
+  scene.add(trunk);
+
+  [[0,4.2,0,2.2],[0.9,3.6,0.6,1.6],[-1,3.7,-0.5,1.5],[0.3,5.1,0.3,1.35],[-0.5,3.5,1,1.2],[0.6,3.4,-0.9,1.1]]
+    .forEach(([fx,fy,fz,fr],i) => {
+      const f = new THREE.Mesh(new THREE.SphereGeometry(fr,10,7), new THREE.MeshLambertMaterial({color:[0x9B59B6,0x8E44AD,0xA569BD,0x7D3C98,0xBB8FCC,0x76448A][i%6]}));
+      f.position.set(fx,fy,fz);
+      scene.add(f);
+    });
+
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(1.4,0.09,8,32),
+    new THREE.MeshLambertMaterial({color:0xFFFAE0,emissive:0xFFFFAA,emissiveIntensity:0.5})
+  );
+  halo.position.set(0,6.5,0);
+  halo.rotation.x = Math.PI*0.08;
+  halo.userData.isHalo = true;
+  haloMesh = halo;
+  scene.add(halo);
+
+  const haloLight = new THREE.PointLight(0xFFFFEE,0.7,10);
+  haloLight.position.set(0,6.5,0);
+  scene.add(haloLight);
+
+  const base = new THREE.Mesh(new THREE.CylinderGeometry(1.1,1.1,0.1,32), new THREE.MeshLambertMaterial({color:0x7B5B3A}));
+  base.position.y = 0.05;
+  scene.add(base);
+}
+
+// ── WARP PORTAL ──────────────────────────────────────────
+function buildWarpPortal(x,y,z) {
+  const g = new THREE.Group();
+  const dome = new THREE.Mesh(
+    new THREE.SphereGeometry(1.2,16,12,0,Math.PI*2,0,Math.PI*0.58),
+    new THREE.MeshLambertMaterial({color:0xCCEEFF,transparent:true,opacity:0.28,side:THREE.DoubleSide})
+  );
+  g.add(dome);
+  [[0.75,0xA855F7,0.018],[0.52,0x6366F1,-0.022],[0.32,0x38BDF8,0.03]].forEach(([r,c,sp]) => {
+    const ring = new THREE.Mesh(new THREE.TorusGeometry(r,0.045,6,20), new THREE.MeshLambertMaterial({color:c,emissive:c,emissiveIntensity:0.5}));
+    ring.position.y = 0.7;
+    ring.userData.rotSpeed = sp;
+    g.add(ring);
+    warpRings.push(ring);
+  });
+  const orb = new THREE.Mesh(new THREE.SphereGeometry(0.3,8,6), new THREE.MeshLambertMaterial({color:0x6366F1,emissive:0x4338CA,emissiveIntensity:0.8}));
+  orb.position.y = 0.7;
+  g.add(orb);
+  const plat = new THREE.Mesh(new THREE.CylinderGeometry(1.35,1.35,0.14,32), new THREE.MeshLambertMaterial({color:0xDDE8FF}));
+  plat.position.y = 0.07;
+  g.add(plat);
+  const pl = new THREE.PointLight(0x6366F1,1.0,6);
+  pl.position.set(0,1.5,0);
+  g.add(pl);
+  g.position.set(x,y,z);
+  g.userData.zone = 'warp';
+  scene.add(g);
+}
+
+// ── PAPAN INFO ────────────────────────────────────────────
+function buildPapanInfo(x,y,z) {
+  const g = new THREE.Group();
+  [[-0.6,0],[0.6,0]].forEach(([lx]) => {
+    const leg = new THREE.Mesh(new THREE.CylinderGeometry(0.055,0.055,1.3,6), new THREE.MeshLambertMaterial({color:0x8B6914}));
+    leg.position.set(lx,0.65,0);
+    g.add(leg);
+  });
+  const board = new THREE.Mesh(new THREE.BoxGeometry(1.5,1.0,0.1), new THREE.MeshLambertMaterial({color:0x4A90D9}));
+  board.position.set(0,1.38,0);
+  g.add(board);
+  const scr = new THREE.Mesh(new THREE.BoxGeometry(1.3,0.8,0.06), new THREE.MeshLambertMaterial({color:0x6AAEE8}));
+  scr.position.set(0,1.38,0.06);
+  g.add(scr);
+  for(let i=0;i<4;i++){
+    const ln = new THREE.Mesh(new THREE.BoxGeometry(i===0?1.0:0.7,0.06,0.02), new THREE.MeshLambertMaterial({color:0xFFFFFF}));
+    ln.position.set(i===0?0:-0.1, 1.6-i*0.16, 0.1);
+    g.add(ln);
+  }
+  const pl = new THREE.PointLight(0x4A90D9,0.35,3);
+  pl.position.set(0,2.2,0.5);
+  g.add(pl);
+  g.position.set(x,y,z);
+  g.userData.zone = 'info';
+  scene.add(g);
+}
+
+// ── KOTAK SARAN ───────────────────────────────────────────
+function buildKotakSaran(x,y,z) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(0.8,0.75,0.65), new THREE.MeshLambertMaterial({color:0xEF4444}));
+  body.position.set(0,0.52,0); g.add(body);
+  const lid = new THREE.Mesh(new THREE.BoxGeometry(0.83,0.2,0.68), new THREE.MeshLambertMaterial({color:0xDC2626}));
+  lid.position.set(0,0.99,0); g.add(lid);
+  const slot = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.055,0.07), new THREE.MeshLambertMaterial({color:0x1a0505}));
+  slot.position.set(0,0.9,0.33); g.add(slot);
+  const bub = new THREE.Mesh(new THREE.SphereGeometry(0.16,6,5), new THREE.MeshLambertMaterial({color:0xFBBF24,emissive:0xF59E0B,emissiveIntensity:0.3}));
+  bub.position.set(-0.6,0.68,0); g.add(bub);
+  g.position.set(x,y,z);
+  g.userData.zone = 'saran';
+  scene.add(g);
+}
+
+// ── DEV HUB ───────────────────────────────────────────────
+function buildDevHub(x,y,z) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(2.4,1.8,2.0), new THREE.MeshLambertMaterial({color:0xFBCE7A}));
+  body.position.set(0,0.9,0); g.add(body);
+  const roof = new THREE.Mesh(new THREE.CylinderGeometry(0,1.65,0.85,4), new THREE.MeshLambertMaterial({color:0xC0392B}));
+  roof.position.set(0,2.22,0); roof.rotation.y=Math.PI/4; g.add(roof);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.48,0.75,0.09), new THREE.MeshLambertMaterial({color:0x8B5E3C}));
+  door.position.set(0,0.47,1.04); g.add(door);
+  [[0.65,0.9],[-0.65,0.9],[0.65,0.3],[-0.65,0.3]].forEach(([wx,wy]) => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(0.42,0.42,0.07), new THREE.MeshLambertMaterial({color:0x87CEEB}));
+    w.position.set(wx,wy,1.0); g.add(w);
+  });
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.8,0.35,0.12), new THREE.MeshLambertMaterial({color:0xC0392B}));
+  sign.position.set(0,1.78,1.05); g.add(sign);
+  const pl = new THREE.PointLight(0xFFD700,0.6,5);
+  pl.position.set(0,2.5,1); g.add(pl);
+  g.position.set(x,y,z);
+  g.userData.zone = 'dev';
+  scene.add(g);
+}
+
+// ── CONTRIBUTOR OFFICE ────────────────────────────────────
+function buildContribOffice(x,y,z) {
+  const g = new THREE.Group();
+  const body = new THREE.Mesh(new THREE.BoxGeometry(1.8,1.4,1.6), new THREE.MeshLambertMaterial({color:0xB8D4E8}));
+  body.position.set(0,0.7,0); g.add(body);
+  const roof = new THREE.Mesh(new THREE.BoxGeometry(2.0,0.18,1.8), new THREE.MeshLambertMaterial({color:0x5BA4CF}));
+  roof.position.set(0,1.49,0); g.add(roof);
+  const door = new THREE.Mesh(new THREE.BoxGeometry(0.38,0.6,0.08), new THREE.MeshLambertMaterial({color:0x8B5E3C}));
+  door.position.set(0,0.4,0.84); g.add(door);
+  [[0.5,0.8],[-0.5,0.8]].forEach(([wx,wy]) => {
+    const w = new THREE.Mesh(new THREE.BoxGeometry(0.35,0.35,0.06), new THREE.MeshLambertMaterial({color:0xFFFFCC}));
+    w.position.set(wx,wy,0.82); g.add(w);
+  });
+  const sign = new THREE.Mesh(new THREE.BoxGeometry(1.5,0.28,0.1), new THREE.MeshLambertMaterial({color:0x10B981}));
+  sign.position.set(0,1.38,0.84); g.add(sign);
+  g.position.set(x,y,z);
+  g.userData.zone = 'dev2';
+  scene.add(g);
+}
+
+function makeCloud(x,y,z) {
+  const g = new THREE.Group();
+  const m = new THREE.MeshLambertMaterial({color:0xFFFFFF});
+  [[0,0,0,1.4],[1.4,.35,0,1.05],[-1.3,.25,0,.95],[.6,-.1,1,.8],[-.5,-.1,-.8,.75]].forEach(([cx,cy,cz,r]) => {
+    const s = new THREE.Mesh(new THREE.SphereGeometry(r,7,5),m);
+    s.position.set(cx,cy,cz); g.add(s);
+  });
+  g.position.set(x,y,z);
+  return g;
+}
+
+function makeAvatar(color) {
+  const g = new THREE.Group();
+  const m  = new THREE.MeshLambertMaterial({color});
+  const dm = new THREE.MeshLambertMaterial({color:0x1a0a2e});
+  const bm = new THREE.MeshLambertMaterial({color:0xFFB3BA});
+  const fm = new THREE.MeshLambertMaterial({color:lighten(color,-35)});
+  g.add(bx(.44,.52,.36,m,0,.4,0));
+  g.add(bx(.48,.48,.42,m,0,.88,0));
+  g.add(bx(.09,.09,.04,dm,-.11,.93,.22));
+  g.add(bx(.09,.09,.04,dm,.11,.93,.22));
+  g.add(bx(.1,.055,.03,bm,-.15,.87,.22));
+  g.add(bx(.1,.055,.03,bm,.15,.87,.22));
+  g.add(bx(.19,.19,.24,fm,-.13,.09,0));
+  g.add(bx(.19,.19,.24,fm,.13,.09,0));
+  g.add(bx(.15,.34,.15,m,-.32,.4,0));
+  g.add(bx(.15,.34,.15,m,.32,.4,0));
+  g.castShadow = true;
+  return g;
+}
+
+function bx(w,h,d,m,x,y,z) {
+  const mesh = new THREE.Mesh(new THREE.BoxGeometry(w,h,d),m);
+  mesh.position.set(x,y,z);
+  return mesh;
+}
+
+function lighten(hex,amt) {
+  return((Math.max(0,Math.min(255,((hex>>16)&0xff)+amt))<<16)|(Math.max(0,Math.min(255,((hex>>8)&0xff)+amt))<<8)|Math.max(0,Math.min(255,(hex&0xff)+amt)));
+}
+
+function clamp(v,min,max) { return Math.max(min,Math.min(max,v)); }
+
+// ═══════════════════════════════════════════════════════
+// DAY / NIGHT CYCLE — follows user timezone
+// ═══════════════════════════════════════════════════════
+const DN_PHASES = [
+  // hour, skyR,skyG,skyB, ambInt, sunInt, sunR,sunG,sunB, fillInt
+  [  0,  0.05,0.05,0.15, 0.20, 0.10, 0.30,0.30,0.60, 0.05 ], // midnight
+  [  5,  0.08,0.06,0.18, 0.25, 0.15, 0.35,0.25,0.55, 0.05 ], // pre-dawn
+  [  6,  0.55,0.35,0.40, 0.50, 0.60, 1.00,0.60,0.40, 0.10 ], // dawn
+  [  7,  0.65,0.55,0.45, 0.70, 0.90, 1.00,0.80,0.55, 0.15 ], // early morning
+  [  9,  0.53,0.81,0.92, 0.90, 1.30, 1.00,0.94,0.80, 0.25 ], // morning → day
+  [ 12,  0.53,0.81,0.92, 0.90, 1.30, 1.00,0.94,0.80, 0.25 ], // midday
+  [ 16,  0.60,0.70,0.85, 0.85, 1.10, 1.00,0.90,0.70, 0.20 ], // afternoon
+  [ 17,  0.80,0.50,0.35, 0.65, 0.80, 1.00,0.65,0.35, 0.15 ], // golden hour
+  [ 18,  0.55,0.30,0.40, 0.50, 0.50, 0.90,0.45,0.40, 0.10 ], // sunset
+  [ 19,  0.20,0.15,0.35, 0.35, 0.25, 0.50,0.35,0.55, 0.08 ], // dusk
+  [ 20,  0.08,0.08,0.20, 0.25, 0.15, 0.35,0.30,0.60, 0.05 ], // night
+  [ 24,  0.05,0.05,0.15, 0.20, 0.10, 0.30,0.30,0.60, 0.05 ], // midnight wrap
+];
+
+function updateDayNight() {
+  if (!skyMesh || !ambLight || !sunLight || !fillLight) return;
+  const now = new Date();
+  const h = now.getHours() + now.getMinutes() / 60; // e.g. 14.5 = 2:30 PM
+
+  // Find surrounding phases and lerp
+  let lo = DN_PHASES[0], hi = DN_PHASES[1];
+  for (let i = 0; i < DN_PHASES.length - 1; i++) {
+    if (h >= DN_PHASES[i][0] && h < DN_PHASES[i+1][0]) {
+      lo = DN_PHASES[i]; hi = DN_PHASES[i+1]; break;
+    }
+  }
+  const range = hi[0] - lo[0] || 1;
+  const t = (h - lo[0]) / range;
+
+  const lerp = (a, b) => a + (b - a) * t;
+
+  // Sky color
+  skyMesh.material.color.setRGB(lerp(lo[1],hi[1]), lerp(lo[2],hi[2]), lerp(lo[3],hi[3]));
+  renderer.setClearColor(skyMesh.material.color, 1);
+
+  // Ambient light
+  ambLight.intensity = lerp(lo[4], hi[4]);
+  ambLight.color.setRGB(lerp(lo[1]*1.2,hi[1]*1.2), lerp(lo[2]*1.1,hi[2]*1.1), lerp(lo[3],hi[3]));
+
+  // Sun / directional light
+  sunLight.intensity = lerp(lo[5], hi[5]);
+  sunLight.color.setRGB(lerp(lo[6],hi[6]), lerp(lo[7],hi[7]), lerp(lo[8],hi[8]));
+  // Sun position moves across sky
+  const sunAngle = ((h - 6) / 12) * Math.PI; // 6AM=horizon, 12PM=top, 6PM=horizon
+  const sunH = Math.max(2, Math.sin(sunAngle) * 25);
+  const sunX = Math.cos(sunAngle) * 15;
+  sunLight.position.set(sunX, sunH, 10);
+
+  // Fill light (subtle moonlight at night, soft blue)
+  fillLight.intensity = lerp(lo[9], hi[9]);
+}
+
+// ═══════════════════════════════════════════════════════
+// GAME LOOP
+// ═══════════════════════════════════════════════════════
+function animate() {
+  requestAnimationFrame(animate);
+  const t = clock.getElapsedTime();
+
+  // Avatar movement — relatif ke arah kamera (theta)
+  // forward = arah kamera menghadap di ground plane
+  const fwdX = Math.sin(G.theta);
+  const fwdZ = Math.cos(G.theta);
+  // right = 90° searah jarum jam dari forward
+  const rgtX =  fwdZ;
+  const rgtZ = -fwdX;
+
+  let dx = 0, dz = 0;
+  let moved = false;
+  if (G.mv.u) { dx += fwdX; dz += fwdZ; moved=true; }
+  if (G.mv.d) { dx -= fwdX; dz -= fwdZ; moved=true; }
+  if (G.mv.l) { dx -= rgtX; dz -= rgtZ; moved=true; }
+  if (G.mv.r) { dx += rgtX; dz += rgtZ; moved=true; }
+
+  if (moved) {
+    // Normalise diagonal movement
+    const len = Math.sqrt(dx*dx+dz*dz);
+    myAvatar.position.x += (dx/len) * SPEED;
+    myAvatar.position.z += (dz/len) * SPEED;
+    // Avatar face direction of movement
+    myAvatar.rotation.y = Math.atan2(dx, dz);
+  }
+
+  // Keep on island
+  const ar = Math.sqrt(myAvatar.position.x**2 + myAvatar.position.z**2);
+  if (ar > ISLAND_R-0.7) {
+    const a = Math.atan2(myAvatar.position.z, myAvatar.position.x);
+    myAvatar.position.x = Math.cos(a)*(ISLAND_R-0.7);
+    myAvatar.position.z = Math.sin(a)*(ISLAND_R-0.7);
+  }
+
+  // Bob animation
+  const bob = Math.sin(t*(moved?5:1.5))*(moved?.042:.01);
+  if(myAvatar.children[0]) myAvatar.children[0].position.y = .4+bob;
+  if(myAvatar.children[1]) myAvatar.children[1].position.y = .88+bob;
+
+  // NPCs wander
+  npcMeshes.forEach((n,i) => {
+    n.position.x += Math.sin(t*.25+i*1.8)*.007;
+    n.position.z += Math.cos(t*.2+i*1.4)*.007;
+    const nr = Math.sqrt(n.position.x**2+n.position.z**2);
+    if(nr>ISLAND_R-2){n.position.x*=.97;n.position.z*=.97;}
+    n.rotation.y = Math.sin(t*.25+i)*.4;
+    if(n.children[0]) n.children[0].position.y=.4+Math.sin(t*2+i)*.015;
+    if(n.children[1]) n.children[1].position.y=.88+Math.sin(t*2+i)*.015;
+  });
+
+  // Warp ring rotation — direct refs, no traverse
+  warpRings.forEach(r => r.rotation.y += r.userData.rotSpeed);
+
+  // Halo bob — direct ref
+  if (haloMesh) haloMesh.position.y = 6.5 + Math.sin(t * .7) * .1;
+
+  // Camera follow — snappy, faster when moving
+  const lerpSpeed = moved ? 0.18 : 0.1;
+  CAM_TGT.x += (myAvatar.position.x * .25 - CAM_TGT.x) * lerpSpeed;
+  CAM_TGT.z += (myAvatar.position.z * .25 - CAM_TGT.z) * lerpSpeed;
+  applyCamera();
+
+  // Day/night cycle — update every ~60 frames (1 sec)
+  if (++dnFrame % 60 === 0) updateDayNight();
+
+  checkProximity();
+  updateLabels();
+
+  renderer.render(scene, camera);
+}
+
+// ═══════════════════════════════════════════════════════
+// PROXIMITY
+// ═══════════════════════════════════════════════════════
+function checkProximity() {
+  const p = myAvatar.position;
+  let nearest = null, nd = 999;
+  ZONES.forEach(z => {
+    const d = Math.sqrt((p.x-z.x)**2+(p.z-z.z)**2);
+    if(d<z.r && d<nd){ nearest=z; nd=d; }
+  });
+  const el = document.getElementById('prox');
+  if(nearest) {
+    el.textContent = nearest.hint;
+    el.classList.add('on');
+    if(nd < 1.6 && nearest.id !== G.lastZone) {
+      G.lastZone = nearest.id;
+      triggerZone(nearest.id);
+    }
+  } else {
+    if(G.lastZone) G.lastZone = null;
+    el.classList.remove('on');
+  }
+}
+
+function triggerZone(id) {
+  if(id==='warp')           openPanel('map-panel');
+  else if(id==='info')      openPanel('info-panel');
+  else if(id==='saran')     openPanel('saran-panel');
+  else if(id==='dev'||id==='dev2') openPanel('dev-panel');
+}
+
+// ═══════════════════════════════════════════════════════
+// NPC DIALOG SYSTEM — click NPC when nearby → multi-step dialog
+// ═══════════════════════════════════════════════════════
+const npcRay = new THREE.Raycaster();
+const npcMouse = new THREE.Vector2();
+
+const NPC_DIALOGS = {
+  Guide: {
+    avatar: '🌟', role: 'Pemandu Oola', color: '#F97316',
+    start: {
+      msg: 'Halo! Selamat datang di Oola, kota permulaan Galantara. Mau kemana nih?',
+      choices: [
+        { text: '🌀 Ke Warp Portal — lihat Spot Indonesia', goto: 'warp' },
+        { text: '📋 Apa itu Galantara?', goto: 'about' },
+        { text: '💻 Saya developer, mau kontribusi', goto: 'dev' },
+      ]
+    },
+    warp: {
+      msg: 'Warp Portal ada di sebelah kiri pulau — bola holografik besar dengan ring berputar. Dekati dan kamu bisa lihat peta Indonesia lengkap dengan semua Galantara Spot yang aktif!',
+      choices: [
+        { text: '🗺 Bawa saya ke sana', action: 'gotoWarp' },
+        { text: '↩ Tanya hal lain', goto: 'start' },
+      ]
+    },
+    about: {
+      msg: 'Galantara adalah pasar malam digital Indonesia. Di sini orang bisa nongkrong, jualan, ngamen, live streaming, main game — semua terhubung ke lokasi fisik nyata di Indonesia.',
+      choices: [
+        { text: '🏪 Bagaimana cara jualan?', goto: 'sell' },
+        { text: '🎤 Bisa ngamen di sini?', goto: 'perform' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+    sell: {
+      msg: 'Sewa lahan di Galantara Spot, buka booth, pajang produk. Pembeli bisa langsung beli pakai Perak dan COD kalau kamu lokal terverifikasi. Mudah!',
+      choices: [
+        { text: '💰 Berapa biaya sewa?', goto: 'rent' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+    perform: {
+      msg: 'Tentu! Live musik, stand-up, apapun. Orang yang lewat di dekatmu akan dengar suaramu — makin dekat makin keras. Dan mereka bisa kasih sawer langsung!',
+      choices: [
+        { text: '🎵 Keren! Mau coba', goto: 'start' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+    rent: {
+      msg: 'Harga sewa tergantung lokasi dan ukuran — mulai dari lapak kecil 1×1 sampai landmark 5×5. Spot yang ramai tentu lebih mahal. Cek Warp Portal untuk lihat Spot yang tersedia!',
+      choices: [
+        { text: '🌀 Ke Warp Portal', action: 'gotoWarp' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+    dev: {
+      msg: 'Galantara adalah platform terbuka — siapapun bisa build modul, mini game, NPC, integrasi layanan, dan jual di Marketplace. Developer dapat 70% revenue. Cek Developer Hub di sebelah kanan pulau!',
+      choices: [
+        { text: '💻 Bawa saya ke Dev Hub', action: 'gotoDev' },
+        { text: '🎨 Buka AI 3D Studio', action: 'openStudio' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+  },
+  Budi: {
+    avatar: '👋', role: 'Warga Oola', color: '#06B6D4',
+    start: {
+      msg: 'Hai! Nama saya Budi, warga tetap di Oola. Saya suka banget nongkrong di sini. Kamu baru ya?',
+      choices: [
+        { text: 'Iya, baru pertama kali', goto: 'newbie' },
+        { text: 'Udah pernah, cuma mampir', goto: 'regular' },
+      ]
+    },
+    newbie: {
+      msg: 'Santai aja! Di sini bebas jalan-jalan. Coba deketin Warp Portal buat lihat Spot di seluruh Indonesia. Oh iya, kalau mau fitur lengkap, login dulu ya!',
+      choices: [{ text: '👍 Oke, makasih Budi!', action: 'close' }]
+    },
+    regular: {
+      msg: 'Wah seneng ketemu lagi! Ada dungeon baru loh yang baru muncul. Coba cek sekitar pulau, siapa tau nemu!',
+      choices: [{ text: '👀 Oke, saya cari!', action: 'close' }]
+    },
+  },
+  Maya: {
+    avatar: '🗺', role: 'Travel Guide', color: '#EC4899',
+    start: {
+      msg: 'Halo! Saya Maya, travel guide Galantara. Mau jalan-jalan ke Spot mana hari ini?',
+      choices: [
+        { text: '🏛 Monas, Jakarta', goto: 'monas' },
+        { text: '🏖 Kuta Beach, Bali', goto: 'kuta' },
+        { text: '🏪 Malioboro, Yogya', goto: 'malioboro' },
+      ]
+    },
+    monas: {
+      msg: 'Monas Spot! Suasana urban Jakarta, pedagang kaki lima, dan landmark Monas emas megah. Kalau kamu di luar Jakarta, bayar travel fee kecil ya untuk masuk.',
+      choices: [
+        { text: '🌀 Ke Warp Portal', action: 'gotoWarp' },
+        { text: '↩ Spot lain', goto: 'start' },
+      ]
+    },
+    kuta: {
+      msg: 'Kuta Beach Spot — golden hour, ombak, palm tree. Merchant lokal jual kerajinan Bali, ada pengamen pantai juga! Vibe paling santai di Galantara.',
+      choices: [
+        { text: '🌀 Ke Warp Portal', action: 'gotoWarp' },
+        { text: '↩ Spot lain', goto: 'start' },
+      ]
+    },
+    malioboro: {
+      msg: 'Malioboro Spot — malam penuh lampu hangat, toko batik, becak, dan suara gamelan. Pedagang batik asli Yogya jualan di sini!',
+      choices: [
+        { text: '🌀 Ke Warp Portal', action: 'gotoWarp' },
+        { text: '↩ Spot lain', goto: 'start' },
+      ]
+    },
+  },
+  Sari: {
+    avatar: '🌀', role: 'Dungeon Scout', color: '#8B5CF6',
+    start: {
+      msg: 'Psst! Saya Sari, dungeon scout. Ada kabar dungeon baru yang bakal muncul... tapi nggak tau kapan. Sering-sering cek ya!',
+      choices: [
+        { text: '🔮 Apa itu dungeon?', goto: 'explain' },
+        { text: '⏰ Kapan muncul?', goto: 'when' },
+      ]
+    },
+    explain: {
+      msg: 'Dungeon itu event tersembunyi yang muncul tiba-tiba di Galantara. Timer terbatas, reward eksklusif! Kadang ada yang disponsori brand — hadiahnya voucher produk beneran.',
+      choices: [
+        { text: '😮 Seru! Kapan muncul?', goto: 'when' },
+        { text: '↩ Oke, makasih!', action: 'close' },
+      ]
+    },
+    when: {
+      msg: 'Itulah serunya — nggak ada yang tau! Bisa besok, bisa 5 menit lagi. Makanya tetap online dan perhatiin sekitar. Kalau ada portal aneh muncul... itu dia!',
+      choices: [{ text: '👀 Siap pantau!', action: 'close' }]
+    },
+  },
+  Dev: {
+    avatar: '💻', role: 'Core Developer', color: '#10B981',
+    start: {
+      msg: 'Yo! Saya dari tim developer Galantara. Tertarik bikin modul, mini game, atau asset 3D? Platform ini open source — semua bisa kontribusi.',
+      choices: [
+        { text: '🧩 Jenis modul apa yang bisa dibuat?', goto: 'modules' },
+        { text: '🎨 Mau bikin asset 3D', goto: 'asset' },
+        { text: '💰 Gimana revenue share-nya?', goto: 'revenue' },
+      ]
+    },
+    modules: {
+      msg: 'Mini-game, NPC AI custom, commerce integration (Tokopedia, Gojek), dungeon template, event ticketing, virtual office suite — kreativitasmu yang jadi batasnya!',
+      choices: [
+        { text: '💰 Revenue share?', goto: 'revenue' },
+        { text: '💻 Buka Dev Hub', action: 'gotoDev' },
+      ]
+    },
+    asset: {
+      msg: 'Pakai AI 3D Studio untuk generate model dari teks, atau bikin di Blender/Spline. Format .glb, max 5MB. Upload ke Marketplace dan orang bisa install di Spot mereka.',
+      choices: [
+        { text: '🎨 Buka AI 3D Studio', action: 'openStudio' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+    revenue: {
+      msg: 'Developer ambil 70% dari setiap penjualan modul di Marketplace. Gratis daftar, gratis sandbox. Kamu bikin, kamu jual, kamu yang untung.',
+      choices: [
+        { text: '💻 Daftar jadi dev!', action: 'gotoDev' },
+        { text: '↩ Kembali', goto: 'start' },
+      ]
+    },
+  },
+  Dewi: {
+    avatar: '🏖', role: 'Promo Spot Kuta', color: '#EF4444',
+    start: {
+      msg: 'Hiii! Saya Dewi dari Kuta Beach Spot. Lagi promo — travel fee diskon 50% minggu ini! Mau mampir ke Bali virtual?',
+      choices: [
+        { text: '🏖 Ceritain dong Kuta Spot', goto: 'kuta' },
+        { text: '🌀 Langsung ke Warp Portal', action: 'gotoWarp' },
+      ]
+    },
+    kuta: {
+      msg: 'Di Kuta Spot ada pantai, surfboard stand, merchant oleh-oleh Bali, pengamen ukulele, dan sunset yang indah banget. Vibe paling chill di Galantara!',
+      choices: [
+        { text: '🌀 Ke Warp Portal', action: 'gotoWarp' },
+        { text: '↩ Makasih Dewi!', action: 'close' },
+      ]
+    },
+  },
+};
+
+function onCanvasClick(e) {
+  const rect = renderer.domElement.getBoundingClientRect();
+  npcMouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
+  npcMouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
+  npcRay.setFromCamera(npcMouse, camera);
+
+  // Check NPC meshes (and their children)
+  for (let i = 0; i < npcMeshes.length; i++) {
+    const hits = npcRay.intersectObject(npcMeshes[i], true);
+    if (hits.length > 0) {
+      const dist = myAvatar.position.distanceTo(npcMeshes[i].position);
+      if (dist < 4.0) {
+        openNpcDialog(NPCS[i].name);
+      } else {
+        showToast('Terlalu jauh! Dekati ' + NPCS[i].name + ' dulu.');
+      }
+      return;
+    }
+  }
+}
+
+function openNpcDialog(npcName) {
+  const tree = NPC_DIALOGS[npcName];
+  if (!tree) return;
+  document.getElementById('nd-ava').textContent = tree.avatar;
+  document.getElementById('nd-ava').style.background = tree.color;
+  document.getElementById('nd-name').textContent = npcName;
+  document.getElementById('nd-role').textContent = tree.role;
+  showDialogNode(tree, 'start');
+  document.getElementById('npc-dialog').classList.add('on');
+}
+
+function showDialogNode(tree, nodeId) {
+  const node = tree[nodeId];
+  if (!node) return;
+  document.getElementById('nd-msg').textContent = node.msg;
+  const cc = document.getElementById('nd-choices');
+  cc.innerHTML = '';
+  node.choices.forEach(ch => {
+    const btn = document.createElement('button');
+    btn.className = 'nd-btn';
+    btn.textContent = ch.text;
+    btn.onclick = () => {
+      if (ch.goto) showDialogNode(tree, ch.goto);
+      else if (ch.action === 'close') closeNpcDialog();
+      else if (ch.action === 'gotoWarp') { closeNpcDialog(); openPanel('map-panel'); }
+      else if (ch.action === 'gotoDev') { closeNpcDialog(); openPanel('dev-panel'); }
+      else if (ch.action === 'openStudio') { closeNpcDialog(); openStudio(); }
+    };
+    cc.appendChild(btn);
+  });
+}
+
+function closeNpcDialog() {
+  document.getElementById('npc-dialog').classList.remove('on');
+}
+
+// ═══════════════════════════════════════════════════════
+// LABELS
+// ═══════════════════════════════════════════════════════
+function buildNPCs() {
+  NPCS.forEach(n => {
+    const av = makeAvatar(n.color);
+    av.position.set(n.x, 0, n.z);
+    av.userData = { npc:true, name:n.name, msg:n.msg };
+    scene.add(av);
+    npcMeshes.push(av);
+  });
+}
+
+function updateLabels() {
+  const layer = document.getElementById('lbl-layer');
+  layer.innerHTML = '';
+  const all = [
+    { mesh:myAvatar, name: G.displayName, col:'#A78BFA' },
+    ...NPCS.map((n,i)=>({mesh:npcMeshes[i],name:n.name,col:'#'+n.color.toString(16).padStart(6,'0')}))
+  ];
+  all.forEach(av => {
+    if(!av.mesh) return;
+    const p = av.mesh.position.clone();
+    p.y += 1.5;
+    const proj = p.project(camera);
+    if(proj.z>1||proj.z<0) return;
+    const x = (proj.x*.5+.5)*window.innerWidth;
+    const y = (-proj.y*.5+.5)*window.innerHeight;
+    const el = document.createElement('div');
+    el.className = 'av-n';
+    el.style.left = x+'px';
+    el.style.top  = y+'px';
+    el.style.color = av.col;
+    el.textContent = av.name;
+    layer.appendChild(el);
+  });
+}
+
+let chatIdx = 0;
+function startChat() {
+  spawnChat(NPCS[0], npcMeshes[0]);
+  setInterval(() => {
+    chatIdx = (chatIdx+1)%NPCS.length;
+    if(npcMeshes[chatIdx]) spawnChat(NPCS[chatIdx],npcMeshes[chatIdx]);
+  }, 4000);
+}
+function spawnChat(npc,mesh) {
+  if(!mesh) return;
+  const p = mesh.position.clone(); p.y+=2.0;
+  const proj = p.project(camera);
+  if(proj.z>1) return;
+  const x = (proj.x*.5+.5)*window.innerWidth;
+  const y = (-proj.y*.5+.5)*window.innerHeight;
+  const el = document.createElement('div');
+  el.className = 'npc-chat';
+  el.style.left = x+'px';
+  el.style.top  = (y-18)+'px';
+  el.textContent = npc.msg;
+  document.getElementById('lbl-layer').appendChild(el);
+  setTimeout(()=>el.remove(), 3500);
+}
+
+// ═══════════════════════════════════════════════════════
+// UI
+// ═══════════════════════════════════════════════════════
+function openPanel(id)  { document.getElementById(id).classList.add('on'); }
+function closePanel(id) { document.getElementById(id).classList.remove('on'); }
+
+function openLM(feat) {
+  document.getElementById('lm-s').textContent = `Login untuk ${feat} dan fitur lengkap lainnya.`;
+  document.getElementById('lm').classList.add('on');
+}
+function closeLM() { document.getElementById('lm').classList.remove('on'); }
+
+function doLogin(method) {
+  closeLM();
+  document.getElementById('login-gate').style.display='none';
+  document.getElementById('bottom-bar').classList.add('on');
+  document.getElementById('tok-pill').style.display='flex';
+  document.getElementById('hud-login').style.display='none';
+  document.getElementById('oc').textContent='129';
+  document.getElementById('tok-n').textContent='250';
+  document.getElementById('chat-bar').classList.add('on');
+  G.loggedIn = true;
+  buildAvatarPresets();
+  toast('✅ Login berhasil! Selamat datang 🎉','g');
+}
+
+// ── PROFILE & AVATAR ─────────────────────────────────────
+function openProfile() {
+  if (!G.loggedIn) { openLM('profil'); return; }
+  buildAvatarPresets();
+  openPanel('profile-panel');
+}
+
+function buildAvatarPresets() {
+  const grid = document.getElementById('av-grid');
+  grid.innerHTML = '';
+  AV_PRESETS.forEach((p, i) => {
+    const d = document.createElement('div');
+    d.className = 'av-opt' + (i === G.selPreset ? ' sel' : '');
+    d.onclick = () => selectPreset(i);
+    d.innerHTML = `<div class="av-swatch" style="background:${p.hex}"></div><div class="av-lbl">${p.name}</div>`;
+    grid.appendChild(d);
+  });
+  document.getElementById('p-name').value = G.displayName === 'Kamu' ? '' : G.displayName;
+}
+
+function selectPreset(i) {
+  G.selPreset = i;
+  document.querySelectorAll('.av-opt').forEach((el, j) => el.classList.toggle('sel', j === i));
+}
+
+function saveProfile() {
+  const raw  = document.getElementById('p-name').value.trim();
+  G.displayName = raw || 'Kamu';
+  G.selPreset   = G.selPreset;
+  applyAvatarColor(myAvatar, AV_PRESETS[G.selPreset].color);
+  closePanel('profile-panel');
+  toast(`✅ Profil disimpan — ${G.displayName}!`, 'g');
+}
+
+function applyAvatarColor(av, color) {
+  // makeAvatar children: 0=torso, 1=head, 6=leg-L, 7=leg-R, 8=arm-L, 9=arm-R
+  const mat  = new THREE.MeshLambertMaterial({ color });
+  const matF = new THREE.MeshLambertMaterial({ color: lighten(color, -35) });
+  [0,1,8,9].forEach(i => { if (av.children[i]) av.children[i].material = mat; });
+  [6,7].forEach(i   => { if (av.children[i]) av.children[i].material = matF; });
+}
+
+// ── CHAT ─────────────────────────────────────────────────
+function sendChat() {
+  const inp = document.getElementById('chat-in');
+  const msg = inp.value.trim();
+  if (!msg) return;
+  inp.value = '';
+  spawnUserChat(msg);
+}
+
+function spawnUserChat(msg) {
+  const p = myAvatar.position.clone(); p.y += 2.2;
+  const proj = p.project(camera);
+  if (proj.z > 1 || proj.z < 0) return;
+  const x = (proj.x * .5 + .5) * window.innerWidth;
+  const y = (-proj.y * .5 + .5) * window.innerHeight;
+  const el = document.createElement('div');
+  el.className = 'npc-chat';
+  el.style.left = x + 'px';
+  el.style.top  = (y - 18) + 'px';
+  el.style.background = 'linear-gradient(135deg,#7C3AED,#6366F1)';
+  el.style.color = '#fff';
+  el.style.borderRadius = '11px 11px 2px 11px';
+  el.textContent = G.displayName !== 'Kamu' ? `${G.displayName}: ${msg}` : msg;
+  document.getElementById('lbl-layer').appendChild(el);
+  setTimeout(() => el.remove(), 4000);
+}
+
+// ── DEV TOOLS ────────────────────────────────────────────
+function openStudio() {
+  closePanel('dev-panel');
+  window.open('ai-3d-studio/ai3d-studio.html', '_blank');
+}
+
+function mv(d) { G.mv[d]=true; }
+function sm(d) { G.mv[d]=false; }
+
+function tpTo(name)       { closePanel('map-panel'); toast('✨ Teleport ke '+name+'...','g'); }
+function tpPaid(name,p)   {
+  if(!G.loggedIn){ closePanel('map-panel'); openLM('traveling'); return; }
+  closePanel('map-panel'); toast('✈️ Travel fee '+p+' — coming soon','a');
+}
+function doPrivateEntry() { closePanel('dev-panel'); if(!G.loggedIn){openLM('private spot');return;} toast('🔒 Masukkan link atau kode undangan'); }
+function doCreateSpot()   { closePanel('dev-panel'); if(!G.loggedIn){openLM('buat spot');return;} toast('🏗 Buat Spot — coming soon!'); }
+
+function pickRadio(row) {
+  document.querySelectorAll('.rd').forEach(r=>r.classList.remove('on'));
+  row.querySelector('.rd').classList.add('on');
+}
+
+function submitSaran() {
+  const msg = document.getElementById('s-msg').value.trim();
+  if(!msg){ toast('Tulis pesanmu dulu ya!'); return; }
+  document.getElementById('s-msg').value='';
+  closePanel('saran-panel');
+  toast('📮 Pesan terkirim! Terima kasih 💜','g');
+}
+
+function submitDev() {
+  const n=document.getElementById('d-name').value.trim();
+  const e=document.getElementById('d-email').value.trim();
+  if(!n||!e){ toast('Isi nama dan email dulu!'); return; }
+  closePanel('dev-panel');
+  toast('🎉 Pendaftaran terkirim! Cek email kamu.','g');
+}
+
+function toast(msg,type='') {
+  const el=document.getElementById('toast');
+  el.textContent=msg;
+  el.className='on'+(type?' '+type:'');
+  clearTimeout(el._t);
+  el._t=setTimeout(()=>el.classList.remove('on'),3500);
+}
+
+// ═══════════════════════════════════════════════════════
+// AMBIENT SOUND
+// ═══════════════════════════════════════════════════════
+let ambAudio = null;
+let soundOn = false;
+
+function toggleSound() {
+  if (!ambAudio) {
+    ambAudio = new Audio('https://cdn.pixabay.com/audio/2022/02/22/audio_d1718ab41b.mp3');
+    ambAudio.loop = true;
+    ambAudio.volume = 0.25;
+  }
+  soundOn = !soundOn;
+  if (soundOn) {
+    ambAudio.play().catch(() => {});
+    document.getElementById('snd-btn').textContent = '🔊';
+    toast('🎵 Ambient sound aktif', 'g');
+  } else {
+    ambAudio.pause();
+    document.getElementById('snd-btn').textContent = '🔇';
+  }
+}
+
+// ═══════════════════════════════════════════════════════
+// DUNGEON COUNTDOWN — FOMO mechanic
+// ═══════════════════════════════════════════════════════
+let dungeonTimer = null;
+let dungeonEnd = 0;
+
+function startDungeon() {
+  // Random dungeon muncul setelah 2-5 menit, berlangsung 3-8 menit
+  const delay = (120 + Math.random() * 180) * 1000; // 2-5 min delay
+  setTimeout(() => {
+    const duration = (180 + Math.random() * 300) * 1000; // 3-8 min
+    dungeonEnd = Date.now() + duration;
+    document.getElementById('dungeon-hud').classList.add('on');
+    toast('🌀 Dungeon tersembunyi muncul! Waktu terbatas!', 'g');
+
+    dungeonTimer = setInterval(() => {
+      const left = dungeonEnd - Date.now();
+      if (left <= 0) {
+        clearInterval(dungeonTimer);
+        document.getElementById('dungeon-hud').classList.remove('on');
+        document.getElementById('dg-timer').textContent = '--:--';
+        toast('🌀 Dungeon menghilang... sampai jumpa lagi!', 'a');
+        // Schedule next dungeon
+        startDungeon();
+        return;
+      }
+      const m = Math.floor(left / 60000);
+      const s = Math.floor((left % 60000) / 1000);
+      document.getElementById('dg-timer').textContent =
+        String(m).padStart(2,'0') + ':' + String(s).padStart(2,'0');
+    }, 1000);
+  }, delay);
+}
+
+// Start dungeon cycle on load
+setTimeout(startDungeon, 5000);
+
+window.addEventListener('load', init);
+</script>
+</body>
+</html>
