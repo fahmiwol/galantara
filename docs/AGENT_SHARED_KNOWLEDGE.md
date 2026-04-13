@@ -19,6 +19,11 @@ Tidak ada artist full-time untuk **Blender / sculpt / texture custom**. Strategi
 
 ## 🛠️ Current Project Activity (2026-04-13)
 
+### Deploy & Spot UX (sesi sama)
+- **CI deploy:** push `main` → GitHub Actions `deploy-vps.yml` → `rsync` ke `/www/wwwroot/galantara.io/` (Secrets: `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `REMOTE_PATH`). Workflow strips CRLF from the PEM secret and probes SSH before rsync.
+- **Spot warp portal:** `src/world/spotWarpPortal.js` (global `THREE` only) + `InteractionVolume` on Monas/Bogor opens `map-panel`; new spots should reuse the same pattern.
+- **Spot-aware chrome:** `Game._applySpotChrome()` updates `hud-spot`, chat tab label, and `#bb-spot-pill` so Monas/Bogor sessions do not still read “Oola” everywhere.
+
 ### Game Builder & 3D Tools Sprint (v0.6.0)
 **Owner:** Antigravity (Assistant)
 **Status:** COMPLETED ✅

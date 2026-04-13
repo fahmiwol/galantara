@@ -5,6 +5,7 @@
 - Values collaborator-style work: product ideas, suggestions, and implementation together, not silent coding only.
 - Confirms product direction explicitly when aligned on UX or scope (for example guest presence versus login-only multiplayer).
 - Wants primary onboarding to stay inside the game while the in-game "Tentang Galantara" entry opens a separate static landing page for project story, changelog, open-source contribution, sponsors or donors, and a suggestion channel.
+- When a separate local 3D reference project is pointed out on `D:\Mighan`, treat that tree as read-only for Galantara work unless the user explicitly expands scope to edit it there.
 
 ## Learned Workspace Facts
 
@@ -18,3 +19,6 @@
 - `docs/AGENT_SHARED_KNOWLEDGE.md` is the long-form hub for session changes, skill paths, gotchas, and module pointers for agents; it complements the short bullets in this file.
 - Primary game shell is `index.html` loading the ES-module client; static `about.html` is the public-facing "Tentang" page wired from the in-game menu and related world zones.
 - Production static site and multiplayer deploy are discussed in relation to the `galantara.io` hostname (coordinate `index.html`, `about.html`, `src/`, and `galantara-server/` when releasing).
+- Visual consistency for worlds, props, generators, and tools is anchored in `docs/GALANTARA_STYLE_CONTRACT_v0.md` with shared numeric tokens in `src/data/styleTokens.js` (procedural 3D MVP and future builders should follow that contract).
+- Static deploy to `galantara.io` uses GitHub Actions (`.github/workflows/deploy-vps.yml`) with repo Secrets `SSH_*` / `REMOTE_PATH`; spot POC modules must use **global `THREE`** (no bare `import 'three'`) because the client loads `three.min.js` from a script tag.
+- `Game._applySpotChrome()` keeps HUD spot text, chat sidebar tab wording (`OOLA CHAT` in hub vs `CHAT · {spot name}` on spots), and `#bb-spot-pill` on the bottom bar in sync when the Socket room / URL spot changes.

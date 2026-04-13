@@ -20,6 +20,7 @@
 ## 🔴 URGENT — Harus Selesai Minggu Ini
 
 - [ ] **Perpanjang VPS Hostinger** — batas periode tercatat **2026-04-23**; founder bayar/renew rencana **2026-04-20** (masih oke jika selesai tepat waktu)
+- [x] **Deploy statis otomatis** — push `main` → GitHub Actions `deploy-vps.yml` (Secrets SSH) menggantikan upload manual berkala untuk `index.html` / `src/` / `data/`.
 - [ ] Upload Sprint 4 ke VPS (Chat + Voice + Ghost avatar fix):
   ```powershell
   scp D:\Projects\Galantara\index.html root@72.62.125.6:/www/wwwroot/galantara.io/
