@@ -1,8 +1,7 @@
 // ═══════════════════════════════════════════════════════
 // spotWarpPortal.js — Visual + anchor konsisten untuk warp di tiap Spot POC
+// Pakai global THREE (three.min.js dari index.html), bukan import npm — sama World.js.
 // ═══════════════════════════════════════════════════════
-
-import * as THREE from 'three';
 
 const MS = (color, roughness = 0.72) =>
   new THREE.MeshStandardMaterial({
