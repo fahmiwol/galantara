@@ -125,7 +125,6 @@ export class Game {
 
     // HUD
     this.hud.init();
-    this.hud.setSpotLabel(spotLabelFromSocketRoom(this._socketRoom));
 
     // Login Modal
     this.loginModal.init();
@@ -142,6 +141,7 @@ export class Game {
 
     // Chat
     this.chat.init();
+    this._applySpotChrome();
     this.chat.onSend((msg) => {
       if (!this.user) {
         this.toast.show('Login dulu untuk ikut chat 💬', 'a');
@@ -396,7 +396,7 @@ export class Game {
     this.user = null;
     this._guestLabel = null;
     this._socketRoom = parseInitialSocketRoomFromUrl();
-    this.hud.setSpotLabel(spotLabelFromSocketRoom(this._socketRoom));
+    this._applySpotChrome();
     this._syncSpotVisuals(spotIdFromSocketRoom(this._socketRoom));
     this.mp.disconnect();
     this.hud.setLoggedOut();
@@ -510,7 +510,7 @@ export class Game {
       u.searchParams.set('spot', spot.id);
       window.history.replaceState({}, '', `${u.pathname}${u.search}${u.hash}`);
 
-      this.hud.setSpotLabel(spotLabelFromSocketRoom(this._socketRoom));
+      this._applySpotChrome();
       this.avatar.teleport(0, 2, 0);
       this._reconnectMultiplayerAfterWarp();
       this._syncSpotVisuals(spot.id);
@@ -530,11 +530,20 @@ export class Game {
       const qs = u.searchParams.toString();
       window.history.replaceState({}, '', `${u.pathname}${qs ? `?${qs}` : ''}${u.hash}`);
 
-      this.hud.setSpotLabel(spotLabelFromSocketRoom(this._socketRoom));
+      this._applySpotChrome();
       this.avatar.teleport(0, 2, 0);
       this._reconnectMultiplayerAfterWarp();
       this._syncSpotVisuals(null);
     });
+  }
+
+  /** Sinkron label Spot ke HUD, tab chat, dan pill bar bawah. */
+  _applySpotChrome() {
+    const label = spotLabelFromSocketRoom(this._socketRoom);
+    this.hud.setSpotLabel(label);
+    this.chat.setSpotContext(label);
+    const pill = document.getElementById('bb-spot-pill');
+    if (pill) pill.textContent = label === 'Oola Hub' ? 'Oola' : label;
   }
 
   // ── GLOBAL API (window.G_UI) ──────────────────────────
@@ -615,6 +624,11 @@ export class Game {
       },
       warpToSpot:            (spot)    => this._warpToSpot(spot),
       warpToOolaHub:         ()        => this._warpToOolaHub(),
+      spotHomeHint:          ()        => {
+        const label = spotLabelFromSocketRoom(this._socketRoom);
+        if (label === 'Oola Hub') this.toast.show('Oola — hub utama Galantara 🌟', 'g');
+        else this.toast.show(`${label} — kamu di Spot ini 🏙`, 'g');
+      },
     };
   }
 }

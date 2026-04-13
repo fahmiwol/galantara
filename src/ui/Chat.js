@@ -10,6 +10,8 @@ export class Chat {
     this._open    = false;
     this._onSend  = null;
     this._myName  = 'Aku';
+    /** Label Spot dari HUD (`Oola Hub` atau nama SPOTS). */
+    this._spotLabel = 'Oola Hub';
   }
 
   init(myName) {
@@ -30,6 +32,24 @@ export class Chat {
 
     // Tombol kirim
     document.getElementById('chat-send-btn')?.addEventListener('click', () => this._send());
+
+    this._renderTabLabel();
+  }
+
+  /** Sinkron teks tab chat dengan spot (bukan selalu "Oola"). */
+  setSpotContext(label) {
+    this._spotLabel = label && String(label).trim() ? String(label).trim() : 'Oola Hub';
+    this._renderTabLabel();
+  }
+
+  _chatTabTitle() {
+    return this._spotLabel === 'Oola Hub' ? 'OOLA CHAT' : `CHAT · ${this._spotLabel}`;
+  }
+
+  _renderTabLabel() {
+    if (!this._tab) return;
+    const arrow = this._open ? '▼' : '▲';
+    this._tab.innerHTML = `${arrow} <span>${this._chatTabTitle()}</span>`;
   }
 
   onSend(fn) { this._onSend = fn; }
@@ -74,7 +94,7 @@ export class Chat {
   open() {
     this._open = true;
     this._panel?.classList.remove('collapsed');
-    if (this._tab) this._tab.innerHTML = '▼ <span>OOLA CHAT</span>';
+    this._renderTabLabel();
     this._input?.focus();
     const btn = document.getElementById('chat-toggle-btn');
     if (btn) delete btn.dataset.badge;
@@ -83,7 +103,7 @@ export class Chat {
   close() {
     this._open = false;
     this._panel?.classList.add('collapsed');
-    if (this._tab) this._tab.innerHTML = '▲ <span>OOLA CHAT</span>';
+    this._renderTabLabel();
   }
 
   setName(name) { this._myName = name; }

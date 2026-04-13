@@ -273,9 +273,9 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
 
 <!-- BOTTOM BAR (post-login) -->
 <div id="bottom-bar">
-  <button class="bb act" onclick="G_UI.toast('Oola — kamu di sini! 🌟')">
+  <button class="bb act" id="bb-home-btn" onclick="G_UI.spotHomeHint()">
     <div class="bb-ic" style="background:rgba(124,58,237,.12)">🏙</div>
-    <span class="bb-t" style="color:#7C3AED">Oola</span>
+    <span class="bb-t" id="bb-spot-pill" style="color:#7C3AED">Oola</span>
   </button>
   <button class="bb" onclick="G_UI.openPanel('map-panel')">
     <div class="bb-ic">🗺</div><span class="bb-t">Peta</span>
