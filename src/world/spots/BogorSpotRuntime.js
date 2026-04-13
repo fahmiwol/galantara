@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
+import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
 
 const MS = (color, roughness = 0.72) =>
   new THREE.MeshStandardMaterial({
@@ -21,13 +22,18 @@ export class BogorSpotRuntime {
     this.raycastMeshes = [];
     /** @type {THREE.Mesh | null} */
     this._awning = null;
+    /** @type {THREE.Mesh | null} */
+    this._warpRing = null;
     /** @type {InteractionVolume[]} */
     this.interactionVolumes = [];
   }
 
   /**
    * @param {THREE.Scene} scene
-   * @param {{ toast: { show: (msg: string, type?: string) => void } }} [ctx]
+   * @param {{
+   *   toast: { show: (msg: string, type?: string) => void },
+   *   openPanel?: (id: string) => void,
+   * }} [ctx]
    */
   mount(scene, ctx = null) {
     const g = this.root;
@@ -102,10 +108,28 @@ export class BogorSpotRuntime {
 
     scene.add(g);
 
+    const warpX = 9.5;
+    const warpZ = -5.2;
+    const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
+    this._warpRing = warpRing;
+
     this.interactionVolumes = [];
     if (ctx?.toast) {
       const T = ctx.toast;
+      const openMap = () => {
+        if (ctx?.openPanel) ctx.openPanel('map-panel');
+        else T.show('Buka Peta Spot dari bar bawah (ikon peta) 🗺', 'g');
+      };
       this.interactionVolumes = [
+        new InteractionVolume({
+          id: 'spot_warp_portal',
+          shape: 'sphere',
+          center: { x: warpX, z: warpZ },
+          radius: 2.7,
+          hint: '🌀 Warp Portal — pilih Spot lain',
+          useKeyHint: '[F]',
+          onUse: openMap,
+        }),
         new InteractionVolume({
           id: 'warung',
           shape: 'sphere',
@@ -150,6 +174,7 @@ export class BogorSpotRuntime {
     });
     this.raycastMeshes = [];
     this._awning = null;
+    this._warpRing = null;
   }
 
   /** @param {number} t */
@@ -157,6 +182,7 @@ export class BogorSpotRuntime {
     if (this._awning) {
       this._awning.rotation.y = Math.sin(t * 0.65) * 0.06;
     }
+    animateSpotWarpPortal(this._warpRing, t);
   }
 
   getRaycastTargets() {

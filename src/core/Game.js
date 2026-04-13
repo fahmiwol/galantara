@@ -433,7 +433,10 @@ export class Game {
       this.zones.suspendForSpotWorld();
       this.world.disposeContent();
       this._spotRuntime = new VisualClass();
-      this._spotRuntime.mount(scene, { toast: this.toast });
+      this._spotRuntime.mount(scene, {
+        toast: this.toast,
+        openPanel: (id) => this.panels.openPanel(id),
+      });
       this.npcs?.setHubVisible(false);
       const manifestPath = `assets/spots/${spotVisualId}/manifest.json`;
       void this.assetLibrary.applyManifest(this._spotRuntime.root, manifestPath);

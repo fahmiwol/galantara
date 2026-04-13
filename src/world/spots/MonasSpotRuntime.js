@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
+import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
 
 const MS = (color, roughness = 0.72) =>
   new THREE.MeshStandardMaterial({
@@ -21,13 +22,18 @@ export class MonasSpotRuntime {
     this.raycastMeshes = [];
     /** @type {THREE.Mesh | null} */
     this._goldTip = null;
+    /** @type {THREE.Mesh | null} */
+    this._warpRing = null;
     /** @type {InteractionVolume[]} */
     this.interactionVolumes = [];
   }
 
   /**
    * @param {THREE.Scene} scene
-   * @param {{ toast: { show: (msg: string, type?: string) => void } }} [ctx]
+   * @param {{
+   *   toast: { show: (msg: string, type?: string) => void },
+   *   openPanel?: (id: string) => void,
+   * }} [ctx]
    */
   mount(scene, ctx = null) {
     const g = this.root;
@@ -78,10 +84,28 @@ export class MonasSpotRuntime {
 
     scene.add(g);
 
+    const warpX = 12;
+    const warpZ = 0.5;
+    const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
+    this._warpRing = warpRing;
+
     this.interactionVolumes = [];
     if (ctx?.toast) {
       const T = ctx.toast;
+      const openMap = () => {
+        if (ctx?.openPanel) ctx.openPanel('map-panel');
+        else T.show('Buka Peta Spot dari bar bawah (ikon peta) 🗺', 'g');
+      };
       this.interactionVolumes = [
+        new InteractionVolume({
+          id: 'spot_warp_portal',
+          shape: 'sphere',
+          center: { x: warpX, z: warpZ },
+          radius: 2.7,
+          hint: '🌀 Warp Portal — pilih Spot lain',
+          useKeyHint: '[F]',
+          onUse: openMap,
+        }),
         new InteractionVolume({
           id: 'monas_foto',
           shape: 'sphere',
@@ -126,6 +150,7 @@ export class MonasSpotRuntime {
     });
     this.raycastMeshes = [];
     this._goldTip = null;
+    this._warpRing = null;
   }
 
   /** @param {number} t */
@@ -133,6 +158,7 @@ export class MonasSpotRuntime {
     if (this._goldTip) {
       this._goldTip.rotation.y = t * 0.12;
     }
+    animateSpotWarpPortal(this._warpRing, t);
   }
 
   getRaycastTargets() {
