@@ -180,6 +180,7 @@ Agen hanya bisa menjalankan perintah di mesinmu; dia **tidak punya** password VP
 1. Commit file workflow: `.github/workflows/deploy-vps.yml`.
 2. Di repo GitHub: **Settings → Secrets and variables → Actions**, isi:
    - `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY` (key deploy khusus, bukan key utama pribadi kalau bisa), `REMOTE_PATH` (mis. `/www/wwwroot/galantara.io/`).
+   - Bantuan berurutan di Windows: jalankan `powershell -File scripts/galantara-deploy-help.ps1` (menyalin `.pub` ke clipboard, membuka private key di Notepad untuk secret GitHub, dan mencetak langkah aaPanel).
 3. Setelah itu: **`git push origin main`** → runner Ubuntu men-`rsync` otomatis. Di chat kamu cukup minta agen **commit + push**; deploy ikut jalan.
 
 ### Opsi 2 — Skrip lokal + SSH key sudah jalan di mesinmu
