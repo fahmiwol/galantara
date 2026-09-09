@@ -40,7 +40,11 @@ jobs:
           echo "Testing SSH (BatchMode, no password prompt)..."
           ssh $SSH_BASE "${SSH_USER}@${SSH_HOST}" "echo ssh_ok"
           echo "Running rsync..."
-          rsync -avz --delete -e "ssh $SSH_BASE" ./index.html ./about.html ./admin.html "$DEST"
+          rsync -avz -e "ssh $SSH_BASE" ./index.html ./about.html ./admin.html ./benteng.html "$DEST"
           rsync -avz --delete -e "ssh $SSH_BASE" ./src/ "${DEST}src/"
           rsync -avz --delete -e "ssh $SSH_BASE" ./data/ "${DEST}data/"
+          # assets/ berisi GLB rumah adat dan manifest tiap Spot. Tanpa baris ini
+          # keduanya 404 di live: rumah adat tidak muncul dan Spot gagal memuat
+          # manifestnya, padahal di lokal semuanya benar.
+          rsync -avz --delete -e "ssh $SSH_BASE" ./assets/ "${DEST}assets/"
           echo "Deploy finished."
