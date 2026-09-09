@@ -132,3 +132,134 @@ pemain skrip tidak pernah tertawan dalam 12 match (diukur).
 
 > Status jujur gate ini: **BELUM TERVALIDASI**, bukan lulus. Di browser, sesi
 > yang pemainnya benar-benar tertawan mencatat **115,87 s**.
+
+---
+
+## 10. Bubble chat di atas kepala — dan tiga temuan yang menyertainya
+
+PRD BAB 5.1.1 meminta *"Pesan muncul sebagai bubble di atas kepala karakter.
+Bubble menghilang setelah beberapa detik."* Dibangun di `src/ui/ChatBubble.js`,
+satu lapisan untuk avatar lokal **dan** avatar pemain lain.
+
+### 10.1 Rintisan mati yang hampir jadi mekanisme kedua
+
+`src/entities/Avatar.js` sudah punya `showChat()` dan `updateBubble()`,
+lengkap dengan komentar *"Dipanggil tiap frame dari Game.js"*. Ketiganya
+bohong:
+
+| Klaim di kode | Kenyataan (diukur) |
+| --- | --- |
+| `updateBubble` dipanggil tiap frame | `grep -rn "updateBubble" src/` → **0 pemanggil** |
+| `showChat` dipakai chat | **0 pemanggil** |
+| Elemen berkelas `.av-bubble` | **tidak ada** di `index.html` |
+
+Jadi ia bukan "sudah ada, tinggal disambung" melainkan setengah rintisan yang
+kalau dibiarkan menghasilkan **dua jalur proyeksi 3D→2D** untuk satu hal yang
+sama. Dibuang.
+
+> Pelajaran: komentar yang mengaku *"dipanggil dari X"* adalah klaim yang bisa
+> diuji dengan satu `grep`. Uji sebelum membangun di atasnya.
+
+### 10.2 Server sudah mengirim `socketId`; klien yang tidak membacanya
+
+`galantara-server/index.js:243` sudah lama mengirim `{ socketId, name, msg }`,
+tetapi `src/core/Game.js` hanya mengurai `{ name, msg }` dan memisahkan echo
+pesan sendiri dengan **pencocokan nama**. Dua pemain bernama sama akan saling
+menelan pesan. Sekarang pemetaan bubble dan penyaringan echo sama-sama pakai
+`socketId`.
+
+> Sebelum menambah field ke protokol, periksa apakah servernya memang belum
+> mengirim — di sini datanya sudah ada selama ini.
+
+### 10.3 Overlay HTML tidak mengecil dengan jarak
+
+Bubble adalah `<div>`, bukan objek 3D. Pemain 400 unit jauhnya tetap mendapat
+bubble seukuran penuh di atas titik sebesar piksel.
+
+Menetapkan "jarak maksimum 50 unit" salah, karena tidak ikut berubah saat FOV
+atau tinggi viewport berubah. Patokan yang benar diturunkan dari proyeksi
+perspektifnya sendiri:
+
+```
+px_per_unit      = (tinggi_viewport / (2 * tan(fov/2))) / jarak
+tinggi_tokoh_px  = 1.85 * px_per_unit          // 1.85 = tinggi tokoh (unit)
+sembunyikan bila  tinggi_tokoh_px < 24         // ambang target min. WCAG 2.5.8
+```
+
+Terukur di browser (1280x720, fov 45) — ambangnya jatuh sendiri di ~67 unit:
+
+| Jarak | Tinggi tokoh | Bubble | Toast |
+| ---: | ---: | :---: | :---: |
+| 13,4 u | 119,9 px | tampil | – |
+| 36,0 u | 44,7 px | – (di luar layar, `sy` = -159) | tampil |
+| 64,9 u | 24,8 px | – (di luar layar, `sy` = -339) | tampil |
+| 84,6 u | 19,0 px | – (terlalu kecil) | tampil |
+| 408,9 u | 3,9 px | – (terlalu kecil) | tampil |
+
+### 10.4 Penjaga: nilai layout bisa 0
+
+Aturan di atas memakai tinggi viewport sebagai pembagi. Saat diuji, **semua**
+pembacaan ukuran mengembalikan 0 (`window.innerHeight`,
+`document.documentElement.clientHeight`, `clientHeight` `#lbl-layer`, kanvas)
+karena layout belum jadi. Akibatnya `px_per_unit = 0` dan **setiap** bubble
+disembunyikan — chat mati total tanpa satu pun error.
+
+> Aturan: nilai ukur yang bisa 0 tidak boleh dijadikan alasan **menyembunyikan**.
+> Lewati ujinya dan tampilkan. Fitur yang diam-diam kosong tidak akan pernah
+> dilaporkan sebagai bug — hanya dianggap "chatnya nggak jalan".
+
+Dikunci oleh tes `viewport 0 tidak boleh membuat semua bubble hilang diam-diam`.
+
+### 10.5 Satu pesan, tiga tampilan
+
+Setelah bubble ada, pesan masuk tampil di bubble **dan** panel chat **dan**
+toast. Toast kini hanya muncul bila bubble pengirimnya tidak terlihat.
+Urutannya penting: `ucap()` dipanggil dulu (ia sekaligus memproyeksikan dan
+menetapkan keterlihatan), baru toast diputuskan.
+
+### 10.6 Instrumen tes yang mati (bukan fiturnya)
+
+Tes pertama saya melaporkan bubble "tidak hilang setelah 3,8 detik". Hampir
+saya catat sebagai bug. Diukur: **0 frame dalam 1 detik**, dan waktu simulasi
+game hanya bertambah 0,31 detik selama 88 detik halaman terbuka —
+`requestAnimationFrame` **beku** selama JS saya berjalan di Browser pane,
+meski `document.visibilityState` = `"visible"`.
+
+Dua cara yang benar, keduanya dipakai:
+1. Panggil `layer.update(camera)` langsung — jalur produksi yang sama,
+   deterministik, tidak bergantung frame.
+2. Pisahkan pengamatan ke panggilan tool berbeda; di antaranya frame asli jalan.
+
+> Sebelum menyimpulkan "fitur tidak jalan" di Browser pane: hitung frame dalam
+> 1 detik. Kalau 0, instrumennya yang mati.
+
+### 10.7 Hasil
+
+`tests/chatBubble.test.mjs` — 10 uji, semuanya lulus. Total suite **31/31**.
+Diperiksa di browser: bubble menempel di pemain yang benar di atas name-tag
+masing-masing (jarak bersih 17–19 px), pesan 100 huruf membungkus dalam batas
+lebar, pesan beruntun mengganti bukan menumpuk, elemennya benar-benar lepas
+dari DOM setelah kedaluwarsa.
+
+Warna `#FDF6E8` dengan tinta `#2A1F14` — kontras **14,9:1**, jauh di atas
+ambang WCAG AA 4,5:1, dan tetap terbaca di langit siang maupun latar malam.
+
+## 11. Codex buntu (10 Sep 2026)
+
+Diminta pendapat kedua lewat `codex-bridge`; gagal. Bukan masalah versi CLI
+seperti dugaan awal:
+
+- `codex --version` → **0.153.4**; `npm view @openai/codex version` → **0.153.4**.
+  `npm i -g` dan `codex update` sama-sama tidak menaikkan versi.
+- Model di konfigurasi adalah `gpt-5.6-sol` → *"requires a newer version of
+  Codex"*.
+- Semua alternatif yang dicoba (`gpt-5-codex`, `gpt-5.1-codex-max`, `gpt-5.6`,
+  `gpt-5.2`, `gpt-5`) → *"not supported when using Codex with a ChatGPT
+  account"*.
+
+Jadi CLI-nya terlalu tua untuk satu-satunya model yang boleh dipakai akun ini,
+dan CLI yang lebih baru **belum ada di npm**. Dugaan jalur perbaikan: lewat
+aplikasi desktop Codex (`codex app`) — **belum diverifikasi**.
+
+MiganCore sebagai gantinya juga tidak bisa: Ollama di `127.0.0.1:11434` tidak
+menjawab. Korpus OMIGA sendiri terbaca normal.

@@ -4,6 +4,54 @@
 
 ---
 
+## [v0.7.2] · 2026-09-10
+> **Bubble chat di atas kepala — PRD BAB 5.1.1**
+
+### Added
+- `src/ui/ChatBubble.js` — satu lapisan bubble untuk avatar lokal **dan** avatar
+  pemain lain, jadi hanya ada satu jalur proyeksi 3D→2D yang harus dijaga benar.
+  Bubble dipetakan lewat `socketId`, bukan pencocokan nama; nama bisa kembar.
+- Lama tampil **2,4 detik + 0,045 detik per huruf**, dijepit maksimal 7 detik.
+  Pesan panjang butuh waktu baca; pesan pendek yang menggantung lama menutupi
+  dunia. Pesan beruntun dari orang yang sama **mengganti**, tidak menumpuk.
+- Bubble disembunyikan bila tokohnya lebih kecil dari **24 px** di layar (ambang
+  target minimum WCAG 2.5.8), dihitung dari proyeksi perspektif
+  `px_per_unit = (tinggi_viewport / (2·tan(fov/2))) / jarak` — bukan jarak
+  karangan, supaya ikut menyesuaikan FOV dan viewport. Pada 1280×720 fov 45,
+  ambangnya jatuh di ~67 unit. Tanpa ini, `<div>` yang tidak mengecil dengan
+  jarak jadi papan besar di atas titik sebesar piksel.
+- `RemotePlayers.posisiBubble(socketId)` — titik gantung dari mesh yang sedang
+  di-lerp, jadi bubble ikut bergerak halus; `null` bila pemainnya sudah keluar.
+- `MultiplayerSocket.id` — socketId sendiri, untuk memisahkan echo dengan pasti.
+- `tests/chatBubble.test.mjs` — 10 uji mengunci durasi, ambang 24 px, daur hidup
+  (kedaluwarsa → transisi keluar → lepas dari DOM), dan penjaga viewport 0.
+
+### Changed
+- Toast `💬 nama: pesan` kini **hanya** muncul bila bubble pengirimnya tidak
+  terlihat (di luar layar, di belakang kamera, terlalu jauh, atau belum ada di
+  roster). Sebelumnya satu pesan tampil tiga kali sekaligus: bubble, panel chat,
+  dan toast — dan toast menutupi dunia justru saat pemain sedang menatap orang
+  yang bicara.
+- Dua salinan logika kirim chat di `Game.js` disatukan jadi `_kirimChat()`.
+  Salinan itulah yang membuat fitur seperti ini mudah terpasang di satu jalur
+  lalu diam di jalur lain.
+- Warna bubble `#FDF6E8` dengan tinta `#2A1F14` — kontras **14,9:1**, mengikuti
+  arah visual "Nusantara syahdu 90-an s.d. awal 2000-an". Menghormati
+  `prefers-reduced-motion`.
+
+### Removed
+- `Avatar.showChat()` / `Avatar.updateBubble()` beserta field `_bubble`.
+  Komentarnya mengaku *"Dipanggil tiap frame dari Game.js"*, padahal `grep`
+  menemukan **nol** pemanggil dan CSS `.av-bubble` tidak pernah ada.
+  Mempertahankannya berarti dua mekanisme untuk satu hal.
+
+### Fixed
+- Nilai layout yang terbaca `0` (layout belum jadi) tidak lagi menyembunyikan
+  **semua** bubble. Uji ukuran dilewati bila tinggi viewport tidak diketahui —
+  fitur yang diam-diam kosong tidak akan pernah dilaporkan sebagai bug.
+
+---
+
 ## [v0.7.1] · 2026-09-09
 > **Benteng — near-miss 0,5 dan polish keterbacaan yang terukur**
 
