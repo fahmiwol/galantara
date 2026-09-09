@@ -47,6 +47,56 @@
 
 ---
 
+## [v0.7.2] · 2026-09-09
+> **Benteng bernuansa senja 90-an** — palet, huruf, dan lapangan
+
+### Kenapa
+Fahmi: *"UI-nya terlalu AI banget. Bikin lebih Indonesia, suasana tahun 90 –
+awal 2000-an yang syahdu."* Keluhannya punya bukti: palet lama adalah **warna
+default Tailwind mentah** (`#0ea5e9` sky-500, `#a855f7` purple-500,
+`#f59e0b` amber-500, `#fb7185` rose-400) di atas navy `#111936`, dengan
+Syne+Nunito. Itu juga **melanggar kontrak gaya proyek sendiri**, yang menulis
+"hangat dominan, golden hour, **bukan abu-abu cinematic**".
+
+Arahannya juga tepat secara isi: bentengan adalah permainan anak di tanah
+lapang, dan waktunya memang sore sampai magrib.
+
+### Added
+- `docs/RISET_VISUAL_SENJA_90AN.md` — dasar tiap warna dan bentuk. Sumber
+  rupa (langit magrib, tanah lapang, garis kapur, lampu natrium, pergeseran
+  warna cetakan C41), pilihan huruf, dan pagar yang tidak boleh ditembus estetika.
+- `visual.ground` di `config.js` — latar arena kini satu sumber, dan alat
+  audit membacanya dari sana alih-alih menguji latar yang sudah tidak dipakai.
+- `BentengRenderer._chalkLine()` / `_chalkRect()` — garis kapur dengan
+  simpangan dan ketebalan tidak rata, deterministik dari koordinat sehingga
+  tidak bergetar tiap frame.
+
+### Changed
+- **Palet**: seluruh warna Tailwind disapu. Tim `#7fb2e5` nila / `#f08a6a`
+  bata; aura kapur → natrium → bara → abu; latar `#3a2b20` tanah dalam bayangan.
+- **Huruf**: Syne+Nunito → **Plus Jakarta Sans** (rancangan Tokotype, huruf
+  identitas kota Jakarta, SIL OFL — asal-usul Indonesia yang nyata, bukan
+  klaim rasa) + **Bitter** untuk angka dan judul.
+- **Langit**: gelap merata → gradien magrib, gelap di puncak dan terang di ufuk.
+- **Lapangan**: gradien toska–magenta + grid neon → tanah dengan bercak rumput
+  kering dan garis kapur.
+
+### Terukur (bukan dikira)
+- `tools/benteng-visual-audit.mjs`: latar hangat sempat **menggagalkan 3 ambang**
+  (tim merah 2,96 · aura rendah 2,15 · aura habis 1,35 terhadap minimum 3:1).
+  Tanah digelapkan dan aura bawah diterangkan sampai **semua lulus** —
+  ambangnya tidak diturunkan.
+- Kontras teks **41/41 lulus** WCAG 2.2 AA sesudah penggantian palet.
+- Font terkecil tetap 10 px; area tangkap tetap 44 px (diverifikasi dengan
+  `elementFromPoint`, bukan `getBoundingClientRect` yang tidak melihat `::after`).
+- `node --test tests/benteng.test.mjs` 14/14 lulus.
+
+### Belum
+Dunia 3D Oola (`World.js`, `proceduralMeshFactory.js`) belum disentuh, aset
+Blender belum dibuat, dan pembedaan rupa antar-Spot belum dirumuskan.
+
+---
+
 ## [v0.7.0] · 2026-09-09
 > **Benteng Fase 0 — peran bot nyata, dan alat ukurnya**
 

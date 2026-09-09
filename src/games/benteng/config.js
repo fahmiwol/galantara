@@ -111,13 +111,18 @@ export const BENTENG_CONFIG = Object.freeze({
     screenShakeTag: 7,
     screenShakeRescue: 11,
     bannerDuration: 1.4,
-    teamColors: Object.freeze({ biru: '#38bdf8', merah: '#fb7185' }),
-    teamDark: Object.freeze({ biru: '#075985', merah: '#9f1239' }),
+    // Palet senja — alasan tiap warna di docs/RISET_VISUAL_SENJA_90AN.md.
+    // Yang lama (#38bdf8 sky-400, #fb7185 rose-400) adalah warna default
+    // Tailwind mentah, dan melanggar kontrak gaya proyek sendiri yang
+    // meminta "hangat dominan, bukan abu-abu cinematic".
+    ground: '#3a2b20',              // tanah lapang dalam bayangan magrib
+    teamColors: Object.freeze({ biru: '#7fb2e5', merah: '#f08a6a' }),
+    teamDark: Object.freeze({ biru: '#2f5480', merah: '#8f3a26' }),
     aura: Object.freeze({
-      high: '#fff7d6',
-      medium: '#fde047',
-      low: '#fb923c',
-      empty: '#94a3b8',
+      high: '#fdf3dc',              // kapur kena cahaya
+      medium: '#ffc247',            // lampu natrium
+      low: '#f2794f',               // bara
+      empty: '#b9b3a6',             // abu dingin, harus tetap terbaca di tanah gelap
     }),
   }),
 });

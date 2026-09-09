@@ -118,10 +118,14 @@ export class BentengRenderer {
     this._updateEffects(delta);
     const ctx = this.context;
 
+    // Langit magrib: GELAP di puncak, TERANG di ufuk. Palet lama gelap
+    // merata seperti ruang angkasa; sore tropis justru sebaliknya.
+    // docs/RISET_VISUAL_SENJA_90AN.md §3
     const sky = ctx.createLinearGradient(0, 0, 0, this.height);
-    sky.addColorStop(0, '#111936');
-    sky.addColorStop(0.48, '#241b45');
-    sky.addColorStop(1, '#4c1d48');
+    sky.addColorStop(0, '#2e2542');      // puncak, ungu magrib
+    sky.addColorStop(0.42, '#6b4257');   // peralihan
+    sky.addColorStop(0.74, '#b5613f');   // merah bata
+    sky.addColorStop(1, '#e0913f');      // jingga ufuk
     ctx.fillStyle = sky;
     ctx.fillRect(0, 0, this.width, this.height);
 
@@ -138,7 +142,7 @@ export class BentengRenderer {
     ctx.restore();
 
     if (this.flash > 0) {
-      ctx.fillStyle = `rgba(255,247,214,${this.flash * 0.2})`;
+      ctx.fillStyle = `rgba(253,243,220,${this.flash * 0.2})`;
       ctx.fillRect(0, 0, this.width, this.height);
     }
   }
@@ -166,7 +170,7 @@ export class BentengRenderer {
     ctx.save();
     ctx.shadowColor = 'rgba(0,0,0,.45)';
     ctx.shadowBlur = 28;
-    ctx.fillStyle = '#183a36';
+    ctx.fillStyle = '#2b2018';
     roundedRect(ctx, topLeft.x, topLeft.y, width, height, 22);
     ctx.fill();
     ctx.restore();
@@ -174,49 +178,66 @@ export class BentengRenderer {
     ctx.save();
     roundedRect(ctx, topLeft.x, topLeft.y, width, height, 22);
     ctx.clip();
-    const field = ctx.createLinearGradient(topLeft.x, topLeft.y, topLeft.x + width, topLeft.y);
-    field.addColorStop(0, '#164e63');
-    field.addColorStop(0.48, '#285943');
-    field.addColorStop(0.52, '#4d5b35');
-    field.addColorStop(1, '#7f1d3f');
+    // Tanah lapang, bukan papan neon. Gradien menurun dari sisi yang kena
+    // cahaya rendah ke sisi yang sudah masuk bayangan.
+    const field = ctx.createLinearGradient(topLeft.x, topLeft.y, topLeft.x + width, topLeft.y + height);
+    field.addColorStop(0, '#46341f');
+    field.addColorStop(0.5, '#3a2b20');
+    field.addColorStop(1, '#2f2419');
     ctx.fillStyle = field;
     ctx.fillRect(topLeft.x, topLeft.y, width, height);
 
-    ctx.strokeStyle = 'rgba(255,247,214,.08)';
-    ctx.lineWidth = 1;
-    const grid = Math.max(18, this.scale * 2);
-    for (let x = topLeft.x; x <= topLeft.x + width; x += grid) {
-      ctx.beginPath(); ctx.moveTo(x, topLeft.y); ctx.lineTo(x, topLeft.y + height); ctx.stroke();
-    }
-    for (let y = topLeft.y; y <= topLeft.y + height; y += grid) {
-      ctx.beginPath(); ctx.moveTo(topLeft.x, y); ctx.lineTo(topLeft.x + width, y); ctx.stroke();
-    }
-
-    ctx.setLineDash([this.scale * 0.8, this.scale * 0.55]);
-    ctx.strokeStyle = 'rgba(255,247,214,.3)';
-    ctx.lineWidth = Math.max(2, this.scale * 0.12);
-    ctx.beginPath();
-    ctx.moveTo(this.center.x, topLeft.y);
-    ctx.lineTo(this.center.x, topLeft.y + height);
-    ctx.stroke();
-    ctx.setLineDash([]);
-
-    for (let index = 0; index < 18; index += 1) {
-      const angle = index * 2.399;
-      const radius = (index % 5 + 1) * this.scale * 0.65;
-      const x = this.center.x + Math.cos(angle) * radius;
-      const y = this.center.y + Math.sin(angle) * radius;
-      ctx.fillStyle = index % 2 ? 'rgba(253,224,71,.13)' : 'rgba(244,114,182,.11)';
+    // Bercak rumput kering. Deterministik dari posisi, bukan Math.random,
+    // supaya tidak berkedip tiap frame.
+    for (let i = 0; i < 26; i += 1) {
+      const t = i * 2.3999632;
+      const px = topLeft.x + ((Math.sin(t) * 0.5 + 0.5) * width);
+      const py = topLeft.y + ((Math.cos(t * 1.37) * 0.5 + 0.5) * height);
+      ctx.fillStyle = i % 3 ? 'rgba(111,127,74,.16)' : 'rgba(138,107,79,.14)';
       ctx.beginPath();
-      ctx.arc(x, y, Math.max(1.5, this.scale * 0.08), 0, Math.PI * 2);
+      ctx.ellipse(px, py, this.scale * (0.5 + (i % 4) * 0.22), this.scale * 0.3, t, 0, Math.PI * 2);
       ctx.fill();
     }
+
+    // Garis tengah kapur. Garis kapur di tanah tidak pernah lurus sempurna —
+    // kerapian vektor itulah yang membuat tampilan terasa dibuat mesin.
+    this._chalkLine(ctx, this.center.x, topLeft.y, this.center.x, topLeft.y + height);
     ctx.restore();
 
-    ctx.strokeStyle = 'rgba(255,247,214,.5)';
-    ctx.lineWidth = 3;
-    roundedRect(ctx, topLeft.x, topLeft.y, width, height, 22);
-    ctx.stroke();
+    // Batas lapangan, juga kapur.
+    this._chalkRect(ctx, topLeft.x, topLeft.y, width, height);
+  }
+
+  /**
+   * Coretan kapur: garis yang digambar berulang dengan simpangan kecil
+   * dan ketebalan tidak rata. Simpangannya deterministik dari koordinat,
+   * jadi garisnya diam, tidak bergetar tiap frame.
+   */
+  _chalkLine(ctx, x1, y1, x2, y2, alpha = 0.5) {
+    const steps = 22;
+    ctx.save();
+    ctx.lineCap = 'round';
+    for (let pass = 0; pass < 2; pass += 1) {
+      ctx.strokeStyle = `rgba(244,234,214,${alpha * (pass ? 0.4 : 1)})`;
+      ctx.lineWidth = Math.max(1.5, this.scale * (pass ? 0.16 : 0.09));
+      ctx.beginPath();
+      for (let i = 0; i <= steps; i += 1) {
+        const t = i / steps;
+        const wobble = Math.sin(t * 9.7 + pass * 2.1 + x1 * 0.01) * this.scale * 0.06;
+        const nx = x1 + (x2 - x1) * t + (y2 - y1 ? wobble : 0);
+        const ny = y1 + (y2 - y1) * t + (x2 - x1 ? wobble : 0);
+        if (i === 0) ctx.moveTo(nx, ny); else ctx.lineTo(nx, ny);
+      }
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+
+  _chalkRect(ctx, x, y, w, h) {
+    this._chalkLine(ctx, x, y, x + w, y, 0.44);
+    this._chalkLine(ctx, x + w, y, x + w, y + h, 0.44);
+    this._chalkLine(ctx, x + w, y + h, x, y + h, 0.44);
+    this._chalkLine(ctx, x, y + h, x, y, 0.44);
   }
 
   _drawForts(ctx, state) {

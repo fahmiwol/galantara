@@ -102,7 +102,10 @@ function simulate(rgb, kind) {
 // ── Yang diuji ────────────────────────────────────────────────
 
 const V = BENTENG_CONFIG.visual;
-const GROUND = hexToRgb('#050817'); // latar arena tergelap
+const GROUND = hexToRgb(V.ground || '#050817');
+// Latar arena pindah dari hampir-hitam ke tanah hangat, jadi SELURUH
+// rasio kontras berubah. Dibaca dari config supaya alat ini tidak
+// diam-diam menguji latar yang sudah tidak dipakai.
 
 const TEAM_PAIR = {
   label: 'warna tim (biru vs merah)',
