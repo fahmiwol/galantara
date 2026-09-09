@@ -109,5 +109,22 @@ export class RemotePlayers {
     });
   }
 
+  /**
+   * Titik gantung bubble chat untuk satu pemain, dalam koordinat dunia.
+   * Nilainya dibaca dari mesh yang sedang di-lerp, jadi bubble ikut bergerak
+   * halus bersama avatarnya — bukan menempel di posisi target.
+   *
+   * 2.05 dipilih supaya bubble lolos di atas name-tag (diproyeksikan di 1.6);
+   * kepala remote sendiri hanya setinggi ~1.04.
+   *
+   * @returns {{x:number,y:number,z:number}|null} null kalau pemainnya sudah keluar
+   */
+  posisiBubble(socketId) {
+    const p = this._players[socketId];
+    if (!p) return null;
+    const m = p.mesh.position;
+    return { x: m.x, y: m.y + 2.05, z: m.z };
+  }
+
   get count() { return Object.keys(this._players).length; }
 }

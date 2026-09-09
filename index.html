@@ -112,6 +112,26 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
 .npc-chat{position:absolute;transform:translateX(-50%);background:#fff;border-radius:11px 11px 11px 2px;padding:5px 9px;font-size:9px;font-weight:700;color:#1E1040;white-space:nowrap;box-shadow:0 2px 8px rgba(0,0,0,.12);pointer-events:none;animation:bi .3s ease}
 @keyframes bi{from{opacity:0;transform:translateX(-50%) translateY(5px)}to{opacity:1;transform:translateX(-50%) translateY(0)}}
 
+/* CHAT BUBBLE DI ATAS KEPALA (PRD 5.1.1) — kertas hangat, bukan kotak chat app.
+   Tinta #2A1F14 di atas #FDF6E8 = kontras 14.9:1, lolos WCAG AA jauh di atas
+   ambang, dan tetap terbaca di langit siang maupun latar malam. */
+.chat-bubble{position:absolute;left:0;top:0;transform:translate(-50%,-100%) scale(.92);transform-origin:50% 100%;
+  max-width:min(42vw,230px);padding:6px 10px;border-radius:12px;
+  background:#FDF6E8;border:1px solid rgba(90,66,40,.22);color:#2A1F14;
+  font-size:11px;font-weight:600;line-height:1.35;text-align:center;
+  word-break:break-word;overflow-wrap:anywhere;
+  box-shadow:0 3px 10px rgba(48,32,16,.22);pointer-events:none;
+  opacity:0;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.9,.3,1.25)}
+.chat-bubble.on{opacity:1;transform:translate(-50%,-100%) scale(1)}
+/* Ekor kecil di bawah-tengah, menunjuk ke kepala. */
+.chat-bubble::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-5px;
+  border:5px solid transparent;border-top-color:#FDF6E8;border-bottom:0;
+  filter:drop-shadow(0 1px 0 rgba(90,66,40,.22))}
+@media (prefers-reduced-motion:reduce){
+  .chat-bubble{transition:opacity .12s linear;transform:translate(-50%,-100%)}
+  .chat-bubble.on{transform:translate(-50%,-100%)}
+}
+
 /* TOAST */
 #toast{position:absolute;top:60px;left:50%;transform:translateX(-50%);background:rgba(30,16,64,.88);border-radius:20px;padding:8px 18px;font-size:12px;font-weight:700;color:#fff;z-index:120;opacity:0;transition:opacity .3s;white-space:nowrap;pointer-events:none;max-width:88vw;text-align:center}
 #toast.on{opacity:1}

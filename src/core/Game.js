@@ -30,6 +30,7 @@ import { getVisualSpotRuntimeClass } from '../world/spotVisualRegistry.js';
 import { MultiplayerSocket } from '../multiplayer/Socket.js';
 import { RemotePlayers     } from '../multiplayer/RemotePlayers.js';
 import { Chat              } from '../ui/Chat.js';
+import { ChatBubbleLayer   } from '../ui/ChatBubble.js';
 import { VoiceChat         } from '../multiplayer/VoiceChat.js';
 import { Generator3DPanel  } from '../tools/Generator3DPanel.js';
 import { MapBuilder        } from '../tools/MapBuilder.js';
@@ -56,6 +57,8 @@ export class Game {
     this.mp           = new MultiplayerSocket();
     this.remotePlayers = null;
     this.chat         = new Chat();
+    /** @type {ChatBubbleLayer|null} dibuat setelah #lbl-layer ada di DOM */
+    this.bubble       = null;
     this.voice        = new VoiceChat();
 
     // State
@@ -152,21 +155,13 @@ export class Game {
 
     // Remote players (harus sebelum auth agar event Socket terpasang)
     this.remotePlayers = new RemotePlayers(scene);
+    this.bubble = new ChatBubbleLayer();
     this._initMultiplayer();
 
     // Chat
     this.chat.init();
     this._applySpotChrome();
-    this.chat.onSend((msg) => {
-      if (!this.user) {
-        this.toast.show('Login dulu untuk ikut chat 💬', 'a');
-        this.loginModal.open();
-        return;
-      }
-      this.mp.emitChat(msg);
-      // Tampilkan pesan sendiri langsung (tidak tunggu echo server)
-      this.chat.addMessage({ name: G_Auth.getName(this.user) || 'Aku', msg });
-    });
+    this.chat.onSend((msg) => this._kirimChat(msg));
 
     // Auth + tamu multiplayer (getSession tanpa user → join sebagai guest)
     G_Auth.init(
@@ -283,6 +278,9 @@ export class Game {
 
     // Update remote players (lerp + label)
     this.remotePlayers?.update(this.camera.cam, this.renderer.renderer);
+    // Bubble chat menyusul: ia membaca posisi mesh HASIL lerp di atas, jadi
+    // urutannya tidak boleh dibalik — kalau tidak, bubble tertinggal 1 frame.
+    this.bubble?.update(this.camera.cam);
 
     // Proximity voice — update posisi & cek jarak
     if (this.voice.enabled) {
@@ -392,14 +390,57 @@ export class Game {
         const el = document.getElementById('oc');
         if (el) el.textContent = n;
       })
-      .on('chat', ({ name, msg }) => {
-        // Jangan tampilkan pesan sendiri 2x (sudah di-add saat send)
-        const me = this.user ? G_Auth.getName(this.user) : this._guestLabel;
-        if (name !== me) {
-          this.chat.addMessage({ name, msg });
+      .on('chat', ({ socketId, name, msg }) => {
+        // Echo pesan sendiri: server mengirim balik ke seluruh room, termasuk
+        // pengirimnya. socketId memisahkannya dengan pasti — pencocokan nama
+        // salah begitu dua pemain memakai nama yang sama.
+        if (socketId && socketId === this.mp.id) return;
+
+        this.chat.addMessage({ name, msg });
+
+        // Bubble dulu, baru putuskan perlu-tidaknya toast: ucap() sekaligus
+        // memproyeksikan bubble, jadi setelahnya kita tahu ia terlihat atau
+        // tidak. Kalau bubble-nya kelihatan, toast cuma menyalin pesan yang
+        // sama untuk ketiga kalinya (bubble + panel chat + toast) dan menutupi
+        // dunia. Toast disimpan untuk kasus yang benar-benar butuh: pengirim
+        // di belakang kamera, di luar layar, atau belum ada di roster.
+        if (socketId) {
+          this.bubble?.ucap(socketId, msg, () => this.remotePlayers?.posisiBubble(socketId) ?? null);
         }
-        this.toast.show(`💬 ${name}: ${msg}`, 'g');
+        if (!socketId || !this.bubble?.terlihat(socketId)) {
+          this.toast.show(`💬 ${name}: ${msg}`, 'g');
+        }
       });
+  }
+
+  /**
+   * Satu-satunya jalur kirim chat. Sebelumnya logika ini disalin di dua
+   * tempat (Chat.onSend dan aksi tombol), dan salinan itulah yang membuat
+   * bubble mudah terpasang di satu jalur saja lalu diam di jalur lain.
+   *
+   * @param {string} msg
+   * @returns {boolean} true kalau pesan benar-benar terkirim
+   */
+  _kirimChat(msg) {
+    const teks = msg?.trim();
+    if (!teks) return false;
+    if (!this.user) {
+      this.toast.show('Login dulu untuk ikut chat 💬', 'a');
+      this.loginModal.open();
+      return false;
+    }
+    this.mp.emitChat(teks);
+    // Tampilkan pesan sendiri langsung, tidak menunggu echo server.
+    this.chat.addMessage({ name: G_Auth.getName(this.user) || 'Aku', msg: teks });
+    // Bubble di atas kepala sendiri: pemain harus melihat kata-katanya
+    // mendarat di dunia, bukan cuma di panel chat.
+    this.bubble?.ucap('aku', teks, () => {
+      const p = this.avatar?.getPosition();
+      // 1.85 = di atas kepala chibi (puncak ~1.23); avatar lokal tidak
+      // punya name-tag, jadi tidak perlu setinggi bubble remote.
+      return p ? { x: p.x, y: 1.85, z: p.z } : null;
+    });
+    return true;
   }
 
   /** Multiplayer sebagai tamu: lihat avatar orang, sync posisi; chat/voice butuh login */
@@ -584,6 +625,8 @@ export class Game {
       document.getElementById('voice-btn')?.classList.remove('active');
 
       this.remotePlayers.addAll({}, null);
+      // Pesan dari Spot lama tidak boleh ikut pindah ruangan.
+      this.bubble?.bersihkan();
 
       this._socketRoom = socketRoomForSpot(spot.id);
       const u = new URL(window.location.href);
@@ -603,6 +646,8 @@ export class Game {
       document.getElementById('voice-btn')?.classList.remove('active');
 
       this.remotePlayers.addAll({}, null);
+      // Pesan dari Spot lama tidak boleh ikut pindah ruangan.
+      this.bubble?.bersihkan();
 
       this._socketRoom = OOLA_SOCKET_ROOM;
       const u = new URL(window.location.href);
@@ -663,16 +708,9 @@ export class Game {
         }
       },
       sendChat:       ()                => {
-        if (!this.user) {
-          this.toast.show('Login dulu untuk ikut chat 💬', 'a');
-          this.loginModal.open();
-          return;
-        }
         const inp = document.getElementById('chat-input');
         if (!inp?.value.trim()) return;
-        this.mp.emitChat(inp.value.trim());
-        this.chat.addMessage({ name: G_Auth.getName(this.user) || 'Aku', msg: inp.value.trim() });
-        inp.value = '';
+        if (this._kirimChat(inp.value.trim())) inp.value = '';
       },
       doPrivateEntry: ()                => this.toast.show('Private Spot — coming soon 🔒', 'a'),
       doCreateSpot:   ()                => this.toast.show('Buat Spot Baru — coming soon 🏗', 'a'),

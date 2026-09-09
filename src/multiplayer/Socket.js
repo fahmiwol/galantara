@@ -118,5 +118,9 @@ export class MultiplayerSocket {
   }
 
   get connected() { return this._connected; }
+
+  /** socketId kita sendiri — dipakai memisahkan echo chat dari pesan orang.
+   *  null sebelum tersambung. */
+  get id() { return this._socket?.id ?? null; }
   get isGuest() { return this._guest; }
 }

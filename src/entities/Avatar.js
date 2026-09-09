@@ -20,10 +20,6 @@ export class Avatar {
 
     // Facing direction (radians) — dipakai untuk rotate mesh
     this._facing = 0;
-
-    // Chat bubble
-    this._bubble      = null;
-    this._bubbleTimer = null;
   }
 
   // ── BUILD CHIBI MESH ──────────────────────────────────
@@ -171,32 +167,8 @@ export class Avatar {
     setSavedAvatarColorIndex(this.colorIdx);
   }
 
-  // ── CHAT BUBBLE ───────────────────────────────────────
-  showChat(msg) {
-    if (!this._bubble) {
-      this._bubble = document.createElement('div');
-      this._bubble.className = 'av-bubble';
-      document.body.appendChild(this._bubble);
-    }
-    this._bubble.textContent = msg;
-    this._bubble.style.opacity = '1';
-    this._bubble.style.display = 'block';
-    clearTimeout(this._bubbleTimer);
-    this._bubbleTimer = setTimeout(() => {
-      if (this._bubble) this._bubble.style.display = 'none';
-    }, 4000);
-  }
-
-  // Dipanggil tiap frame dari Game.js
-  updateBubble(threeCamera) {
-    if (!this._bubble || this._bubble.style.display === 'none') return;
-    const v = new THREE.Vector3(this.pos.x, 2.4, this.pos.z);
-    v.project(threeCamera);
-    const x = (v.x *  0.5 + 0.5) * window.innerWidth;
-    const y = (v.y * -0.5 + 0.5) * window.innerHeight;
-    this._bubble.style.left = x + 'px';
-    this._bubble.style.top  = y + 'px';
-  }
+  // Bubble chat di atas kepala ditangani src/ui/ChatBubble.js — satu lapisan
+  // untuk avatar lokal maupun avatar pemain lain.
 
   getPosition() {
     return this.pos;
