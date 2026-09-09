@@ -1,0 +1,9 @@
+{
+  "version": 1,
+  "spotId": "malioboro",
+  "catatan": "Joglo dibangun dengan tools/rupa3d/joglo.py. Dasar penempatan: docs/RISET_3D_NUSANTARA.md §3 — rumpun Yogyakarta. Posisi masih perlu disetel terhadap tata letak Spot yang sebenarnya.",
+  "glbs": [
+    { "url": "assets/models/joglo.glb", "position": [0, 0, -6], "rotationY": 0, "scale": 1 },
+    { "url": "assets/models/joglo.glb", "position": [9, 0, 2], "rotationY": 0.6, "scale": 0.85 }
+  ]
+}

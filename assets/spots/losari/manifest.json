@@ -1,0 +1,10 @@
+{
+  "version": 1,
+  "spotId": "losari",
+  "catatan": "Rumah panggung Bugis-Makassar dibangun dengan tools/rupa3d/rumah_panggung.py. Dasar: docs/RISET_3D_NUSANTARA.md §5 (BPNB Sulawesi Selatan). Timpalaja sengaja dua lis saja — jumlah susunan dapat menandai status sosial, dan model generik tidak boleh memberi pangkat palsu.",
+  "glbs": [
+    { "url": "assets/models/rumah_panggung.glb", "position": [-5, 0, -4], "rotationY": 0, "scale": 1 },
+    { "url": "assets/models/rumah_panggung.glb", "position": [6, 0, -7], "rotationY": -0.45, "scale": 0.9 },
+    { "url": "assets/models/rumah_panggung.glb", "position": [1, 0, 6], "rotationY": 3.14, "scale": 0.8 }
+  ]
+}

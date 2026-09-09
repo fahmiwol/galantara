@@ -71,6 +71,68 @@ di kamera Galantara (phi 18–76°), bukan ukuran baku rumah Joglo. Yang bersumb
 adalah **susunannya** — tiga massa atap, empat saka guru, alas berundak — bukan
 rasio pastinya. Rujukan di `docs/RISET_3D_NUSANTARA.md` §3.
 
+### `sulah_nyanda.py` — Sulah Nyanda (Baduy/Kanekes, Banten)
+
+| | |
+|---|---|
+| Segitiga | **236** |
+| Kotak batas | 5,24 × 5,24 × 3,60 m |
+| Tinggi vs sasaran | 3,602 m vs 3,60 — meleset **0,06%** |
+| GLB | 29 KB |
+
+**Riwayat iterasi:**
+
+1. Sudut atap ditebak 46° → tinggi meleset **15%** (4,15 m vs 3,60).
+2. Render tampak kiri memperlihatkan **sosoran melayang terpisah** dari
+   rumahnya — dibuat sebagai prisma pelana kedua yang diletakkan di samping.
+   Cacat ini tidak muncul di angka mana pun.
+3. Sudut dihitung **mundur** dari tinggi sasaran: `atan(1,48 / 1,96)` = 37,1°.
+   Sosoran diganti jadi satu bidang miring yang menempel di tepi atap utama.
+
+**Pelajaran yang dibawa ke model berikutnya:** jangan menebak sudut lalu
+mengecek tingginya. Hitung sudut DARI tinggi sasaran.
+
+### `rumah_panggung.py` — Rumah panggung Bugis–Makassar (Spot Losari)
+
+| | |
+|---|---|
+| Segitiga | **236** |
+| Kotak batas | 5,50 × 4,67 × 4,20 m |
+| Tinggi vs sasaran | 4,20 m vs 4,20 — **tepat** |
+| GLB | 29 KB |
+
+Sudut atap (33,6°) dihitung sendiri dari tinggi sasaran sejak awal — pelajaran
+dari sulah_nyanda langsung dipakai.
+
+**Dua cacat yang hanya render bisa tunjukkan:**
+
+1. Lis **timpalaja menempel di bidang miring atap**, bukan di muka gable. Di
+   `prisma_pelana` bubungan membujur arah **X**, jadi segitiga gable ada di
+   ±X — bukan ±Y seperti yang saya tulis.
+2. Setelah arahnya benar, lis diletakkan 4 cm ke **dalam** dengan tebal 7 cm,
+   jadi hampir seluruhnya terkubur di mesh atap dan cuma tersisa titik kecil.
+   Sekarang menempel di luar muka gable.
+
+**Batas yang disengaja:** jumlah susunan timpalaja dapat menandai status
+sosial. Model generik tidak boleh memberi pangkat palsu, jadi dibuat **dua lis
+sederhana** yang memperjelas bidang gable — bukan jumlah yang mengaku mewakili
+status tertentu.
+
+## Terbukti termuat di mesin gamenya
+
+Bukan cuma di Blender. Ketiga GLB diuji lewat `THREE.GLTFLoader` di halaman
+Galantara yang sebenarnya (Three.js r128):
+
+```
+joglo.glb          OK | 5.48 x 4.15 x 4.88 m | 14 mesh | 168 tri
+sulah_nyanda.glb   OK | 5.24 x 3.60 x 5.24 m | 20 mesh | 236 tri
+rumah_panggung.glb OK | 5.50 x 4.20 x 4.67 m | 20 mesh | 236 tri
+```
+
+Angkanya sama persis dengan laporan `rupa_ekspor`, dan konversi Y-up benar
+(tinggi jadi komponen Y). Skala diterapkan ke verteks, jadi tidak ada skala
+tersisa di node — manual three.js menyebut itu sumber masalah runtime.
+
 ## Kenapa GLB, bukan mesh procedural di klien
 
 Mesh procedural di `src/tools/proceduralMeshFactory.js` bagus untuk bentuk
