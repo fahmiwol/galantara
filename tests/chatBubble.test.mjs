@@ -8,7 +8,8 @@
 //   - lama tampil ikut panjang pesan, dan dijepit
 //   - pesan baru MENGGANTI, tidak menumpuk
 //   - kedaluwarsa → transisi keluar → benar-benar dibuang (tidak bocor)
-//   - ambang 24px: tokoh yang terlalu kecil tidak diberi bubble
+//   - ambang keterbacaan 24px: tokoh yang terlalu kecil tidak diberi bubble
+//   - emoji dihitung satu huruf, dan tidak terbelah saat dipotong
 //   - penjaga viewport 0: kalau ukuran layar tidak diketahui, bubble tetap
 //     ditampilkan — menyembunyikan atas dasar data tak diketahui berarti
 //     chat diam-diam kosong
@@ -49,13 +50,22 @@ function pasangLingkungan({ lebar = 1280, tinggi = 720 } = {}) {
       distanceTo(v) {
         return Math.hypot(this.x - v.x, this.y - v.y, this.z - v.z);
       }
-      /** Kamera tiruan: menghadap -z, tanpa rotasi. NDC sederhana. */
+      /**
+        * Kamera tiruan: menghadap -z, tanpa rotasi.
+        * z dikembalikan sebagai NDC sungguhan di [-1, 1] untuk titik yang
+        * berada antara near dan far — supaya uji batas near/far menguji
+        * perilaku nyata, bukan nilai yang dipaksakan dari luar.
+        */
       project(cam) {
+        const NEAR = 1, FAR = 1000;
         const dz = cam.position.z - this.z;
         const f = 1 / Math.max(Math.tan((cam.fov * Math.PI) / 360), 1e-6);
         this.x = (this.x / (dz || 1e-6)) * f;
         this.y = (this.y / (dz || 1e-6)) * f;
-        this.z = dz > 0 ? 0.9 : 1.1; // >0 = di depan kamera
+        if (dz <= 0) this.z = 1.1;              // di belakang kamera
+        else if (dz < NEAR) this.z = -1.5;      // lebih dekat dari near plane
+        else if (dz > FAR) this.z = 1.5;
+        else this.z = ((dz - NEAR) / (FAR - NEAR)) * 2 - 1;
         return this;
       }
     },
@@ -157,6 +167,9 @@ test('pemilik yang sudah pergi (posisi null) tidak terlihat, tapi tidak error', 
 });
 
 test('tokoh lebih kecil dari 24px tidak diberi bubble', () => {
+  // 24 px = keputusan keterbacaan yang memakai angka WCAG 2.5.8 sebagai
+  // pembanding besaran. BUKAN klaim kepatuhan: SC 2.5.8 mengatur target
+  // interaktif, sedangkan avatar di sini bukan target klik.
   pasangLingkungan({ tinggi: 720 });
   const L = new ChatBubbleLayer();
   // 1.85 * (720 / (2*tan(22.5°))) / jarak = 24  →  jarak ≈ 67
@@ -171,6 +184,48 @@ test('tokoh lebih kecil dari 24px tidak diberi bubble', () => {
   M.ucap('jauh', 'hai', diTitikAsal);
   M.update(jauh);
   assert.equal(M.terlihat('jauh'), false, '200 unit harus disembunyikan');
+});
+
+test('emoji dihitung satu huruf dan tidak terbelah saat dipotong', () => {
+  pasangLingkungan();
+  const L = new ChatBubbleLayer();
+  const BULAN = String.fromCodePoint(0x1F319); // satu emoji = dua code unit UTF-16
+
+  // Kalau dihitung per code unit, 10 emoji akan dianggap 20 huruf dan
+  // durasinya jadi dua kali lipat.
+  L.ucap('a', BULAN.repeat(10), diTitikAsal);
+  const durasiEmoji = L._bubble.get('a').kadaluarsa - performance.now();
+  L.ucap('b', 'x'.repeat(10), diTitikAsal);
+  const durasiHuruf = L._bubble.get('b').kadaluarsa - performance.now();
+  assert.ok(Math.abs(durasiEmoji - durasiHuruf) < 30,
+    `10 emoji (${durasiEmoji} ms) harus setara 10 huruf (${durasiHuruf} ms)`);
+
+  const M = new ChatBubbleLayer();
+  M.ucap('c', BULAN.repeat(200), diTitikAsal);
+  const teks = M._bubble.get('c').el.textContent;
+  assert.equal(Array.from(teks).length, 100, 'dipotong di 100 karakter tampak');
+  // Karakter terakhir tidak boleh separuh pasangan surrogate.
+  const akhir = teks.charCodeAt(teks.length - 1);
+  assert.ok(akhir < 0xD800 || akhir > 0xDBFF, 'tidak berakhir di separuh emoji');
+});
+
+test('titik lebih dekat dari near plane tidak terlihat', () => {
+  pasangLingkungan();
+  const L = new ChatBubbleLayer();
+  L.ucap('a', 'hai', diTitikAsal);
+  // Kamera 0,5 unit dari titiknya — di dalam near plane (1,0). Tokohnya
+  // besar sekali jadi uji ukuran lolos; yang harus menolak adalah uji NDC.
+  L.update(kameraDi(0.5));
+  assert.equal(L.terlihat('a'), false);
+});
+
+test('kamera boleh diberikan saat konstruksi, tidak menunggu frame pertama', () => {
+  pasangLingkungan();
+  const L = new ChatBubbleLayer('lbl-layer', kameraDi(30));
+  // Belum sekali pun update() dipanggil. Pesan pertama tetap harus terlihat,
+  // supaya toast cadangan tidak salah menyala.
+  L.ucap('a', 'hai', diTitikAsal);
+  assert.equal(L.terlihat('a'), true);
 });
 
 test('titik di belakang kamera tidak terlihat', () => {

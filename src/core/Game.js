@@ -155,7 +155,7 @@ export class Game {
 
     // Remote players (harus sebelum auth agar event Socket terpasang)
     this.remotePlayers = new RemotePlayers(scene);
-    this.bubble = new ChatBubbleLayer();
+    this.bubble = new ChatBubbleLayer('lbl-layer', this.camera?.cam ?? null);
     this._initMultiplayer();
 
     // Chat
@@ -385,6 +385,9 @@ export class Game {
       .on('player_move', (data) => rp.move(data))
       .on('player_leave', (data) => {
         rp.remove(data);
+        // Tanpa ini, bubble orang yang sudah keluar tetap hidup (tersembunyi)
+        // sampai waktunya habis sendiri.
+        this.bubble?.buang(data.socketId);
       })
       .on('count', (n) => {
         const el = document.getElementById('oc');

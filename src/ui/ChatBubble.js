@@ -32,10 +32,16 @@ const MAKS_HURUF = 100;
 const TINGGI_TOKOH = 1.85;
 
 /** Bubble disembunyikan kalau tokohnya sudah lebih kecil dari ini di layar.
- *  24 px = ambang target minimum WCAG 2.5.8; di bawah itu tokohnya bukan lagi
- *  sesuatu yang bisa dikenali, jadi bubble berhenti menunjuk siapa pun dan
- *  hanya menutupi dunia. Patokannya UKURAN DI LAYAR, bukan jarak karangan,
- *  supaya ikut menyesuaikan FOV dan tinggi viewport. */
+ *  Di bawah ~24 px tokohnya bukan lagi sesuatu yang bisa dikenali, jadi bubble
+ *  berhenti menunjuk siapa pun dan hanya menutupi dunia.
+ *
+ *  CATATAN KEJUJURAN: 24 px dipilih dengan MEMBANDINGKAN ke ukuran target
+ *  minimum WCAG 2.5.8, tetapi ini BUKAN klaim kepatuhan — SC 2.5.8 mengatur
+ *  target interaktif, sedangkan avatar di sini bukan target klik. Anggap ini
+ *  keputusan keterbacaan yang memakai angka WCAG sebagai pembanding besaran.
+ *
+ *  Yang penting: patokannya UKURAN DI LAYAR, bukan jarak karangan, supaya ikut
+ *  menyesuaikan FOV dan tinggi viewport. */
 const MIN_PX_TOKOH = 24;
 
 /** Dipakai ulang tiap frame — jangan alokasi Vector3 di dalam loop. */
@@ -43,8 +49,12 @@ let _v = null;
 
 export class ChatBubbleLayer {
   /** @param {string} idLapisan elemen tempat bubble ditempel */
-  constructor(idLapisan = 'lbl-layer') {
+  constructor(idLapisan = 'lbl-layer', kamera = null) {
     this._lapisan = document.getElementById(idLapisan);
+    // Kalau kamera baru diketahui saat update() pertama, pesan yang tiba
+    // SEBELUM frame pertama akan dianggap "tidak terlihat" dan memicu toast
+    // padahal pengirimnya di depan mata. Jadi kamera boleh diberikan di sini.
+    this._kamera = kamera;
     /** @type {Map<string, {el: HTMLElement, ambilPosisi: Function, kadaluarsa: number, keluar: boolean, terlihat: boolean}>} */
     this._bubble = new Map();
   }
@@ -62,7 +72,12 @@ export class ChatBubbleLayer {
    */
   ucap(id, pesan, ambilPosisi) {
     if (!this._lapisan || !pesan || typeof ambilPosisi !== 'function') return;
-    const teks = String(pesan).slice(0, MAKS_HURUF);
+    // Array.from, bukan slice/length: keduanya bekerja pada code unit UTF-16,
+    // sehingga satu emoji terhitung dua "huruf" (durasi jadi berlebih) dan
+    // pemotongan di batas 100 bisa membelah pasangan surrogate jadi sampah.
+    const huruf = Array.from(String(pesan));
+    const teks = huruf.slice(0, MAKS_HURUF).join('');
+    const jumlahHuruf = Math.min(huruf.length, MAKS_HURUF);
 
     let b = this._bubble.get(id);
     if (!b) {
@@ -88,7 +103,7 @@ export class ChatBubbleLayer {
     if (typeof rAF === 'function') rAF(() => b.el.classList.add('on'));
     else b.el.classList.add('on');
 
-    const lama = Math.min(DETIK_MAKS, DETIK_DASAR + teks.length * DETIK_PER_HURUF);
+    const lama = Math.min(DETIK_MAKS, DETIK_DASAR + jumlahHuruf * DETIK_PER_HURUF);
     b.kadaluarsa = performance.now() + lama * 1000;
   }
 
@@ -125,9 +140,11 @@ export class ChatBubbleLayer {
 
     _v.project(this._kamera);
 
-    // z >= 1 berarti titiknya di belakang kamera — proyeksinya membalik dan
-    // bubble akan muncul di sisi layar yang salah kalau tidak disaring.
-    if (_v.z >= 1) return this._sembunyikan(b);
+    // NDC z yang sah ada di [-1, 1]. z >= 1 berarti di belakang kamera —
+    // proyeksinya membalik dan bubble muncul di sisi layar yang salah.
+    // z < -1 berarti lebih dekat daripada near plane; titiknya juga tidak
+    // benar-benar tergambar, jadi jangan diberi bubble.
+    if (_v.z >= 1 || _v.z < -1) return this._sembunyikan(b);
 
     const sx = (_v.x * 0.5 + 0.5) * W;
     const sy = (-_v.y * 0.5 + 0.5) * H;

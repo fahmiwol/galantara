@@ -183,8 +183,14 @@ perspektifnya sendiri:
 ```
 px_per_unit      = (tinggi_viewport / (2 * tan(fov/2))) / jarak
 tinggi_tokoh_px  = 1.85 * px_per_unit          // 1.85 = tinggi tokoh (unit)
-sembunyikan bila  tinggi_tokoh_px < 24         // ambang target min. WCAG 2.5.8
+sembunyikan bila  tinggi_tokoh_px < 24         // ambang keterbacaan (lihat catatan)
 ```
+
+> **Koreksi (pendapat kedua GPT-5.6, 10 Sep).** Angka 24 px semula saya sebut
+> sebagai "ambang target minimum WCAG 2.5.8". Itu salah kutip: SC 2.5.8 mengatur
+> **target interaktif**, sedangkan avatar di sini bukan target klik. Ambangnya
+> tetap dipakai sebagai keputusan **keterbacaan**, dengan angka WCAG sebagai
+> pembanding besaran — bukan klaim kepatuhan.
 
 Terukur di browser (1280x720, fov 45) — ambangnya jatuh sendiri di ~67 unit:
 

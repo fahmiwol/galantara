@@ -14,8 +14,10 @@
 - Lama tampil **2,4 detik + 0,045 detik per huruf**, dijepit maksimal 7 detik.
   Pesan panjang butuh waktu baca; pesan pendek yang menggantung lama menutupi
   dunia. Pesan beruntun dari orang yang sama **mengganti**, tidak menumpuk.
-- Bubble disembunyikan bila tokohnya lebih kecil dari **24 px** di layar (ambang
-  target minimum WCAG 2.5.8), dihitung dari proyeksi perspektif
+- Bubble disembunyikan bila tokohnya lebih kecil dari **24 px** di layar —
+  keputusan keterbacaan yang memakai ukuran target minimum WCAG 2.5.8 sebagai
+  *pembanding besaran*, **bukan** klaim kepatuhan (SC 2.5.8 mengatur target
+  interaktif; avatar di sini bukan target klik). Dihitung dari proyeksi perspektif
   `px_per_unit = (tinggi_viewport / (2·tan(fov/2))) / jarak` — bukan jarak
   karangan, supaya ikut menyesuaikan FOV dan viewport. Pada 1280×720 fov 45,
   ambangnya jatuh di ~67 unit. Tanpa ini, `<div>` yang tidak mengecil dengan

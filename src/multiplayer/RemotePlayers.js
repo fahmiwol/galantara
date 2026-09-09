@@ -49,7 +49,12 @@ export class RemotePlayers {
     nameEl.style.cssText += ';pointer-events:none;font-size:9px;background:rgba(0,0,0,.45);color:#fff;padding:2px 6px;border-radius:8px;position:absolute;';
     document.getElementById('lbl-layer')?.appendChild(nameEl);
 
-    this._players[socketId] = { mesh: group, targetX: x, targetZ: z, facing: 0, nameEl, name };
+    // PRD BAB 2.4 melarang scene.traverse — jadi referensi mesh dikumpulkan
+    // SEKARANG, saat dibuat, bukan disapu lagi nanti waktu dibuang.
+    this._players[socketId] = {
+      mesh: group, targetX: x, targetZ: z, facing: 0, nameEl, name,
+      bagian: [body, head, tag],
+    };
   }
 
   // ── BULK ADD (dari event 'players' saat join) ─────────
@@ -75,7 +80,10 @@ export class RemotePlayers {
     const p = this._players[socketId];
     if (!p) return;
     this.scene.remove(p.mesh);
-    p.mesh.traverse(c => { if (c.geometry) c.geometry.dispose(); });
+    // Geometry DAN material dua-duanya dibuang. Sebelumnya hanya geometry,
+    // sehingga tiga material per pemain menumpuk di GPU setiap kali ada yang
+    // keluar-masuk — tidak terlihat di sesi pendek, menumpuk di Spot ramai.
+    p.bagian?.forEach((m) => { m.geometry?.dispose(); m.material?.dispose(); });
     p.nameEl?.remove();
     delete this._players[socketId];
   }
