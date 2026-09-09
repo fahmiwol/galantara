@@ -10,6 +10,12 @@ const M = (color) => new THREE.MeshLambertMaterial({ color });
 const MS = (color, r = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: r, metalness: 0.05 });
 
 export class World {
+  /**
+   * Bohlam dan lampu titik yang ikut siklus hari (DayNight.pakaiLampu).
+   * Diisi saat prop dibangun, bukan dengan menyapu scene — lihat PRD BAB 2.4.
+   */
+  lampu = [];
+
   constructor(scene) {
     this.scene     = scene;
     /** @type {THREE.Group | null} */
@@ -103,6 +109,12 @@ export class World {
           typeof prop.scale === 'number' ? prop.scale : 1,
         );
         g.position.set(prop.pos.x, prop.pos.y, prop.pos.z);
+        // Kumpulkan lampu SEKARANG, saat grupnya masih di tangan. PRD BAB 2.4
+        // melarang scene.traverse; menyapu scene setelahnya untuk mencari
+        // lampu akan melanggar aturan itu tanpa alasan.
+        for (const anak of g.children) {
+          if (anak.userData?.isLampu) this.lampu.push(anak);
+        }
         this.addObject(g, prop.id || `prop_${prop.archetype}`);
       }
     }

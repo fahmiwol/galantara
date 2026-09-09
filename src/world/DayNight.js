@@ -25,15 +25,11 @@ export class DayNight {
   }
 
   /**
-   * Sapu scene sekali, kumpulkan apa pun yang bertanda `userData.isLampu`.
-   * Dipanggil setelah dunia dibangun; aman dipanggil ulang saat dunia
-   * dibangun ulang karena daftar lama dibuang dulu.
+   * Terima daftar lampu yang sudah dikumpulkan World saat prop dibangun.
+   * Sengaja TIDAK menyapu scene: PRD BAB 2.4 melarang `scene.traverse`.
    */
-  daftarkanLampu(scene) {
-    this._lampu = [];
-    scene?.traverse?.((o) => {
-      if (o.userData?.isLampu) this._lampu.push(o);
-    });
+  pakaiLampu(daftar) {
+    this._lampu = Array.isArray(daftar) ? daftar : [];
     return this._lampu.length;
   }
 
