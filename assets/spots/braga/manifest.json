@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "spotId": "braga",
+  "catatan": "Belum ada GLB. Ruko art deco, kafe trotoar, dan lampu klasik dibangun procedural di BragaSpotRuntime. Manifest kosong ini sengaja ada supaya tidak memicu 404 tiap kali Spot dibuka — pelajaran dari Kuta.",
+  "glbs": []
+}

@@ -296,3 +296,52 @@ yang memang berdiri di lokasi itu.
 
 **Belum diklaim:** ukiran spesifik pada candi bentar, dan jenis pura tertentu
 di Kuta. Yang bersumber adalah **bentuk gerbangnya**, bukan ornamennya.
+
+## 14. Braga / Bandung — art deco dan budaya nongkrong
+
+*Ditambahkan 2026-09-10.*
+
+### Dasar yang dapat dipertanggungjawabkan
+
+Braga berkembang dari jalan kecil yang dilalui pedati pengangkut hasil bumi,
+lalu menjadi koridor utama menuju pusat pemerintahan Eropa. **Puncak
+kejayaannya 1920–1940**, dan dari sanalah istilah *Paris van Java* muncul.
+
+**Art deco** yang populer 1920-an–1930-an memberi karakter visualnya:
+**garis-garis geometris**, ornamen khas, dan material berkualitas. Detail yang
+disebut berulang: **detail geometris, balkon klasik, jendela lengkung**, dan
+tekstur batu era kolonial.
+
+Yang paling menentukan untuk model: jenis properti yang **mendominasi** Braga
+adalah **ruko art deco/kolonial dua sampai tiga lantai, dengan lantai dasar
+sebagai ruang usaha** — toko, kafe, restoran, galeri. Ditambah **penataan
+trotoar yang ramah pejalan kaki** dan **lampu jalan bergaya klasik**.
+
+### Kenapa Braga jadi Spot nongkrong
+
+PRD BAB 1.5 menempatkan Galantara sebagai *"ruang digital yang
+merepresentasikan budaya berkumpul Indonesia — dari ngobrol di warung kopi,
+belanja di pasar malam, sampai **nongkrong di pinggir jalan**"*. Braga adalah
+tempat paling tepat untuk kalimat terakhir itu, karena deretan kafe klasik dan
+trotoarnya memang fungsinya begitu.
+
+BAB 1.3 juga menyebut **mIRC** sebagai referensi: *"chat room culture
+Indonesia, budaya tongkrongan digital era 2000-an"* — sejalan dengan arahan
+"syahdu 90-an – awal 2000-an".
+
+### Siluet procedural
+
+- **Trotoar sebagai permukaan utama**, lebih tinggi dari badan jalan. Braga
+  dalam ingatan orang adalah jalan pejalan kaki.
+- **Deret ruko 2–3 lantai** dengan mahkota bertingkat (*stepped parapet*) —
+  itu yang paling cepat terbaca dari kamera orbit, karena mengubah siluet atas.
+- **Lis horizontal antar lantai** dan **alur vertikal** di muka: garis
+  geometris, murah, berulang.
+- **Jendela lengkung** di lantai atas.
+- **Lantai dasar sebagai etalase** dengan kanopi.
+- **Meja kafe di trotoar** — inti "nongkrong"-nya.
+- **Lampu jalan klasik** berkepala segi, bukan bola polos.
+
+**Belum diklaim:** bangunan tertentu di Braga (Gedung Merdeka, Braga Permai,
+dll.) tidak dimodelkan sebagai potret. Yang dibangun adalah **tipologi ruko
+art deco**-nya, bukan gedung yang bisa dikenali orang dan salah.

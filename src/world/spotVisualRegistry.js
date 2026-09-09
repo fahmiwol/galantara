@@ -7,6 +7,7 @@ import { MonasSpotRuntime } from './spots/MonasSpotRuntime.js';
 import { MalioboroSpotRuntime } from './spots/MalioboroSpotRuntime.js';
 import { LosariSpotRuntime } from './spots/LosariSpotRuntime.js';
 import { KutaSpotRuntime } from './spots/KutaSpotRuntime.js';
+import { BragaSpotRuntime } from './spots/BragaSpotRuntime.js';
 
 /** Spot `id` (config) → kelas runtime visual POC. */
 export const SPOT_VISUAL_RUNTIME = {
@@ -15,6 +16,7 @@ export const SPOT_VISUAL_RUNTIME = {
   malioboro: MalioboroSpotRuntime,
   losari: LosariSpotRuntime,
   kuta: KutaSpotRuntime,
+  braga: BragaSpotRuntime,
 };
 
 /** @param {string | null | undefined} spotId */
