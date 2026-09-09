@@ -133,7 +133,18 @@ function buildLampPost(palette, seed, scale) {
   bulb.material.emissive = new THREE.Color(palette.accent);
   bulb.material.emissiveIntensity = 0.35;
   bulb.castShadow = true;
+  // Ditandai supaya DayNight bisa menemukannya tanpa referensi dijalin
+  // turun lewat World -> Game. Lihat DayNight.daftarkanLampu().
+  bulb.userData.isLampu = true;
   g.add(bulb);
+
+  // Kolam cahaya di tanah. Emissive saja hanya membuat bohlamnya terang;
+  // yang bikin malam terasa syahdu justru tanah di bawahnya ikut hangat.
+  // Tanpa bayangan — sepuluh lampu bershadow akan menghabiskan HP kelas menengah.
+  const nyala = new THREE.PointLight(0xffb35c, 0, 6.5 * scale, 2);
+  nyala.position.y = 2.25 * scale;
+  nyala.userData.isLampu = true;
+  g.add(nyala);
   return g;
 }
 

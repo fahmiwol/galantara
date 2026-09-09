@@ -101,6 +101,12 @@ export class Game {
       skyDome:  this.world.skyDome,
     });
     this.dayNight.buildStars(scene);
+    // Lampu warung dan tiang ikut siklus hari: padam siang, menyala magrib.
+    // Disapu dari scene lewat userData.isLampu, jadi prop baru otomatis ikut
+    // tanpa perlu dijalin referensinya turun dari World.
+    this.dayNight.daftarkanLampu(scene);
+    // Lampu warung/tiang ikut siklus hari: padam siang, menyala magrib.
+    this.dayNight.daftarkanLampu(scene);
 
     // Avatar
     this.avatar = new Avatar(scene);
