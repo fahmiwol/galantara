@@ -124,7 +124,9 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
   opacity:0;transition:opacity .18s ease,transform .22s cubic-bezier(.2,.9,.3,1.25)}
 .chat-bubble.on{opacity:1;transform:translate(-50%,-100%) scale(1)}
 /* Ekor kecil di bawah-tengah, menunjuk ke kepala. */
-.chat-bubble::after{content:'';position:absolute;left:50%;bottom:-6px;margin-left:-5px;
+/* Ekor mengikuti --ekor supaya tetap menunjuk kepala pemiliknya walau
+   bubble-nya digeser menjauh dari tepi layar. Default di tengah. */
+.chat-bubble::after{content:'';position:absolute;left:var(--ekor,50%);bottom:-6px;margin-left:-5px;
   border:5px solid transparent;border-top-color:#FDF6E8;border-bottom:0;
   filter:drop-shadow(0 1px 0 rgba(90,66,40,.22))}
 @media (prefers-reduced-motion:reduce){

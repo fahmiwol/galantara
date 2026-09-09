@@ -44,6 +44,9 @@ const TINGGI_TOKOH = 1.85;
  *  menyesuaikan FOV dan tinggi viewport. */
 const MIN_PX_TOKOH = 24;
 
+/** Ekor tidak boleh lebih dekat dari ini ke sudut bubble. */
+const EKOR_TEPI_PX = 10;
+
 /** Jarak aman antar bubble yang bertumpuk, dan dari tepi layar. */
 const SELA_PX = 6;
 const TEPI_PX = 8;
@@ -265,6 +268,14 @@ export class ChatBubbleLayer {
     for (const b of tampak) {
       b.el.style.left = `${b._x}px`;
       b.el.style.top = `${b._y}px`;
+
+      // Ekor menunjuk titik gantung SEBENARNYA (b.sx), bukan tengah kotak.
+      // Begitu bubble dijepit menjauh dari tepi layar, ekor yang tetap di
+      // tengah akan menunjuk tempat kosong dan pembaca kehilangan tahu siapa
+      // yang bicara. Dijaga tetap di dalam kotak supaya tidak menggantung.
+      const w = b.w || LEBAR_CADANGAN;
+      const ekor = Math.min(Math.max(b.sx - (b._x - w / 2), EKOR_TEPI_PX), w - EKOR_TEPI_PX);
+      b.el.style.setProperty?.('--ekor', `${ekor}px`);
     }
   }
 
