@@ -10,6 +10,7 @@
 //   - kedaluwarsa → transisi keluar → benar-benar dibuang (tidak bocor)
 //   - ambang keterbacaan 24px: tokoh yang terlalu kecil tidak diberi bubble
 //   - emoji dihitung satu huruf, dan tidak terbelah saat dipotong
+//   - tata letak: dijepit di tepi layar, tidak bertumpuk sesama bubble
 //   - penjaga viewport 0: kalau ukuran layar tidak diketahui, bubble tetap
 //     ditampilkan — menyembunyikan atas dasar data tak diketahui berarti
 //     chat diam-diam kosong
@@ -25,6 +26,9 @@ function buatElemen() {
     style: {},
     textContent: '',
     _dibuang: false,
+    // 0 = layout belum jadi, seperti yang benar-benar terjadi di Browser pane.
+    offsetWidth: 0,
+    offsetHeight: 0,
     classList: {
       add: (c) => kelas.add(c),
       remove: (c) => kelas.delete(c),
@@ -234,6 +238,68 @@ test('titik di belakang kamera tidak terlihat', () => {
   L.ucap('a', 'hai', diTitikAsal);
   L.update(kameraDi(-10)); // kamera di belakang titik → z proyeksi >= 1
   assert.equal(L.terlihat('a'), false);
+});
+
+// ── Tata letak: tepi layar dan tumpukan ───────────────
+const angka = (px) => Number(String(px).replace('px', ''));
+
+test('bubble di dekat tepi atas dijepit supaya tidak terpotong', () => {
+  pasangLingkungan({ tinggi: 720 });
+  const L = new ChatBubbleLayer();
+  // y dunia tinggi → proyeksinya jatuh di ~12 px dari atas layar. Bubble
+  // digambar DI ATAS titik itu, jadi tanpa penjepitan ia terpotong habis
+  // oleh overflow:hidden milik #lbl-layer.
+  L.ucap('a', 'hai', () => ({ x: 0, y: 12, z: 0 }));
+  L.update(kameraDi(30));
+
+  assert.equal(L.terlihat('a'), true, 'harus tetap terlihat, bukan disembunyikan');
+  const atas = angka(L._bubble.get('a').el.style.top);
+  // Tinggi cadangan 28 + tepi 8 = 36: seluruh kotaknya masuk layar.
+  assert.ok(atas >= 36, `top ${atas} px, seluruh bubble harus di dalam layar`);
+});
+
+test('dua bubble di titik yang sama tidak saling menutupi', () => {
+  pasangLingkungan({ tinggi: 720 });
+  const L = new ChatBubbleLayer();
+  // Dua orang bicara berdempetan — kejadian yang SERING di dunia yang
+  // seluruh tujuannya orang berkumpul, bukan kasus tepi.
+  L.ucap('a', 'sini kumpul', diTitikAsal);
+  L.ucap('b', 'otw', diTitikAsal);
+  L.update(kameraDi(30));
+
+  const ya = angka(L._bubble.get('a').el.style.top);
+  const yb = angka(L._bubble.get('b').el.style.top);
+  // Tinggi cadangan 28 + sela 6 = 34.
+  assert.ok(Math.abs(ya - yb) >= 34,
+    `jarak vertikal ${Math.abs(ya - yb)} px, harus >= 34 supaya tidak bertumpuk`);
+});
+
+test('bubble sendirian tidak digeser tanpa alasan', () => {
+  pasangLingkungan({ tinggi: 720 });
+  const L = new ChatBubbleLayer();
+  L.ucap('a', 'hai', diTitikAsal);
+  L.update(kameraDi(30));
+  // Titik asal memproyeksi ke tengah layar; tidak ada tepi maupun tumpukan.
+  assert.equal(angka(L._bubble.get('a').el.style.top), 360);
+});
+
+test('ukuran elemen diukur ulang setelah layout jadi, tidak terkunci di cadangan', () => {
+  pasangLingkungan({ tinggi: 720 });
+  const L = new ChatBubbleLayer();
+  L.ucap('a', 'pesan yang panjang sekali sampai lebarnya jauh dari cadangan', diTitikAsal);
+
+  const b = L._bubble.get('a');
+  assert.equal(b.terukur, false, 'saat layout belum jadi, pakai cadangan');
+  assert.equal(b.w, 160);
+
+  // Layout akhirnya jadi — bubble panjang jauh lebih lebar dari cadangan.
+  b.el.offsetWidth = 230;
+  b.el.offsetHeight = 46;
+  L.update(kameraDi(30));
+
+  assert.equal(b.terukur, true, 'harus diukur ulang, bukan terkunci');
+  assert.equal(b.w, 230);
+  assert.equal(b.h, 46);
 });
 
 // ── Penjaga: ukuran layar tidak diketahui ─────────────

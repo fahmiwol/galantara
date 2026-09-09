@@ -44,6 +44,19 @@ const TINGGI_TOKOH = 1.85;
  *  menyesuaikan FOV dan tinggi viewport. */
 const MIN_PX_TOKOH = 24;
 
+/** Jarak aman antar bubble yang bertumpuk, dan dari tepi layar. */
+const SELA_PX = 6;
+const TEPI_PX = 8;
+
+/** Sejauh mana bubble boleh digeser naik untuk menghindari tumpukan. Lebih
+ *  dari ini ia sudah terlalu jauh dari kepala pemiliknya untuk masih bisa
+ *  dibaca sebagai "ucapan orang itu". */
+const GESER_MAKS_PX = 120;
+
+/** Ukuran cadangan kalau elemen belum terukur (mis. di lingkungan uji). */
+const LEBAR_CADANGAN = 160;
+const TINGGI_CADANGAN = 28;
+
 /** Dipakai ulang tiap frame — jangan alokasi Vector3 di dalam loop. */
 let _v = null;
 
@@ -93,9 +106,18 @@ export class ChatBubbleLayer {
     b.ambilPosisi = ambilPosisi;
     b.keluar = false;
 
+    // Ukur saat teksnya baru berubah — bukan tiap frame. Membaca
+    // offsetWidth/Height memaksa layout; 60x/detik per bubble itu biaya
+    // yang tidak perlu.
+    b.terukur = false;
+    b.w = LEBAR_CADANGAN;
+    b.h = TINGGI_CADANGAN;
+    this._ukur(b);
+
     // Tempatkan dulu sebelum terlihat, supaya bubble tidak sempat berkedip
     // di pojok kiri-atas pada frame pertama.
     this._tempatkan(b);
+    this._rapikan();
     // Satu frame jeda supaya transisi masuknya terlihat. Kalau rAF tidak ada,
     // langsung tampilkan — sebuah pesan yang hilang jauh lebih buruk daripada
     // sebuah pesan yang muncul tanpa animasi.
@@ -154,10 +176,96 @@ export class ChatBubbleLayer {
       return this._sembunyikan(b);
     }
 
+    // Hanya dihitung di sini. Penulisan gaya ditunda ke _rapikan(), yang
+    // melihat SEMUA bubble sekaligus — penjepitan tepi dan penghindaran
+    // tumpukan tidak bisa diputuskan satu per satu.
     b.terlihat = true;
-    b.el.style.visibility = '';
-    b.el.style.left = `${sx}px`;
-    b.el.style.top = `${sy}px`;
+    b.sx = sx;
+    b.sy = sy;
+  }
+
+  /**
+   * Coba ukur elemennya. Bisa gagal (mengembalikan 0) kalau layout belum jadi
+   * — dan kalau itu terjadi tepat saat pesan datang, ukuran cadangan akan
+   * terkunci selamanya dan penghindaran tumpukan memakai angka yang salah
+   * (pesan panjang jauh lebih lebar dari cadangan 160 px). Jadi selama belum
+   * berhasil, dicoba lagi tiap frame; setelah berhasil, tidak diukur lagi.
+   */
+  _ukur(b) {
+    if (b.terukur) return;
+    const w = b.el.offsetWidth;
+    const h = b.el.offsetHeight;
+    if (w > 0 && h > 0) { b.w = w; b.h = h; b.terukur = true; }
+  }
+
+  /**
+   * Rapikan seluruh bubble yang terlihat, lalu tulis posisinya.
+   *
+   * Dua masalah yang tidak bisa dilihat dari satu bubble saja:
+   *
+   * 1. TEPI LAYAR. Bubble digambar DI ATAS titik gantungnya
+   *    (translate -100%), dan #lbl-layer memakai overflow:hidden. Pemain yang
+   *    berdiri di bagian atas layar — hal yang biasa — bubble-nya terpotong
+   *    habis. Jadi posisinya dijepit supaya seluruh kotaknya tetap di dalam.
+   *
+   * 2. TUMPUKAN. Inti dunia ini orang berkumpul, jadi dua orang bicara
+   *    berdekatan itu kejadian yang SERING, bukan kasus tepi. Tanpa ini
+   *    bubble yang satu menutupi yang lain dan dua-duanya jadi tidak terbaca.
+   *    Yang lebih bawah di layar (lebih dekat ke kamera) dianggap pemilik
+   *    tempat; yang di belakangnya naik.
+   */
+  _rapikan() {
+    const [W, H] = this._ukuranLayar();
+    const tampak = [];
+    for (const b of this._bubble.values()) {
+      if (!b.terlihat) { b.el.style.visibility = 'hidden'; continue; }
+      b.el.style.visibility = '';
+      this._ukur(b);
+      tampak.push(b);
+    }
+    if (!tampak.length) return;
+
+    // Kotak layar tiap bubble: x di tengah sx, y dari (sy - tinggi) ke sy.
+    for (const b of tampak) {
+      const w = b.w || LEBAR_CADANGAN;
+      const h = b.h || TINGGI_CADANGAN;
+      b._x = W > 0 ? Math.min(Math.max(b.sx, w / 2 + TEPI_PX), W - w / 2 - TEPI_PX) : b.sx;
+      b._y = H > 0 ? Math.min(Math.max(b.sy, h + TEPI_PX), H - TEPI_PX) : b.sy;
+    }
+
+    if (tampak.length > 1) {
+      // Urut dari yang paling bawah: ia mendapat tempatnya lebih dulu.
+      const urut = [...tampak].sort((a, b) => b._y - a._y);
+      const sudah = [];
+      for (const b of urut) {
+        const w = b.w || LEBAR_CADANGAN;
+        const h = b.h || TINGGI_CADANGAN;
+        let geser = 0;
+        // Ulangi karena menggeser ke atas bisa membenturkan ke bubble lain.
+        for (let putaran = 0; putaran < sudah.length + 1; putaran++) {
+          let bentrok = null;
+          for (const a of sudah) {
+            const aw = a.w || LEBAR_CADANGAN;
+            const tumpangX = Math.abs(a._x - b._x) < (aw + w) / 2;
+            const atasB = b._y - geser - h;
+            const bawahB = b._y - geser;
+            const tumpangY = atasB < a._y + SELA_PX && bawahB > a._y - (a.h || TINGGI_CADANGAN) - SELA_PX;
+            if (tumpangX && tumpangY) { bentrok = a; break; }
+          }
+          if (!bentrok) break;
+          geser = b._y - (bentrok._y - (bentrok.h || TINGGI_CADANGAN) - SELA_PX);
+          if (geser > GESER_MAKS_PX) { geser = GESER_MAKS_PX; break; }
+        }
+        b._y -= geser;
+        if (H > 0) b._y = Math.max(b._y, h + TEPI_PX);
+        sudah.push(b);
+      }
+    }
+
+    for (const b of tampak) {
+      b.el.style.left = `${b._x}px`;
+      b.el.style.top = `${b._y}px`;
+    }
   }
 
   /**
@@ -213,6 +321,7 @@ export class ChatBubbleLayer {
       }
       this._tempatkan(b);
     }
+    this._rapikan();
   }
 
   /** Buang semuanya — dipakai saat pindah Spot. */
