@@ -61,9 +61,20 @@ export const BENTENG_CONFIG = Object.freeze({
     releasePushMultiplier: 0.35,
   }),
   nearMiss: Object.freeze({
-    distance: 0.3,
+    // 0.5 m, not 0.3. Tag radius is 0.6 m, so the old band was 0.6-0.9 m:
+    // at 5 m/s a pass crossed it in ~60 ms, roughly 4 frames. Too short to
+    // read, and it fired 2.2x per match against a gate of 3. At 0.5 the
+    // band is ~100 ms and the rate is 3.6x. Measured in
+    // docs/BENTENG_BALANCE_LOG.md.
+    distance: 0.5,
     timeScale: 0.25,
     duration: 0.15,
+    // Slow-motion adalah umpan balik, bukan hiasan: ia ada supaya momen
+    // PEMAIN terasa mendarat. Diukur 40 match, 100% near-miss terjadi
+    // antar-bot — menghentikan waktu untuk kejadian di pojok arena yang
+    // tak dilihat pemain membuatnya terbaca sebagai tersendat, bukan hadiah.
+    // Percikan dan kilau lokal tetap muncul untuk semua near-miss.
+    slowOnlyForPlayer: true,
     noTagWindow: 0.5,
     unitCooldown: 1.5,
   }),

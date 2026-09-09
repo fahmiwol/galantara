@@ -2,7 +2,11 @@
 <html lang="id">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <!-- Zoom sengaja TIDAK dikunci. maximum-scale=1 + user-scalable=no melanggar
+       WCAG 2.2 SC 1.4.4 (Resize Text, AA): konten harus bisa diperbesar sampai
+       200%. Gestur zoom tidak mengganggu permainan karena kanvas dan joystick
+       sudah memakai touch-action:none. -->
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#111936">
   <meta name="description" content="Benteng — prototype Sistem Muatan di semesta Galantara.">
   <title>Benteng · Galantara</title>

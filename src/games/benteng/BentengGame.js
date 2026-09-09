@@ -405,10 +405,13 @@ export class BentengGame {
             const last = this.lastNearMiss.get(escaping.id) ?? Number.NEGATIVE_INFINITY;
             if (this.elapsed - last >= c.nearMiss.unitCooldown) {
               this.lastNearMiss.set(escaping.id, this.elapsed);
-              this.nearSlowRemaining = c.nearMiss.duration;
-              this.timeScale = c.nearMiss.timeScale;
-              this.logger.recordNearMiss();
-              this.callbacks.onEvent({ type: 'nearMiss', unit: escaping });
+              const menyentuhPemain = a.isPlayer || b.isPlayer;
+              if (menyentuhPemain || !c.nearMiss.slowOnlyForPlayer) {
+                this.nearSlowRemaining = c.nearMiss.duration;
+                this.timeScale = c.nearMiss.timeScale;
+              }
+              this.logger.recordNearMiss(menyentuhPemain);
+              this.callbacks.onEvent({ type: 'nearMiss', unit: escaping, player: menyentuhPemain });
             }
           }
         }

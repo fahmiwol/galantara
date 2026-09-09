@@ -39,6 +39,9 @@ export class PlaytestLogger {
     this.captureAttempts = 0;
     this.outsideSeconds = 0;
     this.nearMisses = 0;
+    // Dihitung terpisah, sengaja TIDAK masuk CSV: kontrak 14 kolom sudah
+    // dikunci di docs/BENTENG_FASE0_WEB_PLAN.md. Ini untuk harness & HUD.
+    this.playerNearMisses = 0;
     this.maxChainLength = 0;
     this.prisonerIdleSeconds = 0;
   }
@@ -56,7 +59,10 @@ export class PlaytestLogger {
 
   recordRescue() { this.rescues += 1; }
   recordCaptureAttempt() { this.captureAttempts += 1; }
-  recordNearMiss() { this.nearMisses += 1; }
+  recordNearMiss(involvesPlayer = false) {
+    this.nearMisses += 1;
+    if (involvesPlayer) this.playerNearMisses += 1;
+  }
 
   accumulate(outsideSeconds, prisonerIdleSeconds, chainLength) {
     this.outsideSeconds += outsideSeconds;

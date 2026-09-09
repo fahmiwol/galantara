@@ -364,8 +364,14 @@ export class BentengRenderer {
 
       ctx.textAlign = 'center';
       ctx.fillStyle = 'rgba(248,250,252,.94)';
-      ctx.font = `800 ${clamp(this.scale * 0.58, 8, 12)}px Nunito, sans-serif`;
-      ctx.fillText(unit.name, position.x, position.y - this.config.visual.unitLabelOffset * this.scale);
+      // Tawanan berjajar 1,2 unit dunia (~45 px di layar penuh) sementara nama
+      // seperti "Rajawali" selebar 49 px, jadi labelnya saling tumpuk jadi
+      // gumpalan. Identitas tawanan sudah dibaca dari roster (ikon rantai);
+      // yang perlu dibaca di arena adalah panjang rantai dan ujungnya.
+      if (!unit.captured) {
+        ctx.font = `800 ${clamp(this.scale * 0.58, 8, 12)}px Nunito, sans-serif`;
+        ctx.fillText(unit.name, position.x, position.y - this.config.visual.unitLabelOffset * this.scale);
+      }
       ctx.fillStyle = chargeColor;
       ctx.font = `900 ${clamp(this.scale * 0.54, 8, 11)}px monospace`;
       ctx.fillText(`${Math.round(unit.charge)}`, position.x, position.y + this.config.visual.chargeLabelOffset * this.scale);

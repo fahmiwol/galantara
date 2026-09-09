@@ -11,6 +11,8 @@
     "test": "node --experimental-default-type=module --test tests/*.test.mjs",
     "install:server": "cd galantara-server && npm install",
     "server": "cd galantara-server && npm start",
-    "server:dev": "cd galantara-server && npm run dev"
+    "server:dev": "cd galantara-server && npm run dev",
+    "audit:visual": "node tools/benteng-visual-audit.mjs",
+    "sim:benteng": "node tools/benteng-sim.mjs --runs 100"
   }
 }

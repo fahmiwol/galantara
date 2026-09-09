@@ -4,6 +4,49 @@
 
 ---
 
+## [v0.7.1] · 2026-09-09
+> **Benteng — near-miss 0,5 dan polish keterbacaan yang terukur**
+
+### Changed
+- `nearMiss.distance` **0,3 → 0,5**. Radius tag 0,6 m, jadi pita lama 0,6-0,9 m
+  dilintasi dalam ~60 ms (±4 frame) pada 5 m/detik — terlalu singkat untuk
+  terbaca. Near-miss 2,20 → **3,50 per match**; **kelima gate Fase 0 lulus**.
+- Lantai tipografi HUD **7 px → 10/11 px** (18 aturan CSS). Acuan: Material 3
+  label-small 11sp, Apple HIG minimum 11pt.
+- Roster dilebarkan 105/120/152 → 126/132/140 px dan nama panjang ter-ellipsis,
+  karena teks yang lebih besar menjebolkannya 4 px.
+- Nama tawanan tidak lagi digambar di arena. Tawanan berjajar ~44,7 px di layar
+  sementara "Rajawali" selebar 49 px — labelnya menyatu jadi satu gumpalan.
+  Identitasnya sudah terbaca di roster lewat ikon rantai.
+
+### Added
+- `nearMiss.slowOnlyForPlayer` (default **true**). Diukur 40 match: 100%
+  near-miss terjadi antar-bot, nol melibatkan pemain — menghentikan waktu untuk
+  kejadian yang pemain tak lihat terbaca sebagai tersendat, bukan hadiah.
+  Percikan dan kilau lokal tetap muncul untuk semua near-miss.
+- `PlaytestLogger.playerNearMisses` — dilacak terpisah, sengaja **tidak** masuk
+  CSV karena kontrak 14 kolom sudah dikunci.
+- `tools/benteng-visual-audit.mjs` (`npm run audit:visual`) — kontras WCAG 2.2
+  plus jarak warna CIE76 di bawah simulasi protanopia/deuteranopia/tritanopia
+  (matriks Machado dkk. 2009). Ambang dE >= 20 untuk kategori yang harus
+  dibedakan sekilas.
+- Area sentuh **44x44** (Apple HIG · WCAG 2.2 SC 2.5.5) lewat `::after` yang
+  melebar, tanpa membesarkan kotak yang terlihat.
+- `npm run sim:benteng` sebagai jalan pintas ke gate Fase 0.
+
+### Fixed
+- Zoom halaman tidak lagi dikunci. `maximum-scale=1,user-scalable=no` melanggar
+  WCAG 2.2 SC 1.4.4 (Resize Text 200%). Tombol diberi `touch-action:manipulation`
+  supaya jeda tap-ganda 300 ms tetap hilang.
+- Satu target sentuh 21x32 px di bawah ambang WCAG 2.2 SC 2.5.8 (24x24).
+
+### Tidak diubah — dan itu disengaja
+- **Palet tetap.** Audit menunjukkan warna tim dan tangga aura lolos semua
+  ambang di ketiga jenis buta warna; yang paling tipis `sedang → rendah` di
+  deuteranopia (dE 24,2). Palet sesi sebelumnya sudah kuat.
+
+---
+
 ## [v0.7.0] · 2026-09-09
 > **Benteng Fase 0 — peran bot nyata, dan alat ukurnya**
 

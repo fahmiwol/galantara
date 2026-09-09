@@ -81,6 +81,10 @@ perlu dilihat, bukan dihitung.
 Angka near-miss dari bot juga cuma proksi: gate ini ditulis untuk playtest
 manusia, dan manusia mengelak dengan sengaja.
 
+> **Ditindaklanjuti hari yang sama:** Fahmi memutuskan naikkan ke 0,5.
+> Lihat entri "2026-09-09 (2)" di bawah untuk alasan terukurnya dan
+> konsekuensi slow-motion yang ikut harus ditangani.
+
 ---
 
 ## Cacat metode yang ketahuan (jangan diulang)
@@ -105,3 +109,85 @@ Dua kali harness saya sendiri yang berbohong, bukan game-nya:
 
 > Sebelum melaporkan "ada bias", jalankan `--policy bot` sebagai kontrol.
 > Kalau kontrolnya sendiri tidak setara, angkanya tidak berarti apa-apa.
+
+---
+
+## 2026-09-09 (2) — Dial near-miss dinaikkan, lalu polish keterbacaan
+
+### Keputusan dial
+
+`nearMiss.distance` **0,3 → 0,5**. Radius tag 0,6 m, jadi pita near-miss
+lama adalah 0,6–0,9 m: pada 5 m/detik sebuah papasan melintasinya dalam
+**~60 milidetik (±4 frame)** — terlalu singkat untuk terbaca. Pada 0,5 pita
+jadi ~100 ms. Near-miss naik 2,20 → **3,50 per match**, dan **kelima gate
+terukur Fase 0 lulus**.
+
+### Konsekuensi yang harus ditangani
+
+Menaikkan dial berarti slow-motion lebih sering terpicu. Diukur 40 match:
+**100% near-miss terjadi antar-bot, nol melibatkan pemain.** Artinya game
+menghentikan waktu untuk kejadian di pojok arena yang pemain tidak lihat.
+
+Slow-motion adalah **umpan balik** — ia ada supaya momen *pemain* terasa
+mendarat. Dipakai untuk kejadian NPC di luar perhatian, ia terbaca sebagai
+tersendat, bukan hadiah. Ditambahkan `nearMiss.slowOnlyForPlayer: true`.
+Percikan dan kilau lokal tetap muncul untuk semua near-miss — yang dicabut
+hanya penghentian waktu global. Gate tetap lulus setelahnya (3,37).
+
+Hitungan near-miss pemain dilacak terpisah di `PlaytestLogger.playerNearMisses`,
+**sengaja tidak masuk CSV** karena kontrak 14 kolom sudah dikunci.
+
+### Polish visual — diukur, bukan dikira
+
+| Yang diperiksa | Acuan | Sebelum | Sesudah |
+|---|---|---|---|
+| Kontras teks | WCAG 2.2 SC 1.4.3 (4,5:1 / 3:1) | 38/38 lulus | 38/38 lulus |
+| Kontras non-teks | WCAG 2.2 SC 1.4.11 (3:1) | semua lulus | semua lulus |
+| Ukuran font terkecil | Material 3 label-small 11sp; Apple HIG min 11pt | **7 px** | **10 px** |
+| Target sentuh | Apple HIG 44pt; WCAG 2.2 SC 2.5.5 | 6 di bawah 44 px | **0** |
+| Target sentuh (AA) | WCAG 2.2 SC 2.5.8 (24×24) | 1 gagal (21×32) | **0** |
+| Zoom halaman | WCAG 2.2 SC 1.4.4 (Resize Text 200%) | **dikunci** | terbuka |
+| Panel jebol | scrollWidth vs clientWidth | — | 0 di 3 breakpoint |
+| Label tawanan | lebar teks vs jarak di layar | 49 px teks / 44,7 px jarak | tidak digambar |
+
+Catatan tiap perubahan:
+
+1. **Palet TIDAK diubah.** `tools/benteng-visual-audit.mjs` menguji warna tim
+   dan tangga aura di bawah simulasi protanopia/deuteranopia/tritanopia
+   (matriks Machado dkk. 2009) dengan ambang CIE76 dE ≥ 20. Semua lulus;
+   yang paling tipis `sedang → rendah` di deuteranopia (dE 24,2, kuning dan
+   jingga memang saling mendekat) dan warna tim di protanopia (dE 42,3).
+   Palet buatan sesi sebelumnya sudah kuat — mengecatnya ulang cuma akan
+   merusak yang sudah benar.
+
+2. **Lantai tipografi 10 px / 11 px.** 18 aturan CSS dinaikkan. Sapuan pertama
+   melewatkan tiga ukuran karena ditulis sebagai shorthand `font:900 9px …`,
+   bukan `font-size:` — ketahuan dari audit DOM, bukan dari membaca CSS.
+
+3. **Zoom dibuka.** `maximum-scale=1,user-scalable=no` melanggar SC 1.4.4.
+   Kanvas dan joystick sudah `touch-action:none`, jadi gestur zoom tidak
+   mengganggu kendali; tombol diberi `touch-action:manipulation` supaya jeda
+   tap-ganda 300 ms tetap hilang.
+
+4. **Area sentuh 44×44 tanpa membesarkan kotak yang terlihat**, lewat `::after`
+   yang melebar. Layout sesi sebelumnya sudah pas; yang kurang cuma area
+   tangkapnya.
+
+5. **Roster dilebarkan** 105/120/152 → 126/132/140 px karena teks yang lebih
+   besar menjebolkannya 4 px, plus ellipsis untuk nama panjang.
+
+6. **Nama tawanan tidak lagi digambar di arena.** Tawanan berjajar 1,2 unit
+   dunia ≈ 44,7 px, sementara "Rajawali" selebar 49 px — labelnya menyatu jadi
+   "KamuLenteraRajawali". Identitas tawanan sudah terbaca di roster lewat ikon
+   rantai; yang perlu dibaca di arena adalah panjang rantai dan letak ujungnya.
+
+### Cara memeriksa ulang
+
+```
+npm run sim:benteng      # gate Fase 0
+npm run audit:visual     # kontras + buta warna
+node --test tests/benteng.test.mjs
+```
+
+Audit DOM (ukuran font, target sentuh, panel jebol) dijalankan di browser
+terhadap `benteng.html` pada 1280×720, 844×390, dan 640×360.
