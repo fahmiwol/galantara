@@ -22,8 +22,9 @@ function ensureGLTFLoader() {
       return;
     }
     const s = document.createElement('script');
-    s.src =
-      'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
+    s.src = ['localhost', '127.0.0.1'].includes(location.hostname)
+      ? '/vendor/GLTFLoader.js'
+      : 'https://cdn.jsdelivr.net/npm/three@0.128.0/examples/js/loaders/GLTFLoader.js';
     s.onload = () => resolve();
     s.onerror = () => resolve();
     document.head.appendChild(s);

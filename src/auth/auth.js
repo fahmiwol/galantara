@@ -11,6 +11,10 @@ export const G_Auth = {
   // ── INIT ───────────────────────────────────────────
   // opts.onInitialNoUser — dipanggil sekali setelah getSession jika tidak ada user (untuk guest multiplayer)
   init(onLogin, onLogout, opts = {}) {
+    if (['localhost', '127.0.0.1'].includes(location.hostname)) {
+      opts.onInitialNoUser?.();
+      return;
+    }
     try {
       const _sb = window.supabase;
       if (_sb?.createClient) {
@@ -21,7 +25,7 @@ export const G_Auth = {
       return;
     }
 
-    if (!sbClient) return;
+    if (!sbClient) { opts.onInitialNoUser?.(); return; }
 
     // Listen auth state changes
     sbClient.auth.onAuthStateChange((event, session) => {

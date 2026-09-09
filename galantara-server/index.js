@@ -7,6 +7,8 @@
 const express = require('express');
 const http    = require('http');
 const { Server } = require('socket.io');
+const path = require('path');
+const LOCAL = process.argv.includes('--local');
 
 const app    = express();
 const server = http.createServer(app);
@@ -14,8 +16,9 @@ const server = http.createServer(app);
 const GRACE_MS = 8000; // ms sebelum disconnect benar-benar dianggap pergi
 
 const io = new Server(server, {
+  path: LOCAL ? '/mp/socket.io' : '/socket.io',
   cors: {
-    origin: ['https://galantara.io', 'http://localhost:4000', 'http://localhost:3000'],
+    origin: ['https://galantara.io', 'http://localhost:4000', 'http://127.0.0.1:4000', 'http://localhost:3000'],
     methods: ['GET', 'POST'],
   },
   pingTimeout:  60000,
@@ -98,7 +101,7 @@ async function countSupabaseAuthUsers() {
 }
 
 // rooms[roomId][socketId] = { id, name, color, x, z, facing }
-const rooms      = {};
+const rooms      = Object.create(null);
 // grace timers[socketId] = setTimeout handle
 const graceTimers = {};
 
@@ -112,7 +115,7 @@ function removePlayer(roomId, socketId) {
   const name = rooms[roomId][socketId].name;
   delete rooms[roomId][socketId];
   io.to(roomId).emit('player_leave', { socketId });
-  _broadcastCount(roomId);
+  io.to(roomId).emit('count', Object.keys(rooms[roomId] || {}).length);
   console.log(`[-] ${name} left ${roomId} (${Object.keys(rooms[roomId] || {}).length} online)`);
 }
 
@@ -278,7 +281,16 @@ io.on('connection', (socket) => {
   }
 });
 
-const PORT = process.env.PORT || 3005;
-server.listen(PORT, () => {
+if (LOCAL) {
+  const root = path.resolve(__dirname, '..');
+  app.get('/local-health', (_, res) => res.json({ ok: true, app: 'galantara-local', mode: 'guest', port: 4000 }));
+  app.get('/three.min.js', (_, res) => res.sendFile(require.resolve('three/build/three.min.js')));
+  app.get('/vendor/GLTFLoader.js', (_, res) => res.sendFile(path.join(__dirname, 'node_modules/three/examples/js/loaders/GLTFLoader.js')));
+  for (const dir of ['src', 'assets', 'data']) app.use('/' + dir, express.static(path.join(root, dir), { dotfiles: 'deny' }));
+  for (const file of ['index.html', 'benteng.html', 'about.html']) app.get('/' + file, (_, res) => res.sendFile(path.join(root, file)));
+  app.get('/', (_, res) => res.sendFile(path.join(root, 'index.html')));
+}
+const PORT = LOCAL ? 4000 : (process.env.PORT || 3005);
+server.listen(PORT, LOCAL ? '127.0.0.1' : undefined, () => {
   console.log(`✅ Galantara multiplayer server running on :${PORT}`);
 });

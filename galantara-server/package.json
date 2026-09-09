@@ -10,8 +10,13 @@
     "start": "node index.js",
     "dev": "node --watch index.js"
   },
+  "overrides": {
+    "qs": "6.16.0"
+  },
   "dependencies": {
-    "express": "4.21.2",
-    "socket.io": "4.7.4"
+    "express": "4.22.2",
+    "galantara-repo": "file:..",
+    "socket.io": "4.8.3",
+    "three": "0.128.0"
   }
 }

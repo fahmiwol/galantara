@@ -1,0 +1,106 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no,viewport-fit=cover">
+  <meta name="theme-color" content="#111936">
+  <meta name="description" content="Benteng — prototype Sistem Muatan di semesta Galantara.">
+  <title>Benteng · Galantara</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@500;700;800;900&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="src/games/benteng/benteng.css">
+</head>
+<body>
+  <canvas id="arena" aria-label="Arena Benteng"></canvas>
+
+  <header class="topbar">
+    <a class="brand" href="index.html" aria-label="Kembali ke Oola">
+      <span class="brand-mark">G</span>
+      <span><b>GALANTARA</b><small>ARENA BENTENG · FASE 0</small></span>
+    </a>
+    <div class="scoreboard" aria-label="Skor pertandingan">
+      <span class="score score-blue" id="score-blue">0</span>
+      <div class="match-clock"><small>WAKTU</small><strong id="match-time">03:00</strong></div>
+      <span class="score score-red" id="score-red">0</span>
+    </div>
+    <nav class="top-actions" aria-label="Aksi permainan">
+      <button id="variant-button" class="chip" title="Ganti varian dan ulangi">VARIAN B · KEPEPET</button>
+      <button id="mute-button" class="icon-button" title="Suara" aria-label="Matikan suara">🔊</button>
+      <button id="restart-button" class="icon-button" title="Ulangi" aria-label="Ulangi pertandingan">↻</button>
+      <a class="icon-button" href="index.html" title="Kembali ke Oola" aria-label="Kembali ke Oola">×</a>
+    </nav>
+  </header>
+
+  <aside class="roster roster-blue" aria-label="Tim Biru">
+    <div class="roster-title"><span>◆</span> TIM BIRU</div>
+    <div id="roster-blue"></div>
+  </aside>
+  <aside class="roster roster-red" aria-label="Tim Merah">
+    <div class="roster-title">TIM MERAH <span>◆</span></div>
+    <div id="roster-red"></div>
+  </aside>
+
+  <div id="event-banner" class="event-banner" role="status" aria-live="polite"></div>
+
+  <section class="mission-card" aria-live="polite">
+    <small>INSTING SEKARANG</small>
+    <strong id="mission-text">Isi Muatan di Benteng, lalu cari celah.</strong>
+    <div class="charge-bar"><i id="player-charge-bar"></i></div>
+    <span id="player-charge-text">MUATAN 100</span>
+  </section>
+
+  <div class="controls-hint">
+    <span><kbd>WASD</kbd> bergerak</span>
+    <span>Aura terang = kuat</span>
+    <span>Sentuh musuh = tag otomatis</span>
+  </div>
+
+  <div id="joystick" class="joystick" aria-label="Joystick virtual">
+    <div class="joystick-ring"></div>
+    <div id="joystick-knob" class="joystick-knob"></div>
+  </div>
+  <button id="pull-button" class="pull-button" aria-label="Tarik rantai">
+    <span>TAP!</span>
+    TARIK RANTAI
+  </button>
+
+  <div class="playtest-tools">
+    <button id="csv-button" class="text-button">↓ CSV PLAYTEST</button>
+  </div>
+
+  <div id="onboarding" class="overlay on">
+    <section class="modal intro-modal">
+      <div class="eyebrow">PERMAINAN ASLI INDONESIA · RASA BARU</div>
+      <h1>Jaga nyalamu.<br><em>Berani menjauh.</em></h1>
+      <p>Muatanmu penuh saat pulang ke Benteng dan meluruh setiap detik di luar. Saat bersentuhan, aura yang lebih kuat menawan yang lebih lemah.</p>
+      <div class="rule-grid">
+        <div><b>01</b><span><strong>PULANG</strong>Isi Muatan sampai 100.</span></div>
+        <div><b>02</b><span><strong>BACA AURA</strong>Kejar yang lebih redup.</span></div>
+        <div><b>03</b><span><strong>REBUT</strong>Tahan 3 detik di benteng lawan.</span></div>
+      </div>
+      <button id="start-button" class="primary-button">MASUK ARENA <span>→</span></button>
+      <small class="prototype-note">Prototype 4v4 offline · tanpa akun · tanpa item · fokus menguji Sistem Muatan</small>
+    </section>
+  </div>
+
+  <div id="result-overlay" class="overlay">
+    <section class="modal result-modal">
+      <div id="result-kicker" class="eyebrow">PERTANDINGAN SELESAI</div>
+      <h2 id="result-title">TIM BIRU MENANG</h2>
+      <p id="result-reason">Benteng lawan berhasil direbut.</p>
+      <div id="result-metrics" class="result-metrics"></div>
+      <div class="result-actions">
+        <button id="result-restart" class="primary-button">SEKALI LAGI</button>
+        <button id="result-variant" class="secondary-button">COBA VARIAN A</button>
+      </div>
+      <button id="result-csv" class="text-button">Unduh data match (.csv)</button>
+    </section>
+  </div>
+
+  <div class="portrait-warning">Putar HP ke posisi landscape untuk membaca aura dan arena dengan jelas.</div>
+
+  <script type="module" src="src/games/benteng/main.js"></script>
+</body>
+</html>
+

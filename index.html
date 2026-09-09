@@ -11,8 +11,13 @@
 <meta property="og:type" content="website">
 
 <!-- Google Analytics -->
-<script async src="https://www.googletagmanager.com/gtag/js?id=G-WNDQL8J455"></script>
-<script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','G-WNDQL8J455');</script>
+<script>
+window.G_LOCAL = ['localhost','127.0.0.1'].includes(location.hostname);
+if (!window.G_LOCAL) {
+  const ga = document.createElement('script'); ga.src='https://www.googletagmanager.com/gtag/js?id=G-WNDQL8J455'; document.head.appendChild(ga);
+  window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments)}; gtag('js',new Date()); gtag('config','G-WNDQL8J455');
+}
+</script>
 
 <!-- Three.js: self-hosted di VPS, CDN fallback untuk dev lokal -->
 <script>
@@ -28,10 +33,10 @@
 </script>
 
 <!-- Supabase UMD -->
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"></script>
+<script>if(!window.G_LOCAL) document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');</script>
 
 <!-- Socket.io client — multiplayer -->
-<script src="https://cdn.socket.io/4.7.4/socket.io.min.js"></script>
+<script>document.write('<script src="'+(window.G_LOCAL?'/mp/socket.io/socket.io.js':'https://cdn.socket.io/4.7.4/socket.io.min.js')+'"><\/script>');</script>
 
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
@@ -201,6 +206,12 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
 
 <canvas id="c"></canvas>
 <div id="lbl-layer"></div>
+<a id="arena-door" href="benteng.html"><span>✦ MAIN DI GALANTARA</span><strong>Benteng</strong><small>Jaga nyala · kejar · selamatkan teman</small><b>MASUK ARENA →</b></a>
+<style>
+#arena-door{position:fixed;right:16px;top:112px;z-index:49;width:208px;padding:16px;border-radius:21px;border:1px solid rgba(255,255,255,.5);background:linear-gradient(135deg,rgba(15,23,42,.88),rgba(76,29,149,.86));color:#fff;text-decoration:none;box-shadow:0 15px 40px #17255444;backdrop-filter:blur(12px)}
+#arena-door span{display:block;color:#fde68a;font-size:8px;letter-spacing:.15em;font-weight:900}#arena-door strong{display:block;font-size:28px;font-weight:900}#arena-door small{display:block;color:#ddd6fe;font-size:10px;line-height:1.5}#arena-door b{display:block;margin-top:12px;font-size:10px;color:#67e8f9}
+@media(max-width:650px){#arena-door{top:106px;right:10px;width:145px;padding:12px}#arena-door strong{font-size:22px}#arena-door small{display:none}}
+</style>
 
 <!-- HUD TOP -->
 <div id="hud">

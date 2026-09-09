@@ -4,7 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 // Nginx proxy /mp/ → localhost:3001 — tidak perlu port terbuka
-const SERVER_URL = 'https://galantara.io';
+const SERVER_URL = window.location.origin;
 const SOCKET_PATH = '/mp/socket.io';
 const MOVE_THROTTLE_MS = 80; // emit posisi max 12fps
 

@@ -4,6 +4,48 @@
 
 ---
 
+## [v0.7.0] · 2026-09-09
+> **Benteng Fase 0 — peran bot nyata, dan alat ukurnya**
+
+### Added
+- `src/games/benteng/BotDirector.js` — otak bot terpisah dari aturan main.
+  Peran (`penjaga` / `penyerang`) ditentukan tiap tick dari roster hidup,
+  bukan dari ID unit. Serbu hanya dilakukan kalau muatan sanggup membayar
+  perjalanan **plus** 3 detik channel di benteng lawan. Bot terpojok memotong
+  di depan pengejar alih-alih lari pulang.
+- `tools/benteng-sim.mjs` — harness balance headless: 100 match tanpa browser,
+  6 arketipe pemain (termasuk `--policy bot` sebagai kontrol setara), gate
+  Fase 0 yang bisa diukur mesin, `--set` / `--sweep` untuk menguji dial tanpa
+  menyentuh `config.js`, dan `--csv`.
+- `config.match.startJitter` — sebaran posisi awal berseed. Default **0**
+  (perilaku lama); harness menaikkannya supaya sederet match jadi sampel nyata,
+  bukan satu lintasan yang diulang.
+- 5 test baru untuk BotDirector: jumlah penjaga, rotasi peran, unit bebas
+  terakhir berhenti jaga, kelayakan serbu, dan simetri elak antar tim.
+
+### Changed
+- `BentengGame` mendelegasikan keputusan bot ke `BotDirector`; `_chooseBotTarget`
+  menyusut dari ~85 baris jadi 9.
+- Peran ditetapkan saat `reset()` supaya frame pembuka sudah punya penjaga.
+- Profil temperamen bot kini identik untuk kedua tim (`BOT_PROFILE_ORDER`);
+  sebelumnya diturunkan dari indeks unit sehingga komposisi kedua tim berbeda.
+
+### Fixed
+- Penjaga tidak lagi dikunci ke `unit.id === 'B1' || unit.id === 'M0'` —
+  tambalan yang gagal begitu jumlah pemain berubah, dan tetap meninggalkan
+  benteng kosong.
+- Efek domino "satu tim habis dalam 10 detik": selesai-karena-tim-habis turun
+  dari **60% → 2%**, durasi median naik **77 s → 180 s**.
+- Keputusan pulang-saat-kritis naik **2,0% → 29,0%** — inti Sistem Muatan
+  praktis tidak pernah terpicu sebelumnya.
+
+### Belum lulus
+- Near-miss **2,20/match** dari target 3. Melebarkan `nearMiss.distance` ke 0,5
+  akan lulus (3,60) tapi itu melonggarkan definisi, bukan memperbaiki permainan —
+  keputusan rasa, menunggu Fahmi. Lihat `docs/BENTENG_BALANCE_LOG.md`.
+
+---
+
 ## [v0.6.6] · 2026-04-13
 > **Spot visual registry + Monas POC** — satu jalur `Game._spotRuntime`
 

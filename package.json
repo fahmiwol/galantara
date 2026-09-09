@@ -7,6 +7,8 @@
     "node": ">=18"
   },
   "scripts": {
+    "dev": "node galantara-server/index.js --local",
+    "test": "node --experimental-default-type=module --test tests/*.test.mjs",
     "install:server": "cd galantara-server && npm install",
     "server": "cd galantara-server && npm start",
     "server:dev": "cd galantara-server && npm run dev"

@@ -11,6 +11,7 @@ node_modules/
 .DS_Store
 Thumbs.db
 *.log
+.local/
 
 # Local / machine-specific (bukan bagian distribusi open source)
 .claude/settings.local.json
