@@ -207,7 +207,10 @@ export const SPOTS = [
     merchants: 35,
     vibe: 'Batik, kerajinan perak, kuliner Jawa, budaya',
     status: 'live',
-    theme: { primary: '#7C3AED', secondary: '#F59E0B' },
+    // PRD BAB 4.2: Malioboro = Batik Amber PRIMER, Ungu SEKUNDER.
+    // Nilai lama menaruh ungu (#7C3AED violet-600) sebagai primer —
+    // terbalik, dan dua-duanya default Tailwind.
+    theme: { primary: '#B45309', secondary: '#6B4C8A' },
   },
   {
     id: 'braga',
@@ -233,8 +236,15 @@ export const SPOTS = [
     emoji: '🌊',
     merchants: 22,
     vibe: 'Seafood, sunset Makassar, kuliner khas Sulawesi',
-    status: 'coming',
-    theme: { primary: '#0EA5E9', secondary: '#F97316' },
+    // 'coming' -> 'live' sejak LosariSpotRuntime ada. Gerbangnya di
+    // parseInitialSocketRoomFromUrl() di bawah: spot non-live ditolak dan
+    // diam-diam jatuh balik ke Oola — bukan error, jadi mudah disangka
+    // runtime-nya yang rusak.
+    status: 'live',
+    // Palet dibalik agar cocok PRD BAB 4.2: Losari = merah-oranye PRIMER,
+    // biru navy SEKUNDER. Nilai lama (#0EA5E9 sky-500 / #F97316 orange-500)
+    // adalah default Tailwind dan urutannya terbalik dari PRD.
+    theme: { primary: '#C2410C', secondary: '#1E3A5F' },
   },
 ];
 

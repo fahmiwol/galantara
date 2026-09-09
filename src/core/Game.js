@@ -445,6 +445,10 @@ export class Game {
         openPanel: (id) => this.panels.openPanel(id),
       });
       this.npcs?.setHubVisible(false);
+      // Lampu milik Spot ikut siklus hari, sama seperti prop Oola. Daftarnya
+      // diminta ke runtime-nya (dikumpulkan saat mount), bukan disapu dari
+      // scene — PRD BAB 2.4 melarang scene.traverse.
+      this.dayNight?.pakaiLampu(this._spotRuntime.getLampu?.() || []);
       const manifestPath = `assets/spots/${spotVisualId}/manifest.json`;
       void this.assetLibrary.applyManifest(this._spotRuntime.root, manifestPath);
       this._lastInteractionVolumeId = null;
