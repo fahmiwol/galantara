@@ -24,6 +24,8 @@ export class MonasSpotRuntime {
     this._goldTip = null;
     /** @type {THREE.Mesh | null} */
     this._warpRing = null;
+    /** @type {{badan: THREE.Mesh, kepala: THREE.Mesh, fase: number}[]} */
+    this._ondel = [];
     /** @type {InteractionVolume[]} */
     this.interactionVolumes = [];
   }
@@ -40,7 +42,7 @@ export class MonasSpotRuntime {
 
     const plaza = new THREE.Mesh(
       new THREE.CylinderGeometry(16, 17, 1.0, 28),
-      MS(0x9ca3af, 0.88),
+      MS(0xd8d4c8, 0.9),   // plaza putih-krem (sekunder PRD)
     );
     plaza.position.set(0, -0.48, 0);
     plaza.receiveShadow = true;
@@ -49,7 +51,7 @@ export class MonasSpotRuntime {
 
     const grass = new THREE.Mesh(
       new THREE.RingGeometry(1.2, 5.5, 24),
-      MS(0x4d7c0f, 0.9),
+      MS(0x2f6b3a, 0.9),   // hijau — PRIMER PRD, bukan aksen
     );
     grass.rotation.x = -Math.PI / 2;
     grass.position.set(0, 0.04, 0);
@@ -81,6 +83,116 @@ export class MonasSpotRuntime {
     ring.rotation.x = Math.PI / 2;
     ring.position.set(0, 0.08, 0);
     g.add(ring);
+
+
+    // ── Khazanah Betawi ────────────────────────────────
+    // Riset: docs/RISET_3D_NUSANTARA.md §12. Yang dibangun hanya yang
+    // punya sumber; ornamen tanpa dasar sengaja tidak dibuat.
+
+    // Ondel-ondel SEPASANG. Sumber konsisten menyebutnya dipakai berpasangan
+    // untuk menyambut tamu — satu ondel-ondel sendirian salah baca.
+    const ondelWarna = [0xc0392b, 0xf2ede4];
+    for (let i = 0; i < 2; i += 1) {
+      const sisi = i === 0 ? -1 : 1;
+      const ox = sisi * 2.6;
+      const oz = 9.2;
+
+      const badan = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.62, 0.78, 2.1, 10),
+        MS(i === 0 ? 0x2f6b3a : 0xb0483f, 0.86),
+      );
+      badan.position.set(ox, 1.05, oz);
+      badan.castShadow = true;
+      g.add(badan);
+
+      const kepala = new THREE.Mesh(
+        new THREE.SphereGeometry(0.62, 12, 10),
+        MS(ondelWarna[i], 0.8),
+      );
+      kepala.position.set(ox, 2.55, oz);
+      kepala.castShadow = true;
+      g.add(kepala);
+
+      // Mahkota jurai — deret kelopak mengelilingi kepala.
+      for (let k = 0; k < 9; k += 1) {
+        const a = (k / 9) * Math.PI * 2;
+        const jurai = new THREE.Mesh(
+          new THREE.ConeGeometry(0.11, 0.5, 5),
+          MS(k % 2 ? 0xd4a537 : 0xe8836b, 0.82),
+        );
+        jurai.position.set(ox + Math.cos(a) * 0.5, 3.15, oz + Math.sin(a) * 0.5);
+        jurai.rotation.set(0.42, 0, -a);
+        g.add(jurai);
+      }
+      this._ondel.push({ badan, kepala, fase: i * Math.PI });
+    }
+
+    // Rumah Kebaya. Cirinya: atap perisai dengan BIDANG TENGAH DATAR, dan
+    // lipatannya terbaca dari SAMPING. Teras depan lebar dan terbuka.
+    const rk = new THREE.Group();
+    rk.name = 'monas_rumah_kebaya';
+    const RK_X = 8.2, RK_Z = 7.4, RK_LEBAR = 5.2, RK_DALAM = 4.0;
+
+    const rkBadan = new THREE.Mesh(
+      new THREE.BoxGeometry(RK_LEBAR, 2.25, RK_DALAM),
+      MS(0xf2ede4, 0.9),
+    );
+    rkBadan.position.set(0, 1.13, 0);
+    rkBadan.castShadow = true;
+    rk.add(rkBadan);
+
+    // Dua bidang miring + satu bidang datar di tengah = siluet kebaya.
+    for (const sisi of [-1, 1]) {
+      const miring = new THREE.Mesh(
+        new THREE.BoxGeometry(RK_LEBAR + 0.7, 0.16, 1.55),
+        MS(0x8a5a3c, 0.88),
+      );
+      miring.position.set(0, 2.72, sisi * 1.4);
+      miring.rotation.x = sisi * -0.52;
+      miring.castShadow = true;
+      rk.add(miring);
+    }
+    const rkDatar = new THREE.Mesh(
+      new THREE.BoxGeometry(RK_LEBAR + 0.7, 0.16, 1.5),
+      MS(0x8a5a3c, 0.88),
+    );
+    rkDatar.position.set(0, 3.12, 0);
+    rk.add(rkDatar);
+
+    // Gigi balang — deret segitiga di lisplang. Pengulangannya yang
+    // membuatnya terbaca; satu-dua buah tidak akan kelihatan.
+    for (const sisi of [-1, 1]) {
+      for (let t = 0; t < 11; t += 1) {
+        const gigi = new THREE.Mesh(
+          new THREE.ConeGeometry(0.17, 0.3, 3),
+          MS(0xd4a537, 0.84),
+        );
+        gigi.position.set(-2.6 + t * 0.52, 2.34, sisi * 2.08);
+        gigi.rotation.x = Math.PI;
+        rk.add(gigi);
+      }
+    }
+
+    // Teras depan terbuka — ciri yang paling konsisten disebut sumber.
+    const teras = new THREE.Mesh(
+      new THREE.BoxGeometry(RK_LEBAR, 0.18, 1.6),
+      MS(0xd8d4c8, 0.9),
+    );
+    teras.position.set(0, 0.09, -RK_DALAM / 2 - 0.8);
+    teras.receiveShadow = true;
+    rk.add(teras);
+    for (const tx of [-1.9, 1.9]) {
+      const tiang = new THREE.Mesh(
+        new THREE.CylinderGeometry(0.09, 0.09, 2.1, 6),
+        MS(0x8a5a3c, 0.82),
+      );
+      tiang.position.set(tx, 1.15, -RK_DALAM / 2 - 1.4);
+      rk.add(tiang);
+    }
+
+    rk.position.set(RK_X, 0, RK_Z);   // RK_X/RK_Z dinaikkan di deklarasi
+    rk.rotation.y = -0.5;
+    g.add(rk);
 
     scene.add(g);
 
@@ -135,6 +247,15 @@ export class MonasSpotRuntime {
   }
 
   /**
+   * Monas belum punya lampu sendiri, tapi metodenya tetap ada supaya Game
+   * mendapat daftar KOSONG saat pindah ke sini — bukan mewarisi daftar lampu
+   * Spot sebelumnya, yang meshnya sudah di-dispose.
+   */
+  getLampu() {
+    return [];
+  }
+
+  /**
    * @param {THREE.Scene} scene
    */
   dispose(scene) {
@@ -150,6 +271,7 @@ export class MonasSpotRuntime {
     });
     this.raycastMeshes = [];
     this._goldTip = null;
+    this._ondel = [];
     this._warpRing = null;
   }
 
@@ -157,6 +279,14 @@ export class MonasSpotRuntime {
   animate(t) {
     if (this._goldTip) {
       this._goldTip.rotation.y = t * 0.12;
+    }
+    // Ondel-ondel bergoyang pelan seperti diarak. Fase digeser antar
+    // pasangan supaya tidak bergerak serempak seperti satu benda.
+    for (const o of this._ondel) {
+      const goyang = Math.sin(t * 1.1 + o.fase) * 0.055;
+      o.badan.rotation.z = goyang;
+      o.kepala.rotation.z = goyang * 1.4;
+      o.kepala.position.x = o.badan.position.x - goyang * 0.5;
     }
     animateSpotWarpPortal(this._warpRing, t);
   }

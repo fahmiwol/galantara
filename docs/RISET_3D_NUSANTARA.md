@@ -223,3 +223,76 @@ Target tiap prop kecil tetap di bawah 5.000 segitiga. Target praktis pass ini:
 Semua itu perlu riset atau referensi gambar tambahan sebelum dijadikan detail
 produksi. Sampai saat itu, siluet, material, dan konteks yang bersumber di atas
 adalah batas implementasi.
+
+---
+
+## 12. Monas / Jakarta — khazanah Betawi
+
+*Ditambahkan 2026-09-10 atas permintaan Fahmi: "Monas harus Monas dan Jakarta
+banget. Betawi, ada ondel-ondel, riset dulu apa saja khasnya."*
+
+### Dasar yang dapat dipertanggungjawabkan
+
+**Ondel-ondel** adalah figur boneka besar dalam pertunjukan rakyat Betawi.
+Fungsinya sebagai **pelindung kampung** dan simbol spiritual, dan ia dipakai
+**sepasang** untuk meramaikan festival atau menyambut tamu kehormatan. Ini
+ikon Jakarta.
+
+**Rumah Kebaya** adalah rumah tradisional Betawi, dinamai dari **bentuk
+atapnya yang menyerupai lipatan kebaya — dan lipatan itu terlihat dari
+SAMPING**. Atapnya bersisi empat yang miring ke bawah dengan **bagian tengah
+yang datar**, adaptasi terhadap curah hujan tinggi Jakarta. Ciri lain yang
+konsisten disebut: **teras depan yang luas** untuk menerima tamu dan
+bersantai.
+
+**Gigi balang** adalah papan berbentuk segitiga berderet yang mirip gigi
+belalang, dipasang di lisplang. Bersama motif banji ia jadi ornamen identitas
+rumah Kebaya, dan maknanya kerja keras serta kejujuran.
+
+### Siluet procedural
+
+- **Ondel-ondel sepasang** — selalu dua, tidak pernah satu. Badan silinder
+  tinggi, kepala besar bulat, mahkota jurai. Dibedakan lewat warna wajah.
+- **Rumah Kebaya** — atap perisai dengan **bidang tengah datar**; lipatannya
+  harus terbaca dari sisi, bukan dari depan. Teras depan lebar dan terbuka.
+- **Gigi balang** — deret segitiga di sepanjang lisplang. Berulang, jadi
+  murah; dan justru pengulangan itu yang membuatnya terbaca.
+- Monas sendiri: obelisk tinggi dengan lidah api emas di puncak.
+
+**Belum diklaim:** warna wajah ondel-ondel bervariasi antar sanggar; saya
+tidak menemukan satu aturan baku yang berlaku umum, jadi pasangan dibedakan
+lewat warna tanpa mengaku mewakili gender tertentu. Motif banji juga tidak
+dibuat karena bentuk presisinya belum punya sumber di sini.
+
+## 13. Kuta / Bali
+
+*"Kuta harus ada pantainya, pohon kelapa, fitur surfing, bangunan pura atau
+gapura ala Bali."*
+
+### Dasar yang dapat dipertanggungjawabkan
+
+**Candi bentar** adalah gerbang klasik Jawa–Bali: bangunan mirip candi yang
+**dibelah sempurna menjadi dua** sehingga ada jalan di tengahnya. Ciri
+bentuknya **berundak (stepped profile)**; muka depannya bisa sangat berhias
+sementara **sisi lorongnya dibiarkan polos**. Jalannya biasanya **ditinggikan
+dengan anak tangga**. Maknanya dualitas yang harus seimbang — baik dan buruk,
+siang dan malam.
+
+Yang membuatnya tepat di sini: **gerbang masuk pantai Kuta sendiri adalah
+sebuah candi bentar.** Jadi ia bukan tempelan "biar Bali", melainkan bangunan
+yang memang berdiri di lokasi itu.
+
+### Siluet procedural
+
+- **Candi bentar** sebagai gerbang menuju pantai — dua massa berundak yang
+  saling menghadap dengan celah di tengah, dinaikkan beberapa anak tangga.
+  Muka berhias, sisi lorong polos (sesuai sumber, dan kebetulan hemat poligon).
+- **Pantai** — pasir, garis buih, laut. Batasnya harus terbaca.
+- **Pohon kelapa** — batang melengkung, pelepah menjuntai. Sudah ada
+  archetype `pohon_kelapa` di `proceduralMeshFactory.js`.
+- **Papan selancar** ditancapkan berderet di pasir — penanda surfing yang
+  terbaca dari kamera orbit tanpa perlu animasi ombak.
+- Payung pantai dan kursi berjemur.
+
+**Belum diklaim:** ukiran spesifik pada candi bentar, dan jenis pura tertentu
+di Kuta. Yang bersumber adalah **bentuk gerbangnya**, bukan ornamennya.

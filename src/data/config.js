@@ -189,7 +189,10 @@ export const SPOTS = [
     merchants: 48,
     vibe: 'Landmark bersejarah, pasar oleh-oleh, street food',
     status: 'live',
-    theme: { primary: '#DAA520', secondary: '#228B22' },
+    // PRD BAB 4.2: Monas = HIJAU primer, PUTIH sekunder, emas aksen.
+    // Nilai lama (#DAA520 goldenrod / #228B22 forestgreen) menaruh emas
+    // sebagai primer — terbalik, dan putih hilang sama sekali.
+    theme: { primary: '#2F6B3A', secondary: '#F4F1E8', accent: '#D4A537' },
   },
   {
     id: 'kuta',
@@ -198,7 +201,10 @@ export const SPOTS = [
     merchants: 62,
     vibe: 'Pantai, surf culture, kerajinan lokal, sunset live',
     status: 'live',
-    theme: { primary: '#F97316', secondary: '#38BDF8' },
+    // PRD BAB 4.2: Kuta = Oranye, Biru, KREM. Urutannya sudah benar, tapi
+    // nilainya default Tailwind mentah (orange-500 / sky-400) dan aksen
+    // krem belum ada.
+    theme: { primary: '#E2703A', secondary: '#3D8FB8', accent: '#EFE2C8' },
   },
   {
     id: 'malioboro',
@@ -219,7 +225,10 @@ export const SPOTS = [
     merchants: 29,
     vibe: 'Kafe vintage, fashion, kuliner kreatif, seni',
     status: 'live',
-    theme: { primary: '#EC4899', secondary: '#8B5CF6' },
+    // PRD BAB 4.2: Braga = ABU-BIRU primer, TEAL sekunder, CORAL aksen.
+    // Nilai lama (#EC4899 pink-500 / #8B5CF6 violet-500) tidak berhubungan
+    // sama sekali dengan dokumen.
+    theme: { primary: '#5B7A8C', secondary: '#2E8B84', accent: '#E8836B' },
   },
   {
     id: 'bogor',

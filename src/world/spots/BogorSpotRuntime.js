@@ -158,9 +158,13 @@ export class BogorSpotRuntime {
     return this;
   }
 
-  /**
-   * @param {THREE.Scene} scene
-   */
+  /** Belum punya lampu sendiri; kembalikan kosong supaya Game tidak
+   *  mewarisi daftar lampu Spot sebelumnya. */
+  getLampu() {
+    return [];
+  }
+
+  /** @param {THREE.Scene} scene */
   dispose(scene) {
     for (const v of this.interactionVolumes) v.reset();
     this.interactionVolumes = [];

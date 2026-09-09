@@ -1,0 +1,6 @@
+{
+  "version": 1,
+  "spotId": "kuta",
+  "catatan": "Belum ada GLB. Candi bentar, kelapa, papan selancar, dan payung dibangun procedural di KutaSpotRuntime. Manifest kosong ini sengaja ada supaya tidak memicu 404 tiap kali Spot dibuka.",
+  "glbs": []
+}
