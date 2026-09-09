@@ -135,8 +135,33 @@ function showResult(result) {
     <div><b>${row.persen_pulang_di_bawah_20_muatan}%</b><span>PULANG KRITIS</span></div>
     <div><b>${row.panjang_rantai_maks}</b><span>RANTAI MAKS</span></div>
     <div><b>${row.waktu_menganggur_tawanan}s</b><span>TAWANAN DIAM</span></div>`;
+  renderPlaytestProgress();
   $('#result-overlay').classList.add('on');
   showBanner(winnerLabel, result.winner === TEAM.BIRU ? 'hero' : 'danger');
+}
+
+// Gate Fase 0 butuh 20 match manusia (10 A, 10 B) — sekitar sejam bermain.
+// Tanpa penghitung, mudah lupa sudah sampai mana dan varian mana yang kurang.
+function renderPlaytestProgress() {
+  const p = game.logger.progress();
+  const bar = (label, done, colour) => {
+    const pct = Math.min(100, (done / p.target) * 100);
+    return `<div class="pp-bar"><span>${label}</span>
+      <span class="pp-track"><i class="pp-fill" style="width:${pct}%;background:${colour}"></i></span>
+      <span>${done}/${p.target}</span></div>`;
+  };
+  const kurang = [];
+  if (p.a < p.target) kurang.push(`${p.target - p.a}× varian A`);
+  if (p.b < p.target) kurang.push(`${p.target - p.b}× varian B`);
+
+  $('#playtest-progress').innerHTML = `
+    <div class="pp-head"><span>PROGRES PLAYTEST</span><b>${p.a + p.b} / ${p.target * 2}</b></div>
+    ${bar('A · SEKARAT', p.a, BENTENG_CONFIG.visual.teamColors.biru)}
+    ${bar('B · KEPEPET', p.b, BENTENG_CONFIG.visual.teamColors.merah)}
+    <div class="pp-note">${p.selesai
+      ? 'Cukup untuk gate. Unduh CSV-nya, lalu jawab yang tidak bisa diukur mesin: <b>masih ingin main lagi?</b>'
+      : `Kurang ${kurang.join(' dan ')}. Rata-rata sejauh ini — near-miss <b>${p.nearMiss.toFixed(1)}</b>/match, tawanan diam <b>${p.tawananDiam.toFixed(0)} s</b>, pulang kritis <b>${p.pulangKritis.toFixed(0)}%</b>.`}
+    <br>Riwayat tersimpan di browser ini; menutup tab tidak menghapusnya.</div>`;
 }
 
 function startFresh(reverse = game.reverseChargeSpeed) {
@@ -154,6 +179,14 @@ $('#variant-button').addEventListener('click', () => startFresh(!game.reverseCha
 $('#result-variant').addEventListener('click', () => startFresh(!game.reverseChargeSpeed));
 $('#csv-button').addEventListener('click', () => game.logger.download());
 $('#result-csv').addEventListener('click', () => game.logger.download());
+$('#result-reset-playtest').addEventListener('click', () => {
+  const p = game.logger.progress();
+  const total = p.a + p.b;
+  // Membuang data playtest tidak boleh sekali klik — sejam bermain ada di sini.
+  if (total > 0 && !window.confirm(`Hapus ${total} match yang sudah tercatat dan mulai sesi baru?`)) return;
+  game.logger.clear();
+  renderPlaytestProgress();
+});
 $('#mute-button').addEventListener('click', () => {
   audio.setEnabled(!audio.enabled);
   $('#mute-button').textContent = audio.enabled ? '🔊' : '🔇';

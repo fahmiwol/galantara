@@ -105,12 +105,28 @@ const POLICIES = Object.freeze({
     return toward(game.player.position, memo.route?.[0] || memo.target);
   },
 
+  // Bermain normal tapi TIDAK PERNAH menekan tarik-rantai saat tertawan.
+  // Pemain baru yang belum sadar tombolnya ada.
+  pasrah: (game) => {
+    const own = fortPosition(game.player.team, game.config);
+    const enemy = fortPosition(game.player.team === TEAM.BIRU ? TEAM.MERAH : TEAM.BIRU, game.config);
+    return toward(game.player.position, game.player.charge < 35 ? own : enemy);
+  },
+
   // Wanders on a phase-shifted lissajous. Stands for aimless play.
   keliling: (game, tick, seed) => {
     const t = tick * STEP * 0.3 + seed;
     return { x: Math.cos(t), y: Math.sin(t * 1.3) };
   },
 });
+
+// Apakah policy ini menekan TARIK RANTAI saat tertawan?
+// Awalnya SEMUA menarik, dan akibatnya gerbang "tawanan menganggur <= 25 s"
+// lulus tanpa pernah bisa gagal — metriknya selalu 0,0 s. Seorang pemain
+// yang tidak tahu harus menekan adalah kasus nyata, dan itulah yang
+// gerbang ini sebenarnya ingin tangkap.
+const POLICY_PULLS = { diam: false, pasrah: false };
+const pullsChain = (policy) => POLICY_PULLS[policy] !== false;
 
 const POLICY_NAMES = Object.keys(POLICIES);
 
@@ -168,7 +184,7 @@ function runMatch({ reverse, policy, seed, matchSeed, config = BENTENG_CONFIG })
     // A captured player can only tap the chain, not steer.
     if (game.player.captured) {
       playerCapturedTicks += 1;
-      if (tick % 20 === 0) game.pullPlayerChain();
+      if (tick % 20 === 0 && pullsChain(policy)) game.pullPlayerChain();
       game.update(STEP, { x: 0, y: 0 });
     } else {
       game.update(STEP, decide(game, tick, seed));

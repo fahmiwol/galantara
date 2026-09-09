@@ -77,3 +77,14 @@ button{color:inherit}
 }
 /* Hilangkan jeda 300 ms tap-ganda tanpa mengunci zoom halaman. */
 button, a, .chip, .icon-button { touch-action: manipulation; }
+
+/* Progres gate Fase 0 pada layar hasil. Riwayat playtest bertahan di
+   localStorage, jadi angka ini menghitung seluruh sesi, bukan satu match. */
+.playtest-progress{margin:16px 0 4px;padding:12px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.03);text-align:left}
+.playtest-progress .pp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:9px;color:var(--muted);font-size:10px;font-weight:900;letter-spacing:.1em}
+.playtest-progress .pp-head b{color:var(--cream);font:800 12px Syne,sans-serif;letter-spacing:0}
+.playtest-progress .pp-bar{display:grid;grid-template-columns:auto 1fr auto;gap:8px;align-items:center;margin-bottom:6px;color:var(--muted);font-size:10px;font-weight:900}
+.playtest-progress .pp-track{height:7px;border-radius:99px;background:rgba(255,255,255,.08);overflow:hidden}
+.playtest-progress .pp-fill{display:block;height:100%;border-radius:99px;transition:width .3s ease}
+.playtest-progress .pp-note{margin-top:9px;color:var(--muted);font-size:10px;line-height:1.45}
+.playtest-progress .pp-note b{color:var(--cream)}

@@ -94,11 +94,15 @@
       <h2 id="result-title">TIM BIRU MENANG</h2>
       <p id="result-reason">Benteng lawan berhasil direbut.</p>
       <div id="result-metrics" class="result-metrics"></div>
+      <!-- Progres gate Fase 0: 10 match varian A + 10 varian B. Riwayat
+           bertahan di localStorage supaya reload tidak menghapus sesi. -->
+      <div id="playtest-progress" class="playtest-progress" aria-live="polite"></div>
       <div class="result-actions">
         <button id="result-restart" class="primary-button">SEKALI LAGI</button>
         <button id="result-variant" class="secondary-button">COBA VARIAN A</button>
       </div>
       <button id="result-csv" class="text-button">Unduh data match (.csv)</button>
+      <button id="result-reset-playtest" class="text-button">Mulai sesi playtest baru</button>
     </section>
   </div>
 

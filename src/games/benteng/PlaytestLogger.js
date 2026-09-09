@@ -20,11 +20,70 @@ function csvCell(value) {
   return /[",\n]/.test(text) ? `"${text.replaceAll('"', '""')}"` : text;
 }
 
+// Gate Fase 0 (docs/RECONCILIATION_v0.1.md) minta 20 match: 10 varian A,
+// 10 varian B. Itu sekitar sejam bermain — terlalu lama untuk dipertaruhkan
+// pada satu tab browser. Baris disimpan ke localStorage tiap match selesai.
+const STORAGE_KEY = 'galantara_benteng_playtest_v1';
+const TARGET_PER_VARIANT = 10;
+
+function loadRows() {
+  try {
+    const raw = localStorage.getItem(STORAGE_KEY);
+    const parsed = raw ? JSON.parse(raw) : [];
+    return Array.isArray(parsed) ? parsed : [];
+  } catch {
+    // Tab privat, storage penuh, atau JSON rusak. Playtest tetap boleh jalan;
+    // yang hilang cuma riwayatnya, bukan permainannya.
+    return [];
+  }
+}
+
 export class PlaytestLogger {
   constructor() {
+    this.rows = loadRows();
+    this.sequence = this.rows.length;
+    this.reset(true);
+  }
+
+  /** Simpan riwayat. Gagal menyimpan tidak boleh menghentikan permainan. */
+  persist() {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(this.rows));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Buang riwayat — dipakai tombol "mulai sesi baru". */
+  clear() {
     this.rows = [];
     this.sequence = 0;
-    this.reset(true);
+    try { localStorage.removeItem(STORAGE_KEY); } catch { /* abaikan */ }
+  }
+
+  /**
+   * Berapa jauh playtest ini dari gate Fase 0.
+   * Ambang di sini menyalin docs/RECONCILIATION_v0.1.md; kalau dokumen itu
+   * berubah, ubah di sini juga.
+   */
+  progress() {
+    const num = (v) => Number(v) || 0;
+    const perVariant = (v) => this.rows.filter((r) => r.varian_kecepatan === v);
+    const a = perVariant('A');
+    const b = perVariant('B');
+    const mean = (rows, key) => (rows.length
+      ? rows.reduce((sum, r) => sum + num(r[key]), 0) / rows.length
+      : 0);
+    return {
+      a: a.length,
+      b: b.length,
+      target: TARGET_PER_VARIANT,
+      selesai: a.length >= TARGET_PER_VARIANT && b.length >= TARGET_PER_VARIANT,
+      nearMiss: mean(this.rows, 'jumlah_near_miss'),
+      tawananDiam: mean(this.rows, 'waktu_menganggur_tawanan'),
+      pulangKritis: mean(this.rows, 'persen_pulang_di_bawah_20_muatan'),
+    };
   }
 
   reset(reverseChargeSpeed) {
@@ -94,6 +153,7 @@ export class PlaytestLogger {
       waktu_menganggur_tawanan: this.prisonerIdleSeconds.toFixed(2),
     };
     this.rows.push(row);
+    this.persist();
     return row;
   }
 
