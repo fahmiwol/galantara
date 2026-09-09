@@ -55,7 +55,7 @@ export class DayNight {
       const t = (hour - 4.5);
       skyColor      = this._lerp(0x14182e, 0x33405e, t);
       sunIntensity  = 0.08 + t * 0.12;
-      hemiIntensity = 0.16 + t * 0.14;
+      hemiIntensity = 0.14 + t * 0.12;
       sunPosY       = -2 + t * 4;
       sunPosX       = -18;
       lampGlow      = 1 - t * 0.45;
@@ -63,8 +63,8 @@ export class DayNight {
       // Fajar — ufuk memerah cepat, kabut tipis di lembah.
       const t = (hour - 5.5) / 1.25;
       skyColor      = this._lerp(0x33405e, 0xe8a77a, t);
-      sunIntensity  = 0.2 + t * 0.85;
-      hemiIntensity = 0.3 + t * 0.22;
+      sunIntensity  = 0.2 + t * 0.7;
+      hemiIntensity = 0.26 + t * 0.19;
       sunPosY       = 2 + t * 7;
       sunPosX       = -18 + t * 4;
       lampGlow      = 0.55 - t * 0.55;
@@ -72,8 +72,8 @@ export class DayNight {
       // Pagi — jernih, bayangan masih panjang, hijau paling segar.
       const t = (hour - 6.75) / 3.25;
       skyColor      = this._lerp(0xe8a77a, 0x9fc6de, Math.min(1, t * 1.6));
-      sunIntensity  = 1.05 + t * 0.2;
-      hemiIntensity = 0.52;
+      sunIntensity  = 0.9 + t * 0.15;
+      hemiIntensity = 0.45;
       sunPosY       = 9 + t * 8;
       sunPosX       = -14 + t * 8;
       lampGlow      = 0;
@@ -82,8 +82,8 @@ export class DayNight {
       // udara berkabut panas sehingga langit sedikit pudar.
       const t = (hour - 10) / 5;
       skyColor      = this._lerp(0x9fc6de, 0xb4cfdd, Math.sin(t * Math.PI));
-      sunIntensity  = 1.35 + Math.sin(t * Math.PI) * 0.2;
-      hemiIntensity = 0.6;
+      sunIntensity  = 1.0 + Math.sin(t * Math.PI) * 0.3;
+      hemiIntensity = 0.5;
       sunPosY       = 17 + Math.sin(t * Math.PI) * 5;
       sunPosX       = -6 + t * 12;
       lampGlow      = 0;
@@ -92,8 +92,8 @@ export class DayNight {
       // Ini jam bermain di halaman sebelum dipanggil pulang.
       const t = (hour - 15) / 2.25;
       skyColor      = this._lerp(0xb4cfdd, 0xf2c48a, t);
-      sunIntensity  = 1.5 - t * 0.25;
-      hemiIntensity = 0.6 - t * 0.06;
+      sunIntensity  = 1.0 - t * 0.25;
+      hemiIntensity = 0.5 - t * 0.08;
       sunPosY       = 15 - t * 8;
       sunPosX       = 6 + t * 8;
       lampGlow      = t * 0.2;
@@ -102,8 +102,8 @@ export class DayNight {
       // Jingga ke ungu dalam waktu singkat; lampu mulai dinyalakan.
       const t = (hour - 17.25) / 1.15;
       skyColor      = this._lerp(0xf2c48a, 0x6d4a6b, t);
-      sunIntensity  = 1.25 - t * 1.05;
-      hemiIntensity = 0.54 - t * 0.24;
+      sunIntensity  = 0.75 - t * 0.6;
+      hemiIntensity = 0.42 - t * 0.2;
       sunPosY       = 7 - t * 7;
       sunPosX       = 14 + t * 4;
       lampGlow      = 0.2 + t * 0.7;
@@ -111,8 +111,8 @@ export class DayNight {
       // Isya — langit biru tinta, tapi belum hitam. Lampu sudah berkuasa.
       const t = (hour - 18.4) / 1.35;
       skyColor      = this._lerp(0x6d4a6b, 0x232a4a, t);
-      sunIntensity  = 0.2 - t * 0.14;
-      hemiIntensity = 0.3 - t * 0.1;
+      sunIntensity  = 0.15 - t * 0.1;
+      hemiIntensity = 0.22 - t * 0.08;
       sunPosY       = 0 - t * 6;
       sunPosX       = 18;
       lampGlow      = 0.9 + t * 0.1;
@@ -127,6 +127,11 @@ export class DayNight {
       lampGlow      = 1;
     }
 
+    // CATATAN SKALA: angka di atas hidup di pipeline TANPA sRGB encoding /
+    // tone mapping (lihat Renderer.js). Sempat saya naikkan untuk pipeline
+    // sRGB+ACES, lalu pipeline itu dikembalikan tapi angkanya tidak — dan
+    // hasilnya seluruh dunia tersapu putih. Kalau colour pipeline dinyalakan
+    // lagi, angka di sini WAJIB ikut disetel ulang, bukan dibiarkan.
     this.lampGlow = lampGlow;
     for (const lampu of this._lampu) {
       if (lampu.isLight) {

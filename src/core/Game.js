@@ -452,7 +452,10 @@ export class Game {
       return;
     }
 
-    if (!this.world.worldRoot) this.world.rebuildContent();
+    if (!this.world.worldRoot) {
+      this.world.rebuildContent();
+      this.dayNight?.pakaiLampu(this.world.lampu);
+    }
     this.npcs?.setHubVisible(true);
   }
 

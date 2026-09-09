@@ -15,6 +15,92 @@ function rnd(seed) {
   };
 }
 
+function paletteColor(palette, key, fallback) {
+  return palette && Number.isFinite(palette[key]) ? palette[key] : fallback;
+}
+
+function addMesh(group, geometry, material, position = [0, 0, 0], castShadow = true) {
+  const mesh = new THREE.Mesh(geometry, material);
+  mesh.position.set(position[0], position[1], position[2]);
+  mesh.castShadow = castShadow;
+  mesh.receiveShadow = true;
+  group.add(mesh);
+  return mesh;
+}
+
+// Flat-sided roof tiers keep the landmark silhouette crisp at orbit distance.
+function frustumRoofGeometry(width, depth, rise, topScale = 0.35) {
+  const x = width * 0.5;
+  const z = depth * 0.5;
+  const tx = x * topScale;
+  const tz = z * topScale;
+  const positions = [
+    -x, 0, -z,  x, 0, -z,  x, 0, z, -x, 0, z,
+    -tx, rise, -tz,  tx, rise, -tz,  tx, rise, tz, -tx, rise, tz,
+  ];
+  const indices = [
+    0, 4, 5, 0, 5, 1,
+    1, 5, 6, 1, 6, 2,
+    2, 6, 7, 2, 7, 3,
+    3, 7, 4, 3, 4, 0,
+    4, 7, 6, 4, 6, 5,
+  ];
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  const flat = geometry.toNonIndexed();
+  geometry.dispose();
+  flat.computeVertexNormals();
+  return flat;
+}
+
+// ridgeZ allows Sulah Nyanda to retain an intentionally asymmetric profile.
+function gableRoofGeometry(width, backDepth, frontDepth, rise, ridgeZ = 0) {
+  const x = width * 0.5;
+  const positions = [
+    -x, 0, -backDepth,  x, 0, -backDepth,
+    -x, 0, frontDepth,  x, 0, frontDepth,
+    -x, rise, ridgeZ,    x, rise, ridgeZ,
+  ];
+  const indices = [
+    0, 4, 5, 0, 5, 1,
+    2, 3, 5, 2, 5, 4,
+    0, 2, 4,
+    1, 5, 3,
+  ];
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
+  geometry.setIndex(indices);
+  const flat = geometry.toNonIndexed();
+  geometry.dispose();
+  flat.computeVertexNormals();
+  return flat;
+}
+
+function trianglePanelGeometry(width, height) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    -width * 0.5, 0, 0,
+     width * 0.5, 0, 0,
+     0, height, 0,
+  ], 3));
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
+function bananaLeafGeometry(length, width, droop) {
+  const geometry = new THREE.BufferGeometry();
+  geometry.setAttribute('position', new THREE.Float32BufferAttribute([
+    0, 0, 0,
+    length * 0.48, 0.04, width * 0.5,
+    length, -droop, 0,
+    length * 0.48, 0.04, -width * 0.5,
+  ], 3));
+  geometry.setIndex([0, 1, 2, 0, 2, 3]);
+  geometry.computeVertexNormals();
+  return geometry;
+}
+
 function buildTreeRound(palette, seed, scale) {
   const rand = rnd(seed);
   const g = new THREE.Group();
@@ -255,6 +341,270 @@ function buildPohonKelapa(palette, seed, scale) {
   return g;
 }
 
+function buildJoglo(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const wood = galantaraMat(paletteColor(palette, 'trunk', 0x654321), 0.86);
+  const wall = galantaraMat(paletteColor(palette, 'wall', 0xf4dfb7), 0.88);
+  const roof = galantaraMat(paletteColor(palette, 'roof', 0xa94f2b), 0.9);
+  const roofAlt = galantaraMat(paletteColor(palette, 'roofAlt', 0xc56a3d), 0.88);
+  const stone = galantaraMat(paletteColor(palette, 'stone', 0xc7b79e), 0.92);
+
+  addMesh(g, new THREE.BoxGeometry(4.15 * scale, 0.22 * scale, 3.75 * scale), stone, [0, 0.11 * scale, 0]);
+  addMesh(g, new THREE.BoxGeometry(2.25 * scale, 1.1 * scale, 1.85 * scale), wall, [0, 0.85 * scale, -0.15 * scale]);
+
+  const postGeo = new THREE.BoxGeometry(0.16 * scale, 1.6 * scale, 0.16 * scale);
+  [[-0.95, -0.8], [0.95, -0.8], [-0.95, 0.8], [0.95, 0.8]].forEach(([x, z]) => {
+    addMesh(g, postGeo, wood, [x * scale, 1.05 * scale, z * scale]);
+  });
+
+  addMesh(g, new THREE.BoxGeometry(0.72 * scale, 0.92 * scale, 0.07 * scale), wood, [0, 0.82 * scale, 0.79 * scale]);
+
+  const panitih = addMesh(
+    g,
+    frustumRoofGeometry(4.25 * scale, 3.85 * scale, 0.52 * scale, 0.64),
+    roofAlt,
+    [0, 1.7 * scale, 0],
+  );
+  panitih.name = 'joglo_roof_panitih';
+
+  const penanggap = addMesh(
+    g,
+    frustumRoofGeometry(2.72 * scale, 2.45 * scale, 0.62 * scale, 0.54),
+    roof,
+    [0, 2.2 * scale, 0],
+  );
+  penanggap.name = 'joglo_roof_penanggap';
+
+  const brunjung = addMesh(
+    g,
+    frustumRoofGeometry(1.52 * scale, 1.34 * scale, (0.84 + rand() * 0.12) * scale, 0.12),
+    roofAlt,
+    [0, 2.8 * scale, 0],
+  );
+  brunjung.name = 'joglo_roof_brunjung';
+
+  g.userData.archetype = 'joglo';
+  g.userData.region = 'jawa';
+  return g;
+}
+
+function buildSulahNyanda(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const wood = galantaraMat(paletteColor(palette, 'trunk', 0x5f4630), 0.9);
+  const bamboo = galantaraMat(paletteColor(palette, 'wall', 0xc9b887), 0.92);
+  const bambooDark = galantaraMat(paletteColor(palette, 'accent', 0x8f7a4f), 0.9);
+  const thatch = galantaraMat(paletteColor(palette, 'roof', 0x51462d), 0.95);
+  const stone = galantaraMat(paletteColor(palette, 'stone', 0x777168), 0.96);
+
+  const posts = [[-1.25, -0.72], [0, -0.72], [1.25, -0.72], [-1.25, 0.72], [0, 0.72], [1.25, 0.72]];
+  posts.forEach(([x, z], i) => {
+    const contour = (rand() - 0.5) * 0.12 * scale;
+    addMesh(g, new THREE.CylinderGeometry(0.18 * scale, 0.22 * scale, 0.16 * scale, 6), stone, [x * scale, 0.08 * scale + contour, z * scale]);
+    addMesh(g, new THREE.BoxGeometry(0.13 * scale, (0.62 + contour) * scale, 0.13 * scale), wood, [x * scale, (0.37 + contour * 0.5) * scale, z * scale]);
+    if (i === 0) g.children[g.children.length - 1].name = 'sulah_contour_post';
+  });
+
+  addMesh(g, new THREE.BoxGeometry(3.25 * scale, 0.14 * scale, 2.18 * scale), wood, [0, 0.68 * scale, 0]);
+  addMesh(g, new THREE.BoxGeometry(2.95 * scale, 1.28 * scale, 1.92 * scale), bamboo, [0, 1.38 * scale, -0.05 * scale]);
+  addMesh(g, new THREE.BoxGeometry(0.62 * scale, 1.05 * scale, 0.06 * scale), wood, [0.68 * scale, 1.3 * scale, 0.92 * scale]);
+
+  [-0.9, -0.45, 0, 0.45].forEach((x) => {
+    addMesh(g, new THREE.BoxGeometry(0.035 * scale, 0.92 * scale, 0.025 * scale), bambooDark, [x * scale, 1.38 * scale, 0.965 * scale], false);
+  });
+
+  const mainRoof = addMesh(
+    g,
+    gableRoofGeometry(3.65 * scale, 1.45 * scale, 1.12 * scale, 1.25 * scale, -0.22 * scale),
+    thatch,
+    [0, 2.02 * scale, 0],
+  );
+  mainRoof.name = 'sulah_nyanda_asymmetric_roof';
+
+  const sorondoy = addMesh(
+    g,
+    new THREE.BoxGeometry(3.55 * scale, 0.09 * scale, 1.05 * scale),
+    thatch,
+    [0, 1.98 * scale, 1.38 * scale],
+  );
+  sorondoy.rotation.x = 0.24;
+  sorondoy.name = 'sulah_nyanda_sorondoy';
+
+  g.userData.archetype = 'sulah_nyanda';
+  g.userData.region = 'baduy_banten';
+  return g;
+}
+
+function buildRumahPanggungPesisir(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const wood = galantaraMat(paletteColor(palette, 'trunk', 0x70452e), 0.87);
+  const wall = galantaraMat(paletteColor(palette, 'wall', 0xe7c995), 0.86);
+  const roof = galantaraMat(paletteColor(palette, 'roof', 0x233454), 0.9);
+  const accent = galantaraMat(paletteColor(palette, 'accent', 0xd9643a), 0.84);
+  accent.side = THREE.DoubleSide;
+
+  const posts = [[-1.25, -0.8], [0, -0.8], [1.25, -0.8], [-1.25, 0.8], [0, 0.8], [1.25, 0.8]];
+  posts.forEach(([x, z]) => {
+    const h = (0.86 + rand() * 0.08) * scale;
+    addMesh(g, new THREE.BoxGeometry(0.15 * scale, h, 0.15 * scale), wood, [x * scale, h * 0.5, z * scale]);
+  });
+
+  addMesh(g, new THREE.BoxGeometry(3.35 * scale, 0.16 * scale, 2.45 * scale), wood, [0, 0.91 * scale, 0]);
+  addMesh(g, new THREE.BoxGeometry(3.05 * scale, 1.18 * scale, 2.15 * scale), wall, [0, 1.55 * scale, 0]);
+  addMesh(g, new THREE.BoxGeometry(0.63 * scale, 0.96 * scale, 0.06 * scale), wood, [0, 1.45 * scale, 1.08 * scale]);
+
+  for (let i = 0; i < 3; i++) {
+    addMesh(g, new THREE.BoxGeometry(0.85 * scale, 0.16 * scale, 0.48 * scale), wood, [0, (0.12 + i * 0.17) * scale, (1.55 - i * 0.36) * scale]);
+  }
+
+  const roofMesh = addMesh(
+    g,
+    gableRoofGeometry(3.75 * scale, 1.48 * scale, 1.48 * scale, 1.12 * scale),
+    roof,
+    [0, 2.2 * scale, 0],
+  );
+  roofMesh.name = 'rumah_panggung_pelana';
+
+  const timpalaja = addMesh(
+    g,
+    trianglePanelGeometry(2.55 * scale, 0.9 * scale),
+    accent,
+    [0, 2.23 * scale, 1.49 * scale],
+    false,
+  );
+  timpalaja.name = 'timpalaja_neutral';
+  addMesh(g, new THREE.BoxGeometry(2.25 * scale, 0.08 * scale, 0.04 * scale), wood, [0, 2.55 * scale, 1.515 * scale], false);
+
+  g.userData.archetype = 'rumah_panggung_pesisir';
+  g.userData.region = 'bugis_makassar';
+  return g;
+}
+
+function buildPohonPisang(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const stemMat = galantaraMat(paletteColor(palette, 'stem', 0x8ea85d), 0.9);
+  const leafMat = galantaraMat(paletteColor(palette, 'leaf', palette?.foliage?.[0] ?? 0x4f9b53), 0.88);
+  leafMat.side = THREE.DoubleSide;
+  const count = 2 + Math.floor(rand() * 2);
+
+  for (let p = 0; p < count; p++) {
+    const h = (1.85 + rand() * 0.75) * scale;
+    const px = (rand() - 0.5) * 0.75 * scale;
+    const pz = (rand() - 0.5) * 0.6 * scale;
+    addMesh(g, new THREE.CylinderGeometry(0.11 * scale, 0.17 * scale, h, 7), stemMat, [px, h * 0.5, pz]);
+    const leaves = 5 + Math.floor(rand() * 3);
+    for (let i = 0; i < leaves; i++) {
+      const length = (0.85 + rand() * 0.35) * scale;
+      const leaf = addMesh(
+        g,
+        bananaLeafGeometry(length, 0.38 * scale, (0.12 + rand() * 0.12) * scale),
+        leafMat,
+        [px, h, pz],
+      );
+      leaf.rotation.y = (i / leaves) * Math.PI * 2 + rand() * 0.28;
+      leaf.rotation.z = 0.14 + rand() * 0.2;
+    }
+  }
+
+  g.userData.archetype = 'pohon_pisang';
+  return g;
+}
+
+function buildRumpunBambu(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const culmMat = galantaraMat(paletteColor(palette, 'stem', 0x91a650), 0.88);
+  const nodeMat = galantaraMat(paletteColor(palette, 'stemDark', 0x65783b), 0.9);
+  const leafMat = galantaraMat(paletteColor(palette, 'leaf', palette?.foliage?.[1] ?? 0x4d7c3d), 0.9);
+  const culms = 7 + Math.floor(rand() * 5);
+  const tops = [];
+
+  for (let i = 0; i < culms; i++) {
+    const angle = rand() * Math.PI * 2;
+    const radius = Math.sqrt(rand()) * 0.62 * scale;
+    const x = Math.cos(angle) * radius;
+    const z = Math.sin(angle) * radius;
+    const h = (2.8 + rand() * 1.35) * scale;
+    const culm = addMesh(g, new THREE.CylinderGeometry(0.045 * scale, 0.065 * scale, h, 6), culmMat, [x, h * 0.5, z]);
+    culm.rotation.z = (rand() - 0.5) * 0.07;
+    culm.rotation.x = (rand() - 0.5) * 0.05;
+    [0.34, 0.66].forEach((at) => {
+      addMesh(g, new THREE.CylinderGeometry(0.071 * scale, 0.071 * scale, 0.035 * scale, 6), nodeMat, [x, h * at, z]);
+    });
+    tops.push([x, h, z]);
+  }
+
+  tops.filter((_, i) => i % 2 === 0).forEach(([x, y, z], i) => {
+    const crown = addMesh(g, new THREE.SphereGeometry(0.38 * scale, 7, 5), leafMat, [x, y - 0.18 * scale, z]);
+    crown.scale.set(0.7, 1.25, 0.7);
+    crown.rotation.y = i * 0.7;
+  });
+  g.userData.archetype = 'rumpun_bambu';
+  return g;
+}
+
+function buildTeraseringPadi(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const soil = galantaraMat(paletteColor(palette, 'soil', 0x8a6845), 0.96);
+  const bank = galantaraMat(paletteColor(palette, 'ground', 0x719550), 0.92);
+  const water = galantaraMat(paletteColor(palette, 'water', 0x69b7b3), 0.45);
+  water.transparent = true;
+  water.opacity = 0.68;
+  const rice = galantaraMat(paletteColor(palette, 'rice', 0x9cad4f), 0.9);
+  const levels = [
+    { z: 1.18, h: 0.28, w: 4.0 },
+    { z: 0.0, h: 0.55, w: 3.7 },
+    { z: -1.18, h: 0.82, w: 3.38 },
+  ];
+
+  levels.forEach((level, li) => {
+    addMesh(g, new THREE.BoxGeometry(level.w * scale, level.h * scale, 1.45 * scale), soil, [0, level.h * 0.5 * scale, level.z * scale]);
+    addMesh(g, new THREE.BoxGeometry(level.w * 0.96 * scale, 0.07 * scale, 1.34 * scale), bank, [0, (level.h + 0.035) * scale, level.z * scale]);
+    addMesh(g, new THREE.BoxGeometry(level.w * 0.8 * scale, 0.025 * scale, 1.02 * scale), water, [0, (level.h + 0.078) * scale, level.z * scale], false);
+    for (let i = 0; i < 4; i++) {
+      const x = (-0.9 + i * 0.6 + (rand() - 0.5) * 0.12) * scale;
+      const z = (level.z + (rand() - 0.5) * 0.5) * scale;
+      addMesh(g, new THREE.ConeGeometry(0.11 * scale, 0.36 * scale, 4), rice, [x, (level.h + 0.27) * scale, z]);
+    }
+    if (li === 0) g.children[g.children.length - 1].name = 'rice_tuft';
+  });
+  g.userData.archetype = 'terasering_padi';
+  return g;
+}
+
+function buildFlowerPatch(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const stem = galantaraMat(paletteColor(palette, 'stem', 0x6f9b63), 0.92);
+  const colors = [paletteColor(palette, 'accent', 0xe9c86a), ...(palette?.foliage || [0xc4b5fd])];
+  for (let i = 0; i < 4; i++) {
+    const x = (rand() - 0.5) * 0.9 * scale;
+    const z = (rand() - 0.5) * 0.7 * scale;
+    const h = (0.18 + rand() * 0.18) * scale;
+    addMesh(g, new THREE.CylinderGeometry(0.018 * scale, 0.024 * scale, h, 5), stem, [x, h * 0.5, z], false);
+    addMesh(g, new THREE.SphereGeometry(0.11 * scale, 6, 4), galantaraMat(colors[i % colors.length], 0.88), [x, h, z], false);
+  }
+  g.userData.archetype = 'flower_patch';
+  return g;
+}
+
+function buildCloudShrub(palette, seed, scale) {
+  const rand = rnd(seed);
+  const g = new THREE.Group();
+  const cloud = galantaraMat(paletteColor(palette, 'cloud', 0xf7f2ff), 0.86);
+  for (let i = 0; i < 3; i++) {
+    const r = (0.36 + rand() * 0.22) * scale;
+    const puff = addMesh(g, new THREE.SphereGeometry(r, 7, 5), cloud, [(i - 1) * 0.36 * scale, r * 0.72, (rand() - 0.5) * 0.22 * scale], false);
+    puff.scale.y = 0.72 + rand() * 0.18;
+  }
+  g.userData.archetype = 'cloud_shrub';
+  return g;
+}
+
 /**
  * @param {string} archetypeId
  * @param {object} palette — dari PALETTE_SLOTS.*
@@ -281,6 +631,23 @@ export function buildProceduralGroup(archetypeId, palette, seed, scale) {
       return buildPagarKayu(palette, seed, s);
     case 'pohon_kelapa':
       return buildPohonKelapa(palette, seed, s);
+    case 'joglo':
+    case 'rumah_joglo':
+      return buildJoglo(palette, seed, s);
+    case 'sulah_nyanda':
+      return buildSulahNyanda(palette, seed, s);
+    case 'rumah_panggung_pesisir':
+      return buildRumahPanggungPesisir(palette, seed, s);
+    case 'pohon_pisang':
+      return buildPohonPisang(palette, seed, s);
+    case 'rumpun_bambu':
+      return buildRumpunBambu(palette, seed, s);
+    case 'terasering_padi':
+      return buildTeraseringPadi(palette, seed, s);
+    case 'flower_patch':
+      return buildFlowerPatch(palette, seed, s);
+    case 'cloud_shrub':
+      return buildCloudShrub(palette, seed, s);
     default:
       return buildTreeRound(palette, seed, s);
   }
@@ -289,12 +656,15 @@ export function buildProceduralGroup(archetypeId, palette, seed, scale) {
 /** Hitung triangle kasar untuk indikator */
 export function countTrianglesInObject(root) {
   let tri = 0;
-  root.traverse((o) => {
+  const stack = root ? [root] : [];
+  while (stack.length) {
+    const o = stack.pop();
     if (o.isMesh && o.geometry) {
       const g = o.geometry;
-      const pos = g.attributes?.position;
-      if (pos) tri += pos.count / 3;
+      const vertices = g.index?.count || g.attributes?.position?.count || 0;
+      tri += (vertices / 3) * (o.isInstancedMesh ? o.count : 1);
     }
-  });
+    if (o.children?.length) stack.push(...o.children);
+  }
   return Math.floor(tri);
 }

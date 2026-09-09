@@ -55,5 +55,33 @@
       "pos": { "x": 0, "y": 0.2, "z": -6 }
     }
   ],
-  "procedural_props": []
+  "procedural_props": [
+    { "id": "fantasy_tree_nw", "archetype": "tree_round", "paletteId": "oola_heavenly", "seed": 101, "scale": 0.82, "pos": { "x": -11.5, "y": 0, "z": -7.5 } },
+    { "id": "fantasy_tree_w", "archetype": "tree_round", "paletteId": "oola_heavenly", "seed": 113, "scale": 0.72, "pos": { "x": -14, "y": 0, "z": 2 } },
+    { "id": "fantasy_tree_sw", "archetype": "tree_round", "paletteId": "oola_heavenly", "seed": 127, "scale": 0.88, "pos": { "x": -9.5, "y": 0, "z": 9.5 } },
+    { "id": "fantasy_tree_ne", "archetype": "tree_round", "paletteId": "oola_heavenly", "seed": 139, "scale": 0.78, "pos": { "x": 10.5, "y": 0, "z": -8.5 } },
+    { "id": "fantasy_tree_e", "archetype": "tree_round", "paletteId": "oola_heavenly", "seed": 149, "scale": 0.68, "pos": { "x": 14, "y": 0, "z": 2.5 } },
+    { "id": "fantasy_tree_se", "archetype": "tree_round", "paletteId": "oola_heavenly", "seed": 163, "scale": 0.9, "pos": { "x": 7.5, "y": 0, "z": 11.5 } },
+
+    { "id": "garden_bench_w", "archetype": "bench_park", "paletteId": "oola_heavenly", "seed": 211, "scale": 0.82, "rotationY": 1.15, "pos": { "x": -7.5, "y": 0, "z": -4.5 } },
+    { "id": "garden_bench_e", "archetype": "bench_park", "paletteId": "oola_heavenly", "seed": 223, "scale": 0.82, "rotationY": -1.1, "pos": { "x": 6, "y": 0, "z": 4.5 } },
+    { "id": "garden_bench_s", "archetype": "bench_park", "paletteId": "oola_heavenly", "seed": 227, "scale": 0.76, "rotationY": 3.05, "pos": { "x": 2, "y": 0, "z": 9 } },
+
+    { "id": "lamp_portal", "archetype": "lamp_post", "paletteId": "oola_heavenly", "seed": 307, "scale": 0.9, "pos": { "x": -5, "y": 0, "z": -4 } },
+    { "id": "lamp_board", "archetype": "lamp_post", "paletteId": "oola_heavenly", "seed": 311, "scale": 0.86, "pos": { "x": 3, "y": 0, "z": 2.5 } },
+    { "id": "lamp_devhub", "archetype": "lamp_post", "paletteId": "oola_heavenly", "seed": 313, "scale": 0.92, "pos": { "x": 10.5, "y": 0, "z": -5 } },
+    { "id": "lamp_garden_w", "archetype": "lamp_post", "paletteId": "oola_heavenly", "seed": 317, "scale": 0.84, "pos": { "x": -9, "y": 0, "z": 6 } },
+    { "id": "lamp_garden_s", "archetype": "lamp_post", "paletteId": "oola_heavenly", "seed": 331, "scale": 0.84, "pos": { "x": 4, "y": 0, "z": 9 } },
+
+    { "id": "flowers_portal", "archetype": "flower_patch", "paletteId": "oola_heavenly", "seed": 401, "scale": 1.2, "pos": { "x": -7.5, "y": 0, "z": -0.2 } },
+    { "id": "flowers_board", "archetype": "flower_patch", "paletteId": "oola_heavenly", "seed": 409, "scale": 1.15, "pos": { "x": 3.5, "y": 0, "z": -0.5 } },
+    { "id": "flowers_north", "archetype": "flower_patch", "paletteId": "oola_heavenly", "seed": 419, "scale": 1.3, "pos": { "x": -2.5, "y": 0, "z": -10.5 } },
+    { "id": "flowers_east", "archetype": "flower_patch", "paletteId": "oola_heavenly", "seed": 421, "scale": 1.25, "pos": { "x": 11.5, "y": 0, "z": 6.5 } },
+    { "id": "flowers_south", "archetype": "flower_patch", "paletteId": "oola_heavenly", "seed": 431, "scale": 1.1, "pos": { "x": -4.5, "y": 0, "z": 10.5 } },
+
+    { "id": "cloud_shrub_nw", "archetype": "cloud_shrub", "paletteId": "oola_heavenly", "seed": 503, "scale": 1.4, "pos": { "x": -15, "y": 0, "z": -4 } },
+    { "id": "cloud_shrub_ne", "archetype": "cloud_shrub", "paletteId": "oola_heavenly", "seed": 509, "scale": 1.25, "pos": { "x": 14.5, "y": 0, "z": -7 } },
+    { "id": "cloud_shrub_sw", "archetype": "cloud_shrub", "paletteId": "oola_heavenly", "seed": 521, "scale": 1.35, "pos": { "x": -12.5, "y": 0, "z": 8 } },
+    { "id": "cloud_shrub_se", "archetype": "cloud_shrub", "paletteId": "oola_heavenly", "seed": 523, "scale": 1.3, "pos": { "x": 13, "y": 0, "z": 9 } }
+  ]
 }

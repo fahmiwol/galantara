@@ -41,19 +41,23 @@ export class World {
   /** Lepas island Oola (tanpa sky). Dipanggil sebelum mount Spot lain (mis. Bogor). */
   disposeContent() {
     if (this.worldRoot) {
-      this.worldRoot.traverse((obj) => {
+      const stack = [this.worldRoot];
+      while (stack.length) {
+        const obj = stack.pop();
         if (obj.isMesh) {
           obj.geometry?.dispose();
           const mats = Array.isArray(obj.material) ? obj.material : [obj.material];
           mats.forEach((m) => m?.dispose?.());
         }
-      });
+        if (obj.children?.length) stack.push(...obj.children);
+      }
       this.scene.remove(this.worldRoot);
       this.worldRoot = null;
     }
     this.halo       = null;
     this.warpPortal = null;
     this.objects    = [];
+    this.lampu      = [];
   }
 
   /** Bangun ulang island dari `mapData` (sky tetap). */
@@ -78,6 +82,7 @@ export class World {
   }
 
   _mountIslandGeometry() {
+    this.lampu = [];
     this._ensureWorldRoot();
     this._buildGround();
     this._buildIslandBase();
@@ -100,8 +105,8 @@ export class World {
     if (this.mapData?.procedural_props?.length) {
       for (const prop of this.mapData.procedural_props) {
         if (!prop?.archetype || !prop?.pos) continue;
-        const paletteId = prop.paletteId || 'jakarta_warm';
-        const pal = PALETTE_SLOTS[paletteId] || PALETTE_SLOTS.jakarta_warm;
+        const paletteId = prop.paletteId || 'oola_heavenly';
+        const pal = PALETTE_SLOTS[paletteId] || PALETTE_SLOTS.oola_heavenly;
         const g = buildProceduralGroup(
           prop.archetype,
           pal,
@@ -109,6 +114,8 @@ export class World {
           typeof prop.scale === 'number' ? prop.scale : 1,
         );
         g.position.set(prop.pos.x, prop.pos.y, prop.pos.z);
+        g.rotation.y = Number.isFinite(prop.rotationY) ? prop.rotationY : 0;
+        g.userData.mapId = prop.id || '';
         // Kumpulkan lampu SEKARANG, saat grupnya masih di tangan. PRD BAB 2.4
         // melarang scene.traverse; menyapu scene setelahnya untuk mencari
         // lampu akan melanggar aturan itu tanpa alasan.
@@ -131,33 +138,87 @@ export class World {
 
   // ── GROUND PLANE ──────────────────────────────────
   _buildGround() {
-    const geo = new THREE.CylinderGeometry(20, 22, 1.2, 32);
-    const mat = MS(0x7BC67E);
-    const mesh = new THREE.Mesh(geo, mat);
-    mesh.position.set(0, -0.6, 0);
-    mesh.receiveShadow = true;
-    this._addToIsland(mesh);
+    // Alas miniatur berlapis: permukaan gading, bibir lavender, lalu lis emas.
+    // Oola tetap taman surgawi — bukan tanah kampung yang dipindah ke hub.
+    // Permukaan atas: rumput surgawi, BUKAN gading.
+    //
+    // Gading (#f8f1ff) memang setia pada palet "putih" di PRD BAB 4.2, tapi
+    // diukur ia larut ke langit: dE*ab cuma 18,5 terhadap langit siang, jadi
+    // pulaunya hilang dan prop terlihat melayang di ruang putih.
+    //
+    // Catatan metode: kontras luminansi WCAG adalah alat yang SALAH untuk
+    // pertanyaan ini. Hijau lama pun cuma 1,14 terhadap langit siang, padahal
+    // terbaca jelas — yang bekerja adalah beda RONA, bukan terang-gelap.
+    // Diukur dengan dE*ab: hijau lama 48,1 · gading 18,5.
+    //
+    // #a8d5a2 menjaga rasa surgawi-pastel (PRD tetap dihormati lewat lis emas
+    // dan bibir lavender) sambil lolos di SEMUA fase langit:
+    //   pagi 40,5 · siang 35,5 · sore 36,5 · magrib 71,9 · malam 85,2
+    const top = new THREE.Mesh(
+      new THREE.CylinderGeometry(20, 20.55, 0.72, 48),
+      MS(0xa8d5a2, 0.86),
+    );
+    top.position.set(0, -0.36, 0);
+    top.receiveShadow = true;
+    top.name = 'diorama_top';
+    this._addToIsland(top);
 
-    // Outer edge darker
-    const edgeGeo = new THREE.CylinderGeometry(22, 23, 0.8, 32);
-    const edgeMat = MS(0x5A9E5E);
-    const edge = new THREE.Mesh(edgeGeo, edgeMat);
-    edge.position.set(0, -1.2, 0);
+    const edge = new THREE.Mesh(
+      new THREE.CylinderGeometry(20.55, 21.45, 0.72, 48),
+      MS(0xc4b5fd, 0.84),
+    );
+    edge.position.set(0, -1.03, 0);
+    edge.name = 'diorama_lavender_edge';
     this._addToIsland(edge);
 
-    // Water ring
-    const waterGeo = new THREE.CylinderGeometry(25, 25, 0.3, 32);
-    const waterMat = MS(0x38BDF8, 0.1);
+    const goldTrim = new THREE.Mesh(
+      new THREE.TorusGeometry(20.58, 0.13, 6, 48),
+      new THREE.MeshStandardMaterial({ color: 0xe9c86a, roughness: 0.68, metalness: 0.14 }),
+    );
+    goldTrim.position.set(0, -0.72, 0);
+    goldTrim.rotation.x = Math.PI / 2;
+    goldTrim.name = 'diorama_gold_trim';
+    this._addToIsland(goldTrim);
+
+    // Rok bawah sengaja GELAP, dan itu keputusan terukur, bukan selera.
+    // Seluruh palet Oola terang (putih/emas/lavender per PRD BAB 4.2), jadi
+    // di langit siang tidak ada satu pun unsur yang memisahkan siluet pulau
+    // dari latarnya — diukur, kontras alas gading vs langit sore cuma 1,46
+    // dan bibir lavender 1,15. Pulau terlihat larut.
+    //
+    // Bawah pulau melayang memang berada di bayangan, jadi satu unsur gelap
+    // di sini benar secara fisik sekaligus menyelesaikan keterbacaan:
+    //   pagi 3,17 · siang 3,53 · sore 3,56  ← rok bawah yang menopang
+    //   magrib 6,69 · malam 14,21           ← alas gading yang menopang
+    // Tiap fase punya minimal satu unsur >= 3:1. Jangan diterangkan lagi
+    // tanpa mengukur ulang ketiganya.
+    const under = new THREE.Mesh(
+      new THREE.CylinderGeometry(19.35, 20.8, 0.72, 48),
+      MS(0x6b5f8f, 0.9),
+    );
+    under.position.set(0, -1.72, 0);
+    under.name = 'diorama_underplate';
+    this._addToIsland(under);
+
+    // Cakram air/langit pucat memisahkan alas dari awan di bawahnya.
+    const waterGeo = new THREE.CylinderGeometry(24.5, 24.5, 0.22, 48);
+    const waterMat = MS(0x9dd7ea, 0.42);
     waterMat.transparent = true;
-    waterMat.opacity = 0.7;
+    waterMat.opacity = 0.58;
     const water = new THREE.Mesh(waterGeo, waterMat);
-    water.position.set(0, -2, 0);
+    water.position.set(0, -2.18, 0);
+    water.name = 'diorama_sky_pool';
     this._addToIsland(water);
   }
 
   // ── ISLAND BASE (floating clouds underneath) ──────
   _buildIslandBase() {
-    const positions = [[0, -2.5, 0, 8], [-6, -3.5, 4, 5], [5, -3, -6, 4], [-3, -4, -5, 3]];
+    // Puncak tiap bola HARUS di bawah pelat bawah diorama (y = -2.08),
+    // kalau tidak awan menembus permukaan pulau dan menyapu layar jadi putih.
+    // Bola r=8 di y=-2.5 dulu memuncak di y=+5.5 — enam satuan DI ATAS tanah
+    // yang diinjak pemain. Rumusnya: y + r <= -2.5.
+    //   [x, y, z, radius]
+    const positions = [[0, -11.5, 0, 8], [-6, -8.5, 4, 5], [5, -7.5, -6, 4], [-3, -6.5, -5, 3]];
     positions.forEach(([x, y, z, r]) => {
       const geo = new THREE.SphereGeometry(r, 8, 6);
       const mat = MS(0xF0F8FF, 0.3);
