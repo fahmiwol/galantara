@@ -121,6 +121,13 @@ function reasonText(result) {
 }
 
 function showResult(result) {
+  // Lapor ke tantangan harian. Benteng halaman terpisah, jadi ia menulis
+  // langsung ke storage yang sama — bukan lewat instance Game yang tidak
+  // ada di sini. Kalau modulnya gagal dimuat, permainan tetap jalan.
+  import('../../data/dailyChallenge.js')
+    .then(({ DailyChallenge }) => new DailyChallenge().catat('main_benteng', 1))
+    .catch(() => {});
+
   const winnerLabel = result.winner ? `TIM ${result.winner.toUpperCase()} MENANG` : 'HASIL SERI';
   $('#result-title').textContent = winnerLabel;
   $('#result-title').style.color = result.winner

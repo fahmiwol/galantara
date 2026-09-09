@@ -71,6 +71,19 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
 /* BOTTOM BAR (post login) */
 #bottom-bar{position:absolute;bottom:0;left:0;right:0;height:68px;background:rgba(255,255,255,0.92);backdrop-filter:blur(16px);border-top:1px solid rgba(255,255,255,0.6);display:none;align-items:center;justify-content:space-around;padding:0 8px 4px;z-index:50}
 #bottom-bar.on{display:flex}
+/* Tantangan harian — pil ringkas di HUD, kartu saat diklik. */
+.pill-harian{border:1px solid rgba(212,165,55,.45);background:rgba(255,247,230,.9);color:#6b4c1a;cursor:pointer;font-weight:800}
+.pill-harian.selesai{background:rgba(47,107,58,.14);border-color:rgba(47,107,58,.5);color:#2f6b3a}
+/* Diukur: kartu Benteng (#arena-door) menempati y 112-236 di kanan atas,
+   dan kartu ini setinggi ~109px. Ditaruh DI BAWAHNYA supaya tombol
+   'MASUK ARENA' — aksi utama halaman — tidak pernah tertutup. */
+#harian-kartu{position:absolute;top:248px;right:16px;z-index:60;width:min(280px,86vw);padding:14px 16px;border-radius:16px;background:rgba(255,252,246,.97);border:1px solid rgba(212,165,55,.4);box-shadow:0 18px 42px rgba(60,40,20,.22);display:none;font-size:12px;color:#4a3a24}
+#harian-kartu.on{display:block}
+#harian-kartu h4{margin:0 0 4px;font:800 15px/1.2 system-ui,sans-serif;color:#3a2b18}
+#harian-kartu p{margin:0 0 10px;color:#7a6448;line-height:1.45}
+#harian-bar{height:8px;border-radius:99px;background:rgba(0,0,0,.09);overflow:hidden;margin-bottom:6px}
+#harian-bar i{display:block;height:100%;border-radius:99px;background:linear-gradient(90deg,#d4a537,#e2703a);transition:width .35s ease}
+#harian-kaki{display:flex;justify-content:space-between;color:#8a7355;font-size:11px}
 .bb{display:flex;flex-direction:column;align-items:center;gap:2px;cursor:pointer;padding:5px 8px;border-radius:12px;border:none;background:transparent;font-family:'Nunito',sans-serif;transition:all .15s}
 .bb:hover{background:rgba(124,58,237,0.08);transform:translateY(-2px)}
 .bb-ic{width:32px;height:32px;border-radius:9px;display:flex;align-items:center;justify-content:center;font-size:16px}
@@ -221,6 +234,10 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
     <span id="oc">—</span> online &nbsp;·&nbsp; <span id="hud-spot">Oola Hub</span>
   </div>
   <div class="hud-r">
+    <!-- Tantangan harian. Sengaja SEBELUM pil koin: koin masih placeholder
+         (ekonomi belum end-to-end), sedangkan ini kemajuan yang nyata. -->
+    <button class="pill pill-harian" id="harian-pill" title="Tantangan hari ini"
+            aria-live="polite">🎯 <span id="harian-teks">—</span></button>
     <div class="pill pill-amber" id="tok-pill">🪙 <span id="tok-n">0</span></div>
     <span id="hud-user"></span>
     <button class="hud-btn" id="hud-login" onclick="G_UI.openLM('semua fitur')">Masuk</button>
@@ -230,6 +247,12 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
   </div>
 </div>
 <ul id="hamburger-menu"></ul>
+<div id="harian-kartu" role="dialog" aria-label="Tantangan harian">
+  <h4 id="harian-judul">Tantangan hari ini</h4>
+  <p id="harian-detail">—</p>
+  <div id="harian-bar"><i style="width:0%"></i></div>
+  <div id="harian-kaki"><span id="harian-angka">0 / 0</span><span id="harian-runtutan">🔥 0 hari</span></div>
+</div>
 
 <!-- DUNGEON BAR -->
 <div id="dg-bar">

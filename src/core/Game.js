@@ -25,6 +25,7 @@ import {
   spotLabelFromSocketRoom,
 } from '../data/config.js';
 import { AssetLibrary } from '../world/AssetLibrary.js';
+import { DailyChallenge } from '../data/dailyChallenge.js';
 import { getVisualSpotRuntimeClass } from '../world/spotVisualRegistry.js';
 import { MultiplayerSocket } from '../multiplayer/Socket.js';
 import { RemotePlayers     } from '../multiplayer/RemotePlayers.js';
@@ -67,6 +68,12 @@ export class Game {
     /** @type {import('../world/SpotRuntime.js').ISpotRuntime | null} */
     this._spotRuntime = null;
     this.assetLibrary = new AssetLibrary();
+    /** Alasan untuk kembali besok. Lihat src/data/dailyChallenge.js. */
+    this.harian = new DailyChallenge();
+    /** Jarak tempuh kumulatif hari ini (meter), untuk tantangan jalan kaki. */
+    this._jarak = 0;
+    /** @type {{x:number,z:number}|null} */
+    this._posisiLalu = null;
     /** @type {import('../interaction/InteractionVolume.js').InteractionVolume | null} */
     this._activeInteractionVolume = null;
     this._lastInteractionVolumeId = null;
@@ -132,6 +139,7 @@ export class Game {
 
     // HUD
     this.hud.init();
+    this._initHarian();
 
     // Login Modal
     this.loginModal.init();
@@ -181,6 +189,42 @@ export class Game {
     return this;
   }
 
+  // ── TANTANGAN HARIAN ──────────────────────────────────
+
+  _initHarian() {
+    const pil = document.getElementById('harian-pill');
+    const kartu = document.getElementById('harian-kartu');
+    if (!pil || !kartu) return;
+    pil.addEventListener('click', () => kartu.classList.toggle('on'));
+    // Klik di luar menutup kartu — tanpa ini ia menutupi dunia.
+    window.addEventListener('pointerdown', (e) => {
+      if (!kartu.classList.contains('on')) return;
+      if (kartu.contains(e.target) || pil.contains(e.target)) return;
+      kartu.classList.remove('on');
+    });
+    this.harian.onUbah = (st) => {
+      this._gambarHarian(st);
+      if (st.selesai) {
+        this.toast.show(`Tantangan hari ini selesai — runtutan ${st.runtutan} hari 🔥`, 'g');
+      }
+    };
+    this._gambarHarian(this.harian.status());
+  }
+
+  /** @param {ReturnType<DailyChallenge['status']>} st */
+  _gambarHarian(st) {
+    const set = (id, teks) => { const el = document.getElementById(id); if (el) el.textContent = teks; };
+    set('harian-teks', st.selesai ? 'Selesai' : `${st.kemajuan}/${st.target}`);
+    set('harian-judul', st.tantangan.judul);
+    set('harian-detail', st.tantangan.detail);
+    set('harian-angka', `${st.kemajuan} / ${st.target} ${st.tantangan.satuan}`);
+    set('harian-runtutan', `🔥 ${st.runtutan} hari`);
+    const pil = document.getElementById('harian-pill');
+    pil?.classList.toggle('selesai', st.selesai);
+    const isi = document.querySelector('#harian-bar i');
+    if (isi) isi.style.width = `${st.persen}%`;
+  }
+
   // ── GAME LOOP ─────────────────────────────────────────
   _loop() {
     requestAnimationFrame((ts) => this._loop(ts));
@@ -200,6 +244,26 @@ export class Game {
 
     // Day/night
     this.dayNight.update(this._t);
+
+    // Tantangan harian: jarak tempuh & kehadiran saat magrib.
+    // Dihitung di loop karena keduanya bukan kejadian, melainkan keadaan
+    // yang menumpuk — tidak ada satu titik "selesai" untuk dipasangi hook.
+    const pos = this.avatar.getPosition();
+    if (this._posisiLalu) {
+      const d = Math.hypot(pos.x - this._posisiLalu.x, pos.z - this._posisiLalu.z);
+      // Lompatan besar = teleport antar Spot, bukan berjalan. Jangan dihitung.
+      if (d < 1.5) this._jarak += d;
+      if (this._jarak >= 1) {
+        const bulat = Math.floor(this._jarak);
+        this._jarak -= bulat;
+        this.harian.catat('jalan_kaki', bulat);
+      }
+    }
+    this._posisiLalu = { x: pos.x, z: pos.z };
+
+    if (this.dayNight.lampGlow > 0.35) {
+      this.harian.catat('magrib', 1, 'magrib-hari-ini');
+    }
 
     // NPC patrol
     this.npcs.update(dt, this._t);
@@ -301,6 +365,7 @@ export class Game {
   }
 
   _tryTalkNPC() {
+    this.harian.catat('sapa_warga', 1, `npc:${this._lastNPC?.id ?? 'x'}:${Date.now() >> 16}`);
     const npc = this._lastNPC;
     if (!npc) return;
     this.panels.openDialog(npc);
@@ -451,6 +516,7 @@ export class Game {
       this.dayNight?.pakaiLampu(this._spotRuntime.getLampu?.() || []);
       const manifestPath = `assets/spots/${spotVisualId}/manifest.json`;
       void this.assetLibrary.applyManifest(this._spotRuntime.root, manifestPath);
+      this.harian.catat('jelajah_spot', 1, `spot:${spotVisualId}`);
       this._lastInteractionVolumeId = null;
       this._activeInteractionVolume = null;
       return;
