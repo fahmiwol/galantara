@@ -20,3 +20,6 @@ Thumbs.db
 # Salinan backup VPS & eksperimen sementara (besar, tidak perlu di Hub)
 vps-backup/
 bank-tiranyx-temp/
+
+# Tangkapan render sementara untuk review visual (tools/penerima-render.mjs)
+tmp/

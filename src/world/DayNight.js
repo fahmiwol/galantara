@@ -134,11 +134,17 @@ export class DayNight {
     // lagi, angka di sini WAJIB ikut disetel ulang, bukan dibiarkan.
     this.lampGlow = lampGlow;
     for (const lampu of this._lampu) {
+      // Sebuah lampu boleh menyatakan dirinya lebih redup dari yang lain lewat
+      // userData.kuatRelatif. Itu yang membuat komposisi cahaya mungkin —
+      // satu pusat terang dengan pendamping yang jauh lebih lemah membaca
+      // sebagai tempat yang hangat; semua lampu sama terang membaca sebagai
+      // penerangan umum. Bawaannya 1, jadi lampu lama tidak berubah.
+      const kuat = lampu.userData?.kuatRelatif ?? 1;
       if (lampu.isLight) {
-        lampu.intensity = lampGlow * 1.6;
+        lampu.intensity = lampGlow * 1.6 * kuat;
       } else if (lampu.material) {
         // Bohlam padam pun tetap terlihat sebagai benda, jadi sisakan sedikit.
-        lampu.material.emissiveIntensity = 0.12 + lampGlow * 1.5;
+        lampu.material.emissiveIntensity = (0.12 + lampGlow * 1.5) * kuat;
       }
     }
 

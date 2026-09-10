@@ -23,28 +23,64 @@ const buat = (opsi = {}) => new MejaNongkrong({ id: 'uji', x: 0, z: 0, ...opsi }
 const orang = (kunci, x, z) => ({ kunci, nama: kunci, x, z });
 
 // ── Letak kursi ──────────────────────────────────────
-test('kursi melingkar rata dan semuanya menghadap pusat meja', () => {
+test('kursi mengelilingi daun persegi panjang dan semuanya menghadap pusat', () => {
   const m = buat({ kursi: 4 });
   assert.equal(m.kursi.length, 4);
 
   for (const k of m.kursi) {
-    const jarak = Math.hypot(k.x - m.x, k.z - m.z);
-    assert.ok(Math.abs(jarak - 1.02) < 1e-6, `jarak ${jarak}`);
-
-    // facing harus menunjuk dari kursi ke pusat.
+    // facing harus menunjuk dari kursi ke pusat meja — itu yang membuat orang
+    // di satu meja berhadapan, bukan sekadar berdiri berdekatan.
     const seharusnya = Math.atan2(m.x - k.x, m.z - k.z);
     assert.ok(Math.abs(k.facing - seharusnya) < 1e-9);
+
+    // Tiap kursi harus di LUAR jejak daun, kalau tidak dingkliknya menembus meja.
+    const luarPanjang = Math.abs(k.x - m.x) > 1.10 / 2;
+    const luarLebar = Math.abs(k.z - m.z) > 0.72 / 2;
+    assert.ok(luarPanjang || luarLebar, `kursi ${k.i} menembus daun meja`);
   }
 
-  // Jarak antar kursi bersebelahan sama besar.
-  const d01 = Math.hypot(m.kursi[0].x - m.kursi[1].x, m.kursi[0].z - m.kursi[1].z);
-  const d12 = Math.hypot(m.kursi[1].x - m.kursi[2].x, m.kursi[1].z - m.kursi[2].z);
-  assert.ok(Math.abs(d01 - d12) < 1e-9);
+  // Sengaja TIDAK melingkar rata: dua kursi digeser supaya tidak berbaris
+  // presisi. Meja warung tidak pernah rapi.
+  const jari = m.kursi.map((k) => Math.hypot(k.x - m.x, k.z - m.z));
+  assert.ok(Math.max(...jari) - Math.min(...jari) > 0.05, 'harus tidak rata');
+});
+
+test('letak kursi deterministik — dua meja dengan spek sama menghasilkan letak identik', () => {
+  // Kalau pergeseran "supaya tidak kaku" memakai angka acak, dua klien akan
+  // menempatkan kursi di titik berbeda dan pemetaan duduk ikut berbeda,
+  // tanpa satu pun pesan error.
+  const a = buat({ kursi: 4, rotasi: 0.7 });
+  const b = buat({ kursi: 4, rotasi: 0.7 });
+  assert.equal(JSON.stringify(a.kursi), JSON.stringify(b.kursi));
 });
 
 test('jumlah kursi dijepit di rentang yang masuk akal', () => {
   assert.equal(buat({ kursi: 0 }).jumlahKursi, 2);
   assert.equal(buat({ kursi: 99 }).jumlahKursi, 8);
+});
+
+test('koordinat lokal kursi TIDAK ikut diputar, koordinat dunia ikut', () => {
+  // Bug nyata yang pernah terjadi: mesh dingklik ditempatkan memakai koordinat
+  // yang sudah diputar, PADAHAL grup mesh-nya sendiri juga sudah diputar —
+  // jadi dingkliknya kena rotasi dua kali dan berdiri di tempat yang bukan
+  // kursinya. Meja tanpa rotasi tidak akan pernah memperlihatkan ini.
+  const lurus = buat({ kursi: 4, rotasi: 0 });
+  const miring = buat({ kursi: 4, rotasi: Math.PI / 2 });
+
+  // Lokal harus SAMA — rotasi dibawa oleh grup mesh, bukan oleh angkanya.
+  for (let i = 0; i < 4; i++) {
+    assert.ok(Math.abs(lurus.kursi[i].lx - miring.kursi[i].lx) < 1e-9, `lx kursi ${i}`);
+    assert.ok(Math.abs(lurus.kursi[i].lz - miring.kursi[i].lz) < 1e-9, `lz kursi ${i}`);
+  }
+
+  // Dunia harus BERBEDA — di situlah pemain benar-benar didudukkan — dan
+  // arahnya harus sama dengan rotasi Three.js, bukan kebalikannya. Rotasi-Y
+  // Three: x' = x·cos + z·sin, z' = -x·sin + z·cos. Pada 90°: (lx, lz) → (lz, -lx).
+  // Rumus yang terbalik pernah dipakai di sini dan akibatnya letak kursi
+  // tercermin terhadap dingklik yang digambar — pemain duduk di SEBELAH bangku.
+  const k = miring.kursi[0];
+  assert.ok(Math.abs(k.x - lurus.kursi[0].lz) < 1e-9, `x dunia ${k.x} vs ${lurus.kursi[0].lz}`);
+  assert.ok(Math.abs(k.z + lurus.kursi[0].lx) < 1e-9, `z dunia ${k.z} vs ${-lurus.kursi[0].lx}`);
 });
 
 // ── Pemetaan kursi ───────────────────────────────────
@@ -66,13 +102,14 @@ test('pemain yang cuma lewat di dekat meja tidak terhitung duduk', () => {
 
 test('meja 4 kursi: jangkauan kursi tidak saling tumpang tindih', () => {
   // Invarian yang membuat "duduk di mana" tidak pernah ambigu pada meja
-  // bawaan: jarak antar kursi bersebelahan (1,44 m) lebih besar daripada dua
-  // kali toleransi kursi (2 x 0,62 = 1,24 m). Kalau suatu saat jariLingkar
-  // dikecilkan atau jariKursi dilebarkan tanpa memeriksa ini, satu posisi bisa
-  // masuk jangkauan dua kursi dan pemetaannya mulai bergantung pada urutan.
+  // bawaan. Sengaja memakai angka yang DIHITUNG modulnya, bukan angka yang
+  // ditulis ulang di sini: kalau ukuran meja atau toleransi kursi diubah lagi
+  // nanti, uji ini ikut menilai bentuk yang baru, bukan bentuk yang lama.
   const m = buat({ kursi: 4 });
-  const antar = Math.hypot(m.kursi[0].x - m.kursi[1].x, m.kursi[0].z - m.kursi[1].z);
-  assert.ok(antar > 0.62 * 2, `jarak antar kursi ${antar.toFixed(2)} m harus > 1,24`);
+  assert.ok(
+    m.jarakKursiTerdekat > m.toleransiKursi * 2,
+    `kursi terdekat ${m.jarakKursiTerdekat.toFixed(3)} m harus > ${(m.toleransiKursi * 2).toFixed(2)} m`,
+  );
 
   // Konsekuensinya: titik tengah antara dua kursi bukan milik siapa-siapa.
   const a = m.kursi[0], b = m.kursi[1];
@@ -81,13 +118,12 @@ test('meja 4 kursi: jangkauan kursi tidak saling tumpang tindih', () => {
 });
 
 test('kalau jangkauan MEMANG tumpang tindih, satu orang tetap hanya dapat satu kursi', () => {
-  // Meja 8 kursi: jaraknya 0,78 m, lebih kecil dari 2 x 0,62 — jadi ada posisi
-  // yang masuk jangkauan dua kursi sekaligus. Di situlah aturan "satu pemain
-  // sekali pakai" harus bekerja.
+  // Meja 8 kursi memampatkan kursinya sampai jangkauannya beririsan. Di situlah
+  // aturan "satu pemain sekali pakai" harus bekerja.
   const m = buat({ kursi: 8 });
   const a = m.kursi[0], b = m.kursi[1];
   const antar = Math.hypot(a.x - b.x, a.z - b.z);
-  assert.ok(antar < 0.62 * 2, 'prasyarat uji: jangkauannya memang tumpang tindih');
+  assert.ok(antar < m.toleransiKursi * 2, 'prasyarat uji: jangkauannya memang tumpang tindih');
 
   const peta = m.hitungKursi([orang('x', (a.x + b.x) / 2, (a.z + b.z) / 2)]);
   assert.equal(peta.filter(Boolean).length, 1, 'hanya satu kursi yang boleh terisi');
@@ -130,13 +166,21 @@ test('kursi kosong terdekat dipilih, bukan sembarang yang kosong', () => {
   assert.equal(m.kursiKosongTerdekat(dekatKursi3, terisi).i, 3);
 });
 
-test('kursi yang sudah terisi dilewati', () => {
+test('kursi yang sudah terisi dilewati, dan yang terdekat berikutnya dipilih', () => {
   const m = buat();
   const terisi = [null, null, null, { kunci: 'lain' }];
   const dekatKursi3 = { x: m.kursi[3].x + 0.1, z: m.kursi[3].z + 0.1 };
   const pilih = m.kursiKosongTerdekat(dekatKursi3, terisi);
-  assert.notEqual(pilih.i, 3);
-  assert.ok(pilih.i === 0 || pilih.i === 2, `dapat kursi ${pilih.i}`);
+
+  assert.notEqual(pilih.i, 3, 'kursi yang ada orangnya tidak boleh dipilih');
+
+  // Indeks yang benar dihitung, bukan dihafal: kalau tata letak kursi diubah
+  // lagi, uji ini tetap menilai perilakunya, bukan bentuk yang lama.
+  const kosongTerdekat = m.kursi
+    .filter((k) => !terisi[k.i])
+    .sort((a, b) => Math.hypot(a.x - dekatKursi3.x, a.z - dekatKursi3.z)
+                  - Math.hypot(b.x - dekatKursi3.x, b.z - dekatKursi3.z))[0];
+  assert.equal(pilih.i, kosongTerdekat.i, `dapat kursi ${pilih.i}, harusnya ${kosongTerdekat.i}`);
 });
 
 test('meja penuh mengembalikan null, bukan kursi yang sudah ada orangnya', () => {
@@ -146,9 +190,13 @@ test('meja penuh mengembalikan null, bukan kursi yang sudah ada orangnya', () =>
 });
 
 // ── Radius interaksi ─────────────────────────────────
-test('radius interaksi memberi ruang mendekat, tidak hanya menutupi dingklik', () => {
+test('radius interaksi melingkupi seluruh kursi dengan ruang mendekat', () => {
   const m = buat();
-  // Harus lebih besar dari lingkar kursi ditambah lebar dingklik, supaya hint
-  // sempat terbaca sebagai ajakan sebelum orangnya sampai.
-  assert.ok(m.jariInteraksi > 1.02 + 0.19 + 0.5, `jari ${m.jariInteraksi}`);
+  const kursiTerjauh = Math.max(...m.kursi.map((k) => Math.hypot(k.x - m.x, k.z - m.z)));
+  // Hint yang baru muncul saat orang sudah berdiri di antara dingklik
+  // terlambat untuk jadi ajakan.
+  assert.ok(
+    m.jariInteraksi > kursiTerjauh + 0.6,
+    `jari ${m.jariInteraksi.toFixed(2)} vs kursi terjauh ${kursiTerjauh.toFixed(2)}`,
+  );
 });

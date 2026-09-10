@@ -2,6 +2,70 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [Unreleased] · 2026-09-10 — Meja Nongkrong: arahan seni, dan dua alat baru
+
+Arah seninya diserahkan ke GPT-5.6 lewat API langsung, dengan RENDER ASLINYA
+sebagai masukan — bukan deskripsi. Untuk itu dibangun dua alat, disimpan di repo.
+
+### Added
+- `tools/tanya-gpt.mjs` — minta pendapat kedua ke OpenAI dari dalam repo.
+  Peran siap pakai (`seni`, `desain`, `kode`), bisa menyertakan berkas dan
+  GAMBAR. Kunci dibaca dari env, tidak pernah masuk berkas atau chat. Ada
+  karena Codex CLI buntu di mesin ini sementara API langsung tidak.
+- `tools/penerima-render.mjs` — terima tangkapan layar dari halaman, tulis ke
+  berkas. Perlu karena `toDataURL()` pada renderer aplikasi mengembalikan
+  kosong (WebGL membuang drawing buffer), unduhan mati di sandbox pratinjau,
+  dan menarik dataURL lewat hasil tool berarti ~200 ribu karakter sia-sia.
+- Lampu boleh menyatakan `userData.kuatRelatif`. Bawaannya 1, jadi lampu lama
+  tidak berubah. Ini yang membuat KOMPOSISI cahaya mungkin: satu pusat terang
+  dengan pendamping yang jauh lebih lemah terbaca sebagai tempat yang hangat;
+  semua lampu sama terang terbaca sebagai penerangan umum.
+
+### Changed — bentuk mejanya, atas temuan art director
+Diagnosis yang paling tajam: **daun bundar + kaki tengah + dingklik bundar +
+lampu globe adalah bahasa visual set patio / kafe taman**, dan teko gerabah
+saja tidak mengubahnya jadi Indonesia.
+
+- Daun jadi **persegi panjang 1,10 × 0,72 m dari tiga papan bercelah**, dengan
+  4 kaki sudut 0,06 m, apron 0,11 m, dan pengaku H. Itu konstruksi tukang kayu.
+- Dingklik jadi **dudukan kotak 0,28 m berkaki empat membuka 5°** dengan palang
+  bawah. Dingklik "jamur" itu bangku bar, bukan bangku warung.
+- Ditambah **termos pompa** — siluetnya yang paling langsung terbaca sebagai
+  warung 90-an. Gelas dikurangi jadi dua: meja penuh gelas terlihat seperti
+  display, bukan meja yang sedang dipakai.
+- **Meja diberi WILAYAH, bukan ukuran lebih besar** — ukurannya sudah benar
+  terhadap avatar. Bidang tanah terinjak berbentuk poligon tak beraturan
+  (oval tertutup terbaca sebagai panggung), jalur tanah menerus 0,58 × 1,70 m
+  dengan 7 batu pijak lebar-datar-tertanam, dan 6 batu tepi kecil-tinggi
+  berwarna lebih dingin supaya jalur terbaca sebagai jalur.
+- **Susunan kursi 2 + 1 + 1, satu sisi panjang sengaja dikosongkan.** Avatar
+  chibi berkepala besar: empat orang tersebar merata akan menutup seluruh daun
+  meja dari kamera atas-serong, berapa pun ukuran mejanya. Toleransi kursi ikut
+  turun 0,45 → 0,34 m karena dua kursi sesisi hanya berjarak 0,76 m.
+- **Atap sengkuap menaungi meja.** Dua tiang + palang tanpa atap terbaca
+  sebagai gawang atau ayunan taman bermain.
+
+### Fixed
+- Arah rotasi letak kursi berlawanan dengan rotasi Three.js
+  (`x' = x·cos + z·sin`, bukan `x·cos − z·sin`). Akibatnya letak kursi
+  tercermin terhadap dingklik yang digambar — di meja Oola yang diputar 45°,
+  pemain didudukkan di SEBELAH bangkunya. Diverifikasi terhadap
+  `THREE.Object3D` asli, dan dikunci oleh uji regresi.
+- Koordinat lokal kursi sempat ikut diputar padahal grup mesh-nya juga diputar
+  — dingklik kena rotasi dua kali.
+- Bidang tanah menghadap ke BAWAH (`rotation.x = +π/2` memutar normal +Z jadi
+  −Y) sehingga tidak pernah terlihat sama sekali.
+
+### Catatan: satu angka arahan seni sengaja ditimpa
+Arahan aslinya meminta atap pelana DANGKAL, nok 2,12 m di atas bibir 1,92 m —
+kemiringan 20°. Dicoba dua kali dan dilihat hasilnya: dari jarak kamera
+Galantara kemiringan itu tidak terbaca sama sekali dan atapnya tampak sebagai
+papan nama mendatar, persis siluet yang sedang dihindari. Pelana juga menuntut
+tiang depan supaya tidak melayang, dan tiang depan berdiri tepat di tempat
+orang duduk. Diganti **sengkuap** — ditopang dua tiang belakang yang sudah ada,
+menjulur menaungi meja, dan kemiringannya terbaca karena tepi depannya jelas
+lebih rendah. Itu juga bentuk yang paling lazim untuk warung dan kaki lima.
+
 ## [Unreleased] · 2026-09-10 — Meja Nongkrong v1
 
 Social node pertama. PRD `GALANTARA_BUILDER_SYSTEM` §SocialNode registry:
