@@ -73,6 +73,16 @@ export class ChatBubbleLayer {
     this._kamera = kamera;
     /** @type {Map<string, {el: HTMLElement, ambilPosisi: Function, kadaluarsa: number, keluar: boolean, terlihat: boolean}>} */
     this._bubble = new Map();
+    this._byElement = new WeakMap();
+    // Fonts and intermediate resize layouts can change a measured box later.
+    // Observe the box, not every frame; callbacks only invalidate the cache.
+    this._resize = typeof globalThis.ResizeObserver === 'function'
+      ? new ResizeObserver((entries) => {
+        for (const { target } of entries) {
+          const b = this._byElement.get(target);
+          if (b) b.terukur = false;
+        }
+      }) : null;
   }
 
   /**
@@ -102,6 +112,8 @@ export class ChatBubbleLayer {
       this._lapisan.appendChild(el);
       b = { el, ambilPosisi, kadaluarsa: 0, keluar: false, terlihat: false };
       this._bubble.set(id, b);
+      this._byElement.set(el, b);
+      this._resize?.observe(el);
     }
 
     // textContent, bukan innerHTML — isinya diketik pemain lain.
@@ -115,17 +127,20 @@ export class ChatBubbleLayer {
     b.terukur = false;
     b.w = LEBAR_CADANGAN;
     b.h = TINGGI_CADANGAN;
-    this._ukur(b);
+    const layar = this._ukuranLayar();
+    this._ukur(b, layar);
 
     // Tempatkan dulu sebelum terlihat, supaya bubble tidak sempat berkedip
     // di pojok kiri-atas pada frame pertama.
-    this._tempatkan(b);
-    this._rapikan();
+    this._tempatkan(b, layar);
+    this._rapikan(layar);
     // Satu frame jeda supaya transisi masuknya terlihat. Kalau rAF tidak ada,
     // langsung tampilkan — sebuah pesan yang hilang jauh lebih buruk daripada
     // sebuah pesan yang muncul tanpa animasi.
     const rAF = globalThis.requestAnimationFrame;
-    if (typeof rAF === 'function') rAF(() => b.el.classList.add('on'));
+    if (typeof rAF === 'function') rAF(() => {
+      if (this._bubble.get(id) === b && !b.keluar) b.el.classList.add('on');
+    });
     else b.el.classList.add('on');
 
     const lama = Math.min(DETIK_MAKS, DETIK_DASAR + jumlahHuruf * DETIK_PER_HURUF);
@@ -136,19 +151,21 @@ export class ChatBubbleLayer {
   buang(id) {
     const b = this._bubble.get(id);
     if (!b) return;
+    this._resize?.unobserve(b.el);
+    this._byElement.delete(b.el);
     b.el.remove();
     this._bubble.delete(id);
   }
 
   /** Proyeksi satu bubble ke layar. Dipakai update() dan ucap(). */
-  _tempatkan(b) {
+  _tempatkan(b, layar) {
     const p = b.ambilPosisi?.();
     if (!p || !this._kamera) return this._sembunyikan(b);
 
     if (!_v) _v = new THREE.Vector3();
     _v.set(p.x, p.y, p.z);
 
-    const [W, H] = this._ukuranLayar();
+    const [W, H] = layar;
 
     // Ukur dulu, baru proyeksikan — project() menimpa isi vektornya.
     // px per unit dunia = (tinggi viewport / 2·tan(fov/2)) / jarak.
@@ -192,13 +209,18 @@ export class ChatBubbleLayer {
    * — dan kalau itu terjadi tepat saat pesan datang, ukuran cadangan akan
    * terkunci selamanya dan penghindaran tumpukan memakai angka yang salah
    * (pesan panjang jauh lebih lebar dari cadangan 160 px). Jadi selama belum
-   * berhasil, dicoba lagi tiap frame; setelah berhasil, tidak diukur lagi.
+   * berhasil, dicoba lagi tiap frame; setelah berhasil, hanya diukur ulang
+   * jika viewport berubah atau ResizeObserver membatalkan cache.
    */
-  _ukur(b) {
-    if (b.terukur) return;
+  _ukur(b, [W, H]) {
+    // max-width uses vw: a resize can wrap the same text onto extra lines.
+    // Retry zero-size layout, but never measure stable boxes every frame.
+    if (b.terukur && b.ukurW === W && b.ukurH === H) return;
     const w = b.el.offsetWidth;
     const h = b.el.offsetHeight;
-    if (w > 0 && h > 0) { b.w = w; b.h = h; b.terukur = true; }
+    if (w > 0 && h > 0) {
+      b.w = w; b.h = h; b.terukur = true; b.ukurW = W; b.ukurH = H;
+    }
   }
 
   /**
@@ -217,13 +239,14 @@ export class ChatBubbleLayer {
    *    Yang lebih bawah di layar (lebih dekat ke kamera) dianggap pemilik
    *    tempat; yang di belakangnya naik.
    */
-  _rapikan() {
-    const [W, H] = this._ukuranLayar();
+  _rapikan(layar) {
+    const [W, H] = layar;
     const tampak = [];
+    // Batch layout reads before any style writes.
+    for (const b of this._bubble.values()) if (b.terlihat) this._ukur(b, layar);
     for (const b of this._bubble.values()) {
-      if (!b.terlihat) { b.el.style.visibility = 'hidden'; continue; }
-      b.el.style.visibility = '';
-      this._ukur(b);
+      if (!b.terlihat) { this._gaya(b, 'visibility', 'hidden'); continue; }
+      this._gaya(b, 'visibility', '');
       tampak.push(b);
     }
     if (!tampak.length) return;
@@ -266,8 +289,8 @@ export class ChatBubbleLayer {
     }
 
     for (const b of tampak) {
-      b.el.style.left = `${b._x}px`;
-      b.el.style.top = `${b._y}px`;
+      this._gaya(b, 'left', `${b._x}px`);
+      this._gaya(b, 'top', `${b._y}px`);
 
       // Ekor menunjuk titik gantung SEBENARNYA (b.sx), bukan tengah kotak.
       // Begitu bubble dijepit menjauh dari tepi layar, ekor yang tetap di
@@ -275,7 +298,10 @@ export class ChatBubbleLayer {
       // yang bicara. Dijaga tetap di dalam kotak supaya tidak menggantung.
       const w = b.w || LEBAR_CADANGAN;
       const ekor = Math.min(Math.max(b.sx - (b._x - w / 2), EKOR_TEPI_PX), w - EKOR_TEPI_PX);
-      b.el.style.setProperty?.('--ekor', `${ekor}px`);
+      if (b.ekorPx !== ekor) {
+        b.el.style.setProperty?.('--ekor', `${ekor}px`);
+        b.ekorPx = ekor;
+      }
     }
   }
 
@@ -295,7 +321,10 @@ export class ChatBubbleLayer {
 
   _sembunyikan(b) {
     b.terlihat = false;
-    b.el.style.visibility = 'hidden';
+  }
+
+  _gaya(b, nama, nilai) {
+    if (b.el.style[nama] !== nilai) b.el.style[nama] = nilai;
   }
 
   /**
@@ -317,6 +346,7 @@ export class ChatBubbleLayer {
     this._kamera = camera;
     if (!camera || !this._bubble.size) return;
     const kini = performance.now();
+    const layar = this._ukuranLayar();
 
     for (const [id, b] of this._bubble) {
       if (kini > b.kadaluarsa) {
@@ -330,9 +360,9 @@ export class ChatBubbleLayer {
           continue;
         }
       }
-      this._tempatkan(b);
+      this._tempatkan(b, layar);
     }
-    this._rapikan();
+    this._rapikan(layar);
   }
 
   /** Buang semuanya — dipakai saat pindah Spot. */

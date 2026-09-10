@@ -3,6 +3,21 @@
 Platform: Social-Commerce Hyperlocal Digital Market (Pasar Malam Digital).
 Tech Stack: Three.js (Vanilla ES Modules), Supabase, Socket.io.
 
+## Checkpoint terbaru — 10 September 2026, polish GPT
+
+- Root aktif **`C:\galantara`**, bukan `C:\KVM8-BACKUP\galantara` (folder lama
+  sudah tidak ada). Gunakan root ini juga untuk Agent Bridge.
+- Baca `docs/HANDOFF-GPT-POLISH-2026-09-10.md` sesudah handoff Claude tanggal
+  yang sama. Perubahan kecil di ChatBubble/RemotePlayers; tidak memulai fitur.
+- **45/45 tes**. Dependency audit **0 kerentanan — tapi hanya di
+  `galantara-server/`**; root repo tidak punya lockfile sama sekali sehingga
+  `npm audit` di sana menolak jalan (`ENOLOCK`). Jangan baca angka 0 itu
+  sebagai "seluruh repo bersih". Browser QA overlay desktop/mobile dengan
+  pesan sintetis lokal, bukan chat sungguhan atau bukti playtest manusia.
+- Cache layout dapat basi walau ukuran awal positif: resize/font bisa masih
+  menyelesaikan layout. Pakai invalidasi ResizeObserver, bukan offsetWidth per
+  bubble tiap frame. Dispose/unobserve ketika pemilik bubble dibuang.
+
 **Utara produk:** **game engine** + **game builder** no-code (wizard, template, AI copilot) — lihat `docs/GALANTARA_BUILDER_SYSTEM.md` **v1.3** (§ *Utara produk*, § *Visi creator*). Riset & link: `docs/RESOURCES_RESEARCH.md` + **§ 2A Jadwal belajar**. **Log sintesis harian:** `docs/LEARNINGS_LOG.md`.
 
 ## Kendala operasi — tanpa tim art (founder + AI saja)

@@ -6,6 +6,8 @@ export class RemotePlayers {
   constructor(scene) {
     this.scene   = scene;
     this._players = {}; // socketId → { mesh, targetX, targetZ, facing, nameEl }
+    this._labelLayer = document.getElementById('lbl-layer');
+    this._labelPosition = new THREE.Vector3();
   }
 
   // ── ADD PLAYER ────────────────────────────────────────
@@ -90,9 +92,11 @@ export class RemotePlayers {
 
   // ── UPDATE SETIAP FRAME (lerp posisi + update label) ──
   update(camera, renderer) {
-    const W = window.innerWidth, H = window.innerHeight;
+    const W = this._labelLayer?.clientWidth || window.innerWidth || 0;
+    const H = this._labelLayer?.clientHeight || window.innerHeight || 0;
 
-    Object.values(this._players).forEach(p => {
+    for (const sid in this._players) {
+      const p = this._players[sid];
       // Lerp posisi (smooth movement)
       const mx = p.mesh.position;
       mx.x += (p.targetX - mx.x) * 0.15;
@@ -101,20 +105,23 @@ export class RemotePlayers {
 
       // Project 3D → 2D untuk name label
       if (p.nameEl && camera) {
-        const pos3D = p.mesh.position.clone();
+        const pos3D = this._labelPosition.copy(p.mesh.position);
         pos3D.y += 1.6;
         pos3D.project(camera);
         const sx = (pos3D.x * 0.5 + 0.5) * W;
         const sy = (-pos3D.y * 0.5 + 0.5) * H;
-        if (pos3D.z < 1) {
-          p.nameEl.style.display = '';
-          p.nameEl.style.left = sx + 'px';
-          p.nameEl.style.top  = sy + 'px';
+        const visible = Number.isFinite(sx) && Number.isFinite(sy)
+          && pos3D.z >= -1 && pos3D.z < 1
+          && (!(W > 0 && H > 0) || (sx >= 0 && sx <= W && sy >= 0 && sy <= H));
+        if (visible) {
+          if (p.nameEl.style.display !== '') p.nameEl.style.display = '';
+          if (p.nameEl.style.left !== sx + 'px') p.nameEl.style.left = sx + 'px';
+          if (p.nameEl.style.top !== sy + 'px') p.nameEl.style.top = sy + 'px';
         } else {
-          p.nameEl.style.display = 'none';
+          if (p.nameEl.style.display !== 'none') p.nameEl.style.display = 'none';
         }
       }
-    });
+    }
   }
 
   /**

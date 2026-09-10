@@ -243,6 +243,67 @@ test('titik di belakang kamera tidak terlihat', () => {
 // ── Tata letak: tepi layar dan tumpukan ───────────────
 const angka = (px) => Number(String(px).replace('px', ''));
 
+test('bubble diukur ulang ketika viewport berubah, lalu ukuran kembali dicache', () => {
+  const lapisan = pasangLingkungan();
+  const L = new ChatBubbleLayer('lbl-layer', kameraDi(30));
+  L.ucap('a', 'pesan panjang yang membungkus pada layar sempit', diTitikAsal);
+  const b = L._bubble.get('a');
+  b.el.offsetWidth = 230; b.el.offsetHeight = 28;
+  L.update(kameraDi(30));
+  lapisan.clientWidth = 320;
+  b.el.offsetWidth = 134; b.el.offsetHeight = 58;
+  L.update(kameraDi(30));
+  assert.equal(b.w, 134); assert.equal(b.h, 58);
+  let baca = 0;
+  Object.defineProperty(b.el, 'offsetWidth', { get() { baca++; return 134; } });
+  L.update(kameraDi(30)); L.update(kameraDi(30));
+  assert.equal(baca, 0, 'viewport stabil tidak mengukur ulang setiap frame');
+});
+
+test('ukuran layar hanya dibaca satu kali per update untuk seluruh bubble', () => {
+  const lapisan = pasangLingkungan();
+  const L = new ChatBubbleLayer('lbl-layer', kameraDi(30));
+  L.ucap('a', 'halo', diTitikAsal); L.ucap('b', 'hai', diTitikAsal);
+  let baca = 0;
+  Object.defineProperty(lapisan, 'clientWidth', { get() { baca++; return 1280; } });
+  L.update(kameraDi(30));
+  assert.equal(baca, 1);
+});
+
+test('callback animasi tertunda tidak menghidupkan bubble setelah dibuang', () => {
+  pasangLingkungan();
+  const antrian = [];
+  globalThis.requestAnimationFrame = (fn) => antrian.push(fn);
+  const L = new ChatBubbleLayer('lbl-layer', kameraDi(30));
+  L.ucap('a', 'sampai jumpa', diTitikAsal);
+  const el = L._bubble.get('a').el;
+  L.bersihkan();
+  antrian.forEach(fn => fn());
+  assert.equal(el.classList.contains('on'), false);
+  assert.equal(L.jumlah, 0);
+});
+
+test('perubahan layout font/resize terlambat membatalkan cache dan observer dilepas', () => {
+  pasangLingkungan();
+  let notify, observed, released;
+  globalThis.ResizeObserver = class {
+    constructor(fn) { notify = fn; }
+    observe(el) { observed = el; }
+    unobserve(el) { released = el; }
+  };
+  try {
+    const L = new ChatBubbleLayer('lbl-layer', kameraDi(30));
+    L.ucap('a', 'pesan uji font', diTitikAsal);
+    const b = L._bubble.get('a');
+    b.el.offsetWidth=160; b.el.offsetHeight=28; L.update(kameraDi(30));
+    b.el.offsetWidth=180; b.el.offsetHeight=44;
+    notify([{target:observed}]); L.update(kameraDi(30));
+    assert.equal(b.w,180); assert.equal(b.h,44);
+    L.bersihkan(); assert.equal(released,observed);
+    assert.doesNotThrow(()=>notify([{target:observed}]));
+  } finally { delete globalThis.ResizeObserver; }
+});
+
 test('bubble di dekat tepi atas dijepit supaya tidak terpotong', () => {
   pasangLingkungan({ tinggi: 720 });
   const L = new ChatBubbleLayer();

@@ -2,6 +2,20 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [Unreleased] · 2026-09-10 — polish overlay, checkpoint GPT
+
+- Bubble mengukur ulang kotaknya saat resize/font mengubah layout; cache tetap
+  dipakai saat stabil. Snapshot ukuran lapisan dibaca sekali per update, ukur
+  kotak dibatch sebelum tulis gaya, dan nilai gaya yang sama tidak ditulis ulang.
+- Callback animasi tertunda tidak menyalakan bubble yang sudah dibuang.
+- Label pemain remote memakai ulang satu Vector3, mengikuti ukuran lapisan
+  overlay, serta tersembunyi di luar viewport dan near/far plane. Aturan
+  gameplay, gerakan, autentikasi, dan relay multiplayer tidak diubah.
+- Suite **45/45**: Benteng 14, chatBubble 21, dailyChallenge 7, remotePlayers 3.
+  Tes resource memakai Three.js asli dan mengunci dispose tepat sekali.
+- Rincian QA dan kelanjutan Claude: `docs/HANDOFF-GPT-POLISH-2026-09-10.md`.
+  Belum push/deploy; Meja Nongkrong v1 tetap backlog.
+
 ---
 
 ## [v0.7.2] · 2026-09-10
