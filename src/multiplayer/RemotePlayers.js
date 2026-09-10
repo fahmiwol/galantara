@@ -2,12 +2,22 @@
 // RemotePlayers.js — Render & update avatar pemain lain
 // ═══════════════════════════════════════════════════════
 
+/** Sama dengan Avatar.TINGGI_DUDUK — kalau berbeda, orang akan terlihat
+ *  melayang di kursinya sendiri dibanding di layar orang lain. */
+const TINGGI_DUDUK = -0.16;
+
 export class RemotePlayers {
   constructor(scene) {
     this.scene   = scene;
     this._players = {}; // socketId → { mesh, targetX, targetZ, facing, nameEl }
     this._labelLayer = document.getElementById('lbl-layer');
     this._labelPosition = new THREE.Vector3();
+    /** socketId yang sedang menempati kursi meja nongkrong. Diturunkan dari
+     *  posisi oleh Game (bukan dikirim server), lalu dipakai di sini semata
+     *  untuk POSE — supaya orang yang duduk terlihat duduk di layar orang
+     *  lain, bukan berdiri di atas dingkliknya.
+     *  @type {Set<string>} */
+    this._duduk = new Set();
   }
 
   // ── ADD PLAYER ────────────────────────────────────────
@@ -68,6 +78,11 @@ export class RemotePlayers {
     });
   }
 
+  /** @param {Set<string>|string[]} daftar socketId yang sedang duduk */
+  setDuduk(daftar) {
+    this._duduk = daftar instanceof Set ? daftar : new Set(daftar || []);
+  }
+
   // ── UPDATE POSISI ─────────────────────────────────────
   move({ socketId, x, z, facing }) {
     const p = this._players[socketId];
@@ -101,6 +116,10 @@ export class RemotePlayers {
       const mx = p.mesh.position;
       mx.x += (p.targetX - mx.x) * 0.15;
       mx.z += (p.targetZ - mx.z) * 0.15;
+      // Turun/naik dilerp, bukan dipatok, supaya duduk terlihat sebagai
+      // gerakan menurunkan badan dan bukan sebagai kedutan satu frame.
+      const yTarget = this._duduk.has(sid) ? TINGGI_DUDUK : 0;
+      mx.y += (yTarget - mx.y) * 0.18;
       p.mesh.rotation.y = p.facing;
 
       // Project 3D → 2D untuk name label

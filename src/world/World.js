@@ -5,6 +5,8 @@
 
 import { buildProceduralGroup } from '../tools/proceduralMeshFactory.js';
 import { PALETTE_SLOTS } from '../data/styleTokens.js';
+import { MejaNongkrong } from './MejaNongkrong.js';
+import { InteractionVolume } from '../interaction/InteractionVolume.js';
 
 const M = (color) => new THREE.MeshLambertMaterial({ color });
 const MS = (color, r = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: r, metalness: 0.05 });
@@ -18,6 +20,12 @@ export class World {
 
   constructor(scene) {
     this.scene     = scene;
+    /** Social node Oola. Sampai sekarang Oola tidak punya InteractionVolume
+     *  sama sekali — hanya ZONES statis dari config — jadi daftarnya lahir
+     *  bersama meja pertama ini. @type {MejaNongkrong[]} */
+    this.meja = [];
+    /** @type {InteractionVolume[]} */
+    this.interactionVolumes = [];
     /** @type {THREE.Group | null} */
     this.worldRoot = null; // isi Oola — bisa di-dispose saat ganti Spot visual
     this.objects   = []; // mesh di island (raycast MapBuilder) — tidak pakai scene.traverse()
@@ -58,6 +66,10 @@ export class World {
     this.warpPortal = null;
     this.objects    = [];
     this.lampu      = [];
+    // Mesh-nya ikut terlepas bersama worldRoot di atas; yang perlu dibersihkan
+    // di sini adalah daftarnya, supaya Spot berikutnya tidak mewarisi meja Oola.
+    this.meja       = [];
+    this.interactionVolumes = [];
   }
 
   /** Bangun ulang island dari `mapData` (sky tetap). */
@@ -83,6 +95,8 @@ export class World {
 
   _mountIslandGeometry() {
     this.lampu = [];
+    this.meja = [];
+    this.interactionVolumes = [];
     this._ensureWorldRoot();
     this._buildGround();
     this._buildIslandBase();
@@ -125,6 +139,40 @@ export class World {
         this.addObject(g, prop.id || `prop_${prop.archetype}`);
       }
     }
+
+    this._buildMejaNongkrong();
+  }
+
+  /**
+   * Meja nongkrong Oola.
+   *
+   * Ditaruh di sisi seberang pintu Benteng, bukan di tengah: yang dicari orang
+   * saat baru datang adalah sesuatu untuk DILAKUKAN, dan yang dicari orang
+   * setelah beberapa menit adalah tempat untuk BERHENTI. Dua-duanya harus
+   * kelihatan dari titik spawn, tapi tidak berebut tempat yang sama.
+   */
+  _buildMejaNongkrong() {
+    const meja = new MejaNongkrong({
+      id: 'meja_oola_1',
+      nama: 'Meja Nongkrong',
+      x: -4.6,
+      z: 4.4,
+      kursi: 4,
+      rotasi: Math.PI * 0.25,
+    });
+    meja.bangun(this.worldRoot);
+    this.meja.push(meja);
+    this.lampu.push(...meja.getLampu());
+    this.objects.push(...meja.objek);
+
+    this.interactionVolumes.push(new InteractionVolume({
+      id: meja.id,
+      shape: 'sphere',
+      center: { x: meja.x, z: meja.z },
+      radius: meja.jariInteraksi,
+      hint: `🍵 ${meja.nama}`,
+      useKeyHint: '[F] ikut nimbrung',
+    }));
   }
 
   /** Tambahkan objek baru ke dunia secara runtime (untuk Game Builder) */

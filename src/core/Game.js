@@ -268,10 +268,18 @@ export class Game {
       this._updateSpotInteractions();
     } else {
       this.zones.update(this.avatar.getPosition());
+      // Oola sekarang punya volume interaksi sendiri (meja nongkrong).
+      // Zona statis tetap jalan supaya hint papan info / kotak saran tidak hilang.
+      this._updateSpotInteractions();
     }
+    this._updateMeja();
 
-    // Emit posisi ke server multiplayer (throttled di dalam Socket.js)
-    if (this.avatar.isMoving) {
+    // Emit posisi ke server multiplayer (throttled di dalam Socket.js).
+    // Duduk membuat isMoving false padahal posisinya baru saja di-snap ke
+    // kursi; tanpa _emitSekali, klien lain akan melihat orang itu tetap
+    // berdiri di tempat lamanya.
+    if (this.avatar.isMoving || this._emitSekali) {
+      this._emitSekali = false;
       const pos = this.avatar.getPosition();
       this.mp.emitMove(pos.x, pos.z, this.avatar._facing);
     }
@@ -306,8 +314,18 @@ export class Game {
 
   // ── ACTIONS ───────────────────────────────────────────
   /** Zona interaksi Spot (Bogor): pilih volume terdekat, HUD hint + [F]. */
+  /**
+   * Volume interaksi dunia yang sedang aktif. Sampai sekarang hanya Spot
+   * runtime yang boleh punya; Oola cuma punya ZONES statis dari config,
+   * sehingga social node seperti meja nongkrong tidak mungkin ada di sana.
+   * Satu jalur untuk keduanya menghilangkan batasan itu.
+   */
+  _volumeDunia() {
+    return this._spotRuntime?.interactionVolumes ?? this.world?.interactionVolumes ?? [];
+  }
+
   _updateSpotInteractions() {
-    const vols = this._spotRuntime?.interactionVolumes;
+    const vols = this._volumeDunia();
     if (!vols?.length) {
       this._setActiveInteractionVolume(null);
       return;
@@ -330,20 +348,131 @@ export class Game {
     this._setActiveInteractionVolume(best);
   }
 
+  /** @returns {import('../world/MejaNongkrong.js').MejaNongkrong | null} */
+  _mejaDariVolume(vol) {
+    if (!vol) return null;
+    const daftar = this._spotRuntime?.meja ?? this.world?.meja ?? [];
+    return daftar.find((m) => m.id === vol.id) ?? null;
+  }
+
+  /**
+   * Siapa saja yang bisa menempati kursi: pemain lokal dan semua pemain remote.
+   * Kuncinya socketId supaya urutannya stabil di semua klien — itu yang membuat
+   * pemetaan kursi menghasilkan jawaban yang sama di setiap layar tanpa server
+   * ikut memutuskan.
+   */
+  _pemainUntukMeja() {
+    const out = [];
+    const p = this.avatar?.getPosition();
+    if (p) {
+      out.push({
+        kunci: this.mp?.id ?? 'aku',
+        nama: this.user ? (G_Auth.getName(this.user) || 'Aku') : (this._guestLabel || 'Aku'),
+        x: p.x, z: p.z,
+      });
+    }
+    const remote = this.remotePlayers?._players ?? {};
+    for (const sid in remote) {
+      const r = remote[sid];
+      out.push({ kunci: sid, nama: r.name || 'Warga', x: r.mesh.position.x, z: r.mesh.position.z });
+    }
+    return out;
+  }
+
+  /**
+   * Segarkan keterisian tiap meja dan tuliskan ke hint volumenya.
+   * Dihitung ulang tiap frame dari posisi yang memang sudah tersinkron —
+   * tidak ada state duduk yang dikirim lewat socket, jadi tidak ada yang bisa
+   * jadi basi.
+   */
+  _updateMeja() {
+    const daftar = this._spotRuntime?.meja ?? this.world?.meja ?? [];
+    if (!daftar.length) return;
+    const pemain = this._pemainUntukMeja();
+    const vols = this._volumeDunia();
+
+    for (const meja of daftar) {
+      const kursi = meja.hitungKursi(pemain);
+      meja.terisi = kursi;
+      const jumlah = kursi.filter(Boolean).length;
+
+      const vol = vols.find((v) => v.id === meja.id);
+      if (!vol) continue;
+      vol.hint = `🍵 ${meja.nama} · ${jumlah}/${meja.jumlahKursi}`;
+      if (this.avatar.sedangDuduk && this.avatar.kursi?.mejaId === meja.id) {
+        vol.useKeyHint = '[F] berdiri';
+      } else if (jumlah >= meja.jumlahKursi) {
+        vol.useKeyHint = 'penuh, tunggu ada yang berdiri';
+      } else {
+        vol.useKeyHint = '[F] ikut nimbrung';
+      }
+    }
+
+    // Pose duduk untuk pemain lain diturunkan dari peta kursi yang sama —
+    // tidak ada state duduk yang dikirim lewat socket, jadi tidak ada yang
+    // bisa jadi basi.
+    const duduk = new Set();
+    for (const meja of daftar) {
+      for (const k of meja.terisi ?? []) if (k) duduk.add(k.kunci);
+    }
+    this.remotePlayers?.setDuduk(duduk);
+
+    // Berdiri sendiri (menekan arah) juga harus disiarkan.
+    if (this.avatar.baruBerdiri) this._emitSekali = true;
+  }
+
+  /** @param {import('../world/MejaNongkrong.js').MejaNongkrong} meja */
+  _toggleDuduk(meja) {
+    if (this.avatar.sedangDuduk) {
+      this.avatar.berdiri();
+      this._emitSekali = true;
+      this.toast.show('Berdiri dari meja 🚶', 'g');
+      return;
+    }
+    const terisi = meja.terisi ?? meja.hitungKursi(this._pemainUntukMeja());
+    const kursi = meja.kursiKosongTerdekat(this.avatar.getPosition(), terisi);
+    if (!kursi) {
+      this.toast.show('Mejanya penuh — tunggu ada yang berdiri 🍵', 'a');
+      return;
+    }
+    this.avatar.duduk({ ...kursi, mejaId: meja.id });
+    this._emitSekali = true;
+    const jumlah = (terisi.filter(Boolean).length) + 1;
+    this.toast.show(
+      jumlah > 1 ? `Nimbrung di ${meja.nama} — ${jumlah} orang 🍵` : `Duduk di ${meja.nama} 🍵`,
+      'g',
+    );
+  }
+
   /** @param {import('../interaction/InteractionVolume.js').InteractionVolume | null} vol */
   _setActiveInteractionVolume(vol) {
     this._activeInteractionVolume = vol;
     const id = vol?.id ?? null;
-    if (id === this._lastInteractionVolumeId) return;
+    if (!vol) {
+      if (id !== this._lastInteractionVolumeId) this.hud.hideZoneHint();
+      this._lastInteractionVolumeId = id;
+      this._hintTerakhir = null;
+      return;
+    }
+    // Teksnya boleh berubah walau volumenya sama — keterisian meja bergerak
+    // saat orang datang dan pergi. Yang dijaga adalah tidak menulis ulang
+    // teks yang sama, bukan tidak pernah menulis ulang.
+    const teks = `${vol.hint} — ${vol.useKeyHint}`;
     this._lastInteractionVolumeId = id;
-    if (vol) {
-      this.hud.showZoneHint(`${vol.hint} — ${vol.useKeyHint}`);
-    } else {
-      this.hud.hideZoneHint();
+    if (teks !== this._hintTerakhir) {
+      this._hintTerakhir = teks;
+      this.hud.showZoneHint(teks);
     }
   }
 
   _tryOpenZonePanel() {
+    // Meja nongkrong ditangani di sini, bukan lewat onUse volume, karena
+    // aksinya bergantung pada keadaan pemain (duduk / berdiri) dan pada
+    // keterisian kursi — dua hal yang tidak diketahui volume itu sendiri.
+    if (this._activeInteractionVolume && this._mejaDariVolume(this._activeInteractionVolume)) {
+      this._toggleDuduk(this._mejaDariVolume(this._activeInteractionVolume));
+      return;
+    }
     if (this._activeInteractionVolume?.onUse) {
       this._activeInteractionVolume.onUse();
       return;

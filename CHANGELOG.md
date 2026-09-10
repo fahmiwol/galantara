@@ -2,6 +2,60 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [Unreleased] · 2026-09-10 — Meja Nongkrong v1
+
+Social node pertama. PRD `GALANTARA_BUILDER_SYSTEM` §SocialNode registry:
+*"warung, bangku, panggung = node pertama, bukan dekorasi terakhir"*, dan
+`RESOURCES_RESEARCH` menaruh "InteractionVolume + satu aksi (bangku duduk)"
+sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
+
+### Added
+- `src/world/MejaNongkrong.js` — meja bundar rendah + 4 dingklik + teko dan
+  gelas, dengan lampu gantung sendiri yang ikut siklus magrib. Ukurannya nyata
+  (meja 68 cm, dingklik 38 cm): meja warung Indonesia rendah, dan itulah yang
+  membuat orang duduk membungkuk **mendekat**, bukan bersandar menjauh seperti
+  kursi kafe. Dingklik dan gelas pakai `InstancedMesh` — 4 kursi = 2 draw call.
+- **Ikut nimbrung dengan `[F]`**. Avatar di-snap ke kursi kosong terdekat dan
+  diputar menghadap pusat meja, supaya orang-orang di satu meja benar-benar
+  berhadapan. Menekan tombol arah **membangunkan**, bukan menggeser — memaksa
+  orang menekan `[F]` lagi membuat mereka merasa terjebak di kursi.
+- Indikator keterisian di hint: `🍵 Meja Nongkrong · 3/4 — [F] ikut nimbrung`,
+  berubah jadi `[F] berdiri` kalau kamu yang duduk dan `penuh, tunggu ada yang
+  berdiri` kalau tidak ada tempat.
+- `tests/mejaNongkrong.test.mjs` — 13 uji.
+
+### Changed
+- Oola sekarang bisa punya `InteractionVolume`. Sebelumnya hanya Spot runtime
+  yang boleh; Oola cuma punya `ZONES` statis dari config, sehingga social node
+  tidak mungkin ada di kota kedatangan — tempat yang justru paling ramai.
+- Hint interaksi boleh berubah walau volumenya sama, karena keterisian meja
+  bergerak saat orang datang dan pergi. Yang dijaga adalah tidak menulis ulang
+  teks yang **sama**, bukan tidak pernah menulis ulang.
+- `RemotePlayers` menurunkan badan pemain yang sedang duduk, dilerp bukan
+  dipatok. Tanpa ini kamu melihat dirimu duduk sementara orang lain melihatmu
+  berdiri di atas dingklik.
+
+### Fixed
+- Posisi hanya dikirim saat `isMoving`. Duduk membuat `isMoving` false padahal
+  posisinya baru saja di-snap ke kursi — klien lain akan melihat orang itu
+  tetap berdiri di tempat lamanya. Sekarang duduk dan berdiri memaksa satu emit.
+- Radius interaksi meja 1,92 m → 2,37 m. Kursi ada di 1,02 m dan meja+dingklik
+  memakan ~1,2 m, jadi hint lama baru muncul ketika orang sudah berdiri di
+  antara dingklik — terlambat untuk jadi ajakan.
+
+### Catatan jujur
+- **Keterisian kursi tidak memakai state server.** Posisi tiap pemain sudah
+  disiarkan lewat `player_move`, jadi tiap klien menghitung sendiri siapa duduk
+  di kursi mana. Aman hanya karena aturannya deterministik — pasangan
+  (pemain, kursi) terdekat menang lebih dulu, seri dipatahkan kunci socketId
+  yang terurut. Itu yang diuji paling keras di `mejaNongkrong.test.mjs`:
+  masukan yang sama dalam urutan apa pun menghasilkan peta kursi yang sama.
+- **Chat radius meja BELUM ada.** Usulan aslinya menyebutkan itu, tapi chat
+  sekarang disiarkan ke seluruh room oleh server; membuatnya per-meja butuh
+  perubahan server, bukan trik klien. Tidak dipalsukan.
+- Yang dilihat baru meja di Oola. Braga — Spot nongkrong menurut
+  `RISET_3D_NUSANTARA` §14 — belum diberi meja.
+
 ## [Unreleased] · 2026-09-10 — polish overlay, checkpoint GPT
 
 - Bubble mengukur ulang kotaknya saat resize/font mengubah layout; cache tetap

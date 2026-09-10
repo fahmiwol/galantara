@@ -6,6 +6,10 @@
 import { AV_PRESETS, SPEED, ISLAND_R } from '../data/config.js';
 import { getSavedAvatarColorIndex, setSavedAvatarColorIndex } from '../data/avatarPreferences.js';
 
+/** Turunnya badan saat duduk: dudukan dingklik 0,38 m dikurangi tenggelamnya
+ *  badan chibi ke dalam dudukan. */
+const TINGGI_DUDUK = -0.16;
+
 export class Avatar {
   constructor(scene) {
     this.scene     = scene;
@@ -20,6 +24,14 @@ export class Avatar {
 
     // Facing direction (radians) — dipakai untuk rotate mesh
     this._facing = 0;
+
+    /** Kursi yang sedang diduduki, atau null. Saat duduk, tombol arah tidak
+     *  memindahkan posisi — ia MEMBANGUNKAN. Memaksa orang menekan [F] lagi
+     *  untuk berdiri membuat mereka merasa terjebak di kursi. */
+    this._kursi = null;
+    /** Benar satu frame saat pemain berdiri sendiri; dibaca Game untuk
+     *  memberi tahu mejanya. */
+    this.baruBerdiri = false;
   }
 
   // ── BUILD CHIBI MESH ──────────────────────────────────
@@ -116,7 +128,15 @@ export class Avatar {
     const dirs = ['up', 'down', 'left', 'right'];
     const active = dirs.filter(d => this.keys[d] || this.dpad[d]);
 
-    this.isMoving = active.length > 0;
+    this.baruBerdiri = false;
+    if (this._kursi) {
+      // Menekan arah = ingin pergi. Berdiri dulu; gerakannya frame berikutnya,
+      // supaya tidak melompat keluar kursi dalam satu langkah penuh.
+      if (active.length) { this.berdiri(); this.baruBerdiri = true; }
+      this.isMoving = false;
+    } else {
+      this.isMoving = active.length > 0;
+    }
 
     if (this.isMoving) {
       let dx = 0, dz = 0;
@@ -148,9 +168,16 @@ export class Avatar {
 
     // Bob animation
     this._bobTimer += dt;
-    const bobY = this.isMoving
+    let bobY = this.isMoving
       ? Math.abs(Math.sin(this._bobTimer * 8)) * 0.12
       : Math.sin(this._bobTimer * 1.5) * 0.04;
+
+    // Duduk: badan turun ke tinggi dudukan dan napasnya melambat. Tanpa rig
+    // tulang, INI yang membedakan duduk dari berdiri diam — dan dari kamera
+    // isometrik Galantara, itu sudah cukup terbaca.
+    if (this._kursi) {
+      bobY = TINGGI_DUDUK + Math.sin(this._bobTimer * 0.9) * 0.012;
+    }
 
     this.mesh.position.set(this.pos.x, bobY, this.pos.z);
 
@@ -172,6 +199,35 @@ export class Avatar {
 
   getPosition() {
     return this.pos;
+  }
+
+  get kursi() { return this._kursi; }
+  get sedangDuduk() { return this._kursi !== null; }
+
+  /**
+   * Dudukkan di satu kursi: posisi di-snap ke kursi dan menghadap pusat meja,
+   * supaya orang-orang di satu meja benar-benar BERHADAPAN. Itu inti "meja
+   * nongkrong" — bukan sekadar berdiri berdekatan.
+   *
+   * Posisi hasil snap disiarkan lewat emit posisi yang sudah ada, jadi klien
+   * lain melihatnya duduk tanpa perlu pesan socket baru.
+   *
+   * @param {{ i: number, x: number, z: number, facing: number }} kursi
+   */
+  duduk(kursi) {
+    if (!kursi) return false;
+    this._kursi = kursi;
+    this.pos.x = kursi.x;
+    this.pos.z = kursi.z;
+    this._facing = kursi.facing;
+    this.isMoving = false;
+    return true;
+  }
+
+  berdiri() {
+    if (!this._kursi) return false;
+    this._kursi = null;
+    return true;
   }
 
   /** Teleport (warp antar Spot / hub) — reset posisi & mesh. */
