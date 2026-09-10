@@ -1,0 +1,19 @@
+# Normalisasi baris untuk berkas teks yang kita tulis sendiri.
+* text=auto
+
+# ── vendor/ TIDAK BOLEH DINORMALISASI ──
+# Berkas di vendor/ adalah salinan persis dari pustaka pihak ketiga. Kalau git
+# mengubah akhir barisnya, isinya tidak lagi identik dengan sumbernya dan
+# verifikasi integritas (mis. membandingkan hash dengan rilis resmi) jadi
+# mustahil. Diperlakukan sebagai biner.
+vendor/** -text
+
+# Aset biner.
+*.glb   binary
+*.woff2 binary
+*.png   binary
+*.jpg   binary
+
+# Skrip shell wajib LF walau dibuat di Windows — kalau tidak, ia gagal di
+# runner Linux dengan pesan yang tidak menunjuk sebabnya.
+*.sh text eol=lf
