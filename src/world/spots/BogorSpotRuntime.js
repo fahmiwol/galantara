@@ -4,6 +4,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
+import { MejaNongkrong } from '../MejaNongkrong.js';
 import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
 
 const MS = (color, roughness = 0.72) =>
@@ -26,6 +27,9 @@ export class BogorSpotRuntime {
     this._warpRing = null;
     /** @type {InteractionVolume[]} */
     this.interactionVolumes = [];
+    /** Social node Spot ini — dibaca Game untuk keterisian kursi.
+     *  @type {MejaNongkrong[]} */
+    this.meja = [];
   }
 
   /**
@@ -77,18 +81,25 @@ export class BogorSpotRuntime {
     stall.add(sign);
     g.add(stall);
 
-    // Bangku — social node
-    const benchGeo = new THREE.BoxGeometry(1.35, 0.18, 0.42);
-    const benchMat = MS(0x713f12);
-    const b1 = new THREE.Mesh(benchGeo, benchMat);
-    b1.position.set(3, 0.12, -1.5);
-    b1.castShadow = true;
-    g.add(b1);
-    const b2 = new THREE.Mesh(benchGeo, benchMat);
-    b2.position.set(2.2, 0.12, 2.4);
-    b2.rotation.y = Math.PI / 2.3;
-    b2.castShadow = true;
-    g.add(b2);
+    // Bangku — social node, dan sekarang benar-benar begitu.
+    //
+    // Sebelumnya dua papan hiasan, dan [F]-nya cuma memunculkan toast
+    // "Mode duduk — animasi & pose menyusul". Bangku memakai geometri sosial
+    // yang BERBEDA dari meja: orang duduk bersebelahan menghadap arah yang
+    // sama, bukan berhadapan.
+    for (const [i, [bx, bz, rot]] of [[3, -1.5, 0], [2.2, 2.4, Math.PI / 2.3]].entries()) {
+      const bangku = new MejaNongkrong({
+        id: `bogor_bangku_${i + 1}`,
+        nama: 'Bangku',
+        gaya: 'bangku',
+        x: bx,
+        z: bz,
+        kursi: 2,
+        rotasi: rot,
+      });
+      bangku.bangun(g);
+      this.meja.push(bangku);
+    }
 
     // Pohon kecil (low poly)
     const trunk = new THREE.Mesh(
@@ -141,17 +152,14 @@ export class BogorSpotRuntime {
             T.show('Warung: katalog virtual + Mighan — menyusul 💰', 'g');
           },
         }),
-        new InteractionVolume({
-          id: 'bangku1',
+        ...this.meja.map((m) => new InteractionVolume({
+          id: m.id,
           shape: 'sphere',
-          center: { x: 3, z: -1.5 },
-          radius: 1.4,
-          hint: '🪑 Bangku',
-          useKeyHint: '[F]',
-          onUse: () => {
-            T.show('Mode duduk — animasi & pose menyusul 🪑', 'a');
-          },
-        }),
+          center: { x: m.x, z: m.z },
+          radius: m.jariInteraksi,
+          hint: `${m.ikon} ${m.nama}`,
+          useKeyHint: `[F] ${m.ajakan}`,
+        })),
       ];
     }
 

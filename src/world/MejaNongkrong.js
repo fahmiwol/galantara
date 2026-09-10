@@ -125,6 +125,14 @@ const SPEK = Object.freeze({
   dulangJari: 0.27,
   dulangTinggi: 0.14,
 
+  // Bangku — mengikuti papan bangku yang sudah ada di BogorSpotRuntime.
+  bangkuPanjang: 1.35,
+  bangkuDalam: 0.42,
+  bangkuTebal: 0.18,
+  bangkuTinggiKaki: 0.12,
+  /** 0,90 m = lebar badan. Dua orang di papan 1,35 m pas tanpa saling tembus. */
+  bangkuJarakDuduk: 0.90,
+
   // Kafe — mengikuti meja kafe yang sudah ada di BragaSpotRuntime.
   kafeJariDaun: 0.42,
   kafeTinggiMeja: 0.74,
@@ -155,6 +163,14 @@ const GAYA = Object.freeze({
   // Tikar di tanah. Duduk bersila, badan turun jauh lebih dalam.
   lesehan: { tinggiDuduk: -0.30, jariInteraksiTambahan: 0.70, ikon: '🍵', ajakan: 'ikut lesehan' },
   // Kursi kafe Braga: dudukan 0,46 m, lebih tinggi dari dingklik.
+  /**
+   * Bangku taman. Geometri sosial yang BERBEDA dari meja: orang duduk
+   * BERSEBELAHAN menghadap arah yang sama, bukan berhadapan. Itu bukan
+   * penyederhanaan — duduk sebelahan menatap hal yang sama adalah cara
+   * berkumpul tersendiri, dan sering justru yang paling nyaman untuk orang
+   * yang baru saling kenal.
+   */
+  bangku:  { tinggiDuduk: -0.33, jariInteraksiTambahan: 1.10, ikon: '🪑', ajakan: 'duduk', menghadapLuar: true },
   // Braga itu kopi, bukan teh. Ikon ikut gayanya, bukan di-hardcode di Game.
   kafe:    { tinggiDuduk: -0.09, jariInteraksiTambahan: 0.85, ikon: '☕', ajakan: 'duduk' },
 });
@@ -228,6 +244,9 @@ export class MejaNongkrong {
     if (this.gaya === 'kafe') {
       return { setengahP: SPEK.kafeJariDaun, setengahL: SPEK.kafeJariDaun, renggang: 0.36 };
     }
+    if (this.gaya === 'bangku') {
+      return { setengahP: SPEK.bangkuPanjang / 2, setengahL: SPEK.bangkuDalam / 2, renggang: 0 };
+    }
     // renggang 0,40 — bukan 0,31. Angka lama menaruh kursi cukup renggang
     // untuk penetapan yang tidak ambigu (0,76 m > 0,68 m) tetapi TERLALU
     // RAPAT untuk badan chibi selebar 0,90 m, sehingga orangnya saling tembus.
@@ -291,9 +310,20 @@ export class MejaNongkrong {
       { x: -(setengahP + renggang), z: 0 },
     ];
 
-    const pola = this.jumlahKursi === 2
-      ? polaBerdua
-      : (this.gaya === 'warung' ? polaWarung : polaLesehan);
+    /**
+      * Bangku: dua tempat bersebelahan di sepanjang papan, jaraknya 0,90 m —
+      * tepat lebar badan, dan masih di dalam papan 1,35 m.
+      */
+    const polaBangku = [
+      { x: SPEK.bangkuJarakDuduk / 2, z: 0 },
+      { x: -SPEK.bangkuJarakDuduk / 2, z: 0 },
+    ];
+
+    const pola = this.gaya === 'bangku'
+      ? polaBangku
+      : (this.jumlahKursi === 2
+        ? polaBerdua
+        : (this.gaya === 'warung' ? polaWarung : polaLesehan));
 
     const out = [];
     const cos = Math.cos(this.rotasi);
@@ -332,7 +362,10 @@ export class MejaNongkrong {
       const z = this.z + rz;
       out.push({
         i, x, z, lx, lz,
-        facing: Math.atan2(this.x - x, this.z - z),
+        // Menghadap pusat untuk meja; menghadap KELUAR (searah) untuk bangku.
+        facing: this.spekGaya.menghadapLuar
+          ? this.rotasi
+          : Math.atan2(this.x - x, this.z - z),
         // Tinggi duduk ikut kursinya, bukan konstanta global.
         tinggiDuduk: this.spekGaya.tinggiDuduk,
       });
@@ -401,6 +434,8 @@ export class MejaNongkrong {
       this._pasangRangkaLampu(g);
     } else if (this.gaya === 'lesehan') {
       this._pasangLesehan(g);
+    } else if (this.gaya === 'bangku') {
+      this._pasangBangku(g);
     } else {
       this._pasangKafe(g);
     }
@@ -1050,6 +1085,42 @@ export class MejaNongkrong {
     imGelas.instanceMatrix.needsUpdate = true;
     g.add(imGelas);
     this.objek.push(imGelas);
+  }
+
+  /**
+   * BANGKU — papan kayu di atas dua kaki. Sengaja polos.
+   *
+   * Mengikuti papan yang sudah ada di BogorSpotRuntime supaya tidak ada dua
+   * bahasa visual untuk benda yang sama; bedanya, yang ini bisa diduduki.
+   *
+   * @param {THREE.Group} g
+   */
+  _pasangBangku(g) {
+    const papan = new THREE.Mesh(
+      new THREE.BoxGeometry(SPEK.bangkuPanjang, SPEK.bangkuTebal, SPEK.bangkuDalam),
+      MS(PALET.kayuTua, 0.88),
+    );
+    papan.position.y = SPEK.bangkuTinggiKaki + SPEK.bangkuTebal / 2;
+    papan.castShadow = true;
+    this._catat(g, papan);
+
+    const imKaki = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.09, SPEK.bangkuTinggiKaki, SPEK.bangkuDalam * 0.8),
+      MS(PALET.kayuTua, 0.92), 2,
+    );
+    imKaki.name = `${this.id}_kaki_bangku`;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const p = new THREE.Vector3();
+    const sk = new THREE.Vector3(1, 1, 1);
+    [SPEK.bangkuPanjang / 2 - 0.14, -(SPEK.bangkuPanjang / 2 - 0.14)].forEach((x, i) => {
+      p.set(x, SPEK.bangkuTinggiKaki / 2, 0);
+      m.compose(p, q, sk);
+      imKaki.setMatrixAt(i, m);
+    });
+    imKaki.instanceMatrix.needsUpdate = true;
+    g.add(imKaki);
+    this.objek.push(imKaki);
   }
 
   /**

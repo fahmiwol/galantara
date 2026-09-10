@@ -51,7 +51,14 @@ kerja baru**, karena `MejaNongkrong` sudah jadi dan bisa dipakai ulang.
 
 ## P0 — Menutup janji yang sudah terlanjur dibuat
 
-### P0.1 · Pasang Meja Nongkrong di Braga dan Malioboro — STUB
+### ~~P0.1 · Pasang Meja Nongkrong di Braga dan Malioboro~~ — **SELESAI 11 Sep**
+Commit `129fde5`. Malioboro dapat tikar pandan dari Rupa3D (GLB 348 segitiga)
+dengan tiga social node lesehan; Braga dapat empat meja kafe yang bisa diduduki.
+Detail di bawah ini dipertahankan sebagai catatan alasannya.
+
+<details><summary>Rencana aslinya</summary>
+
+**P0.1 · Pasang Meja Nongkrong di Braga dan Malioboro — STUB**
 Dua stub berbunyi "Duduk lesehan + proximity chat" dan "Duduk di trotoar +
 proximity chat". `src/world/MejaNongkrong.js` sudah melakukan bagian duduknya.
 Braga bahkan **Spot nongkrong menurut riset kita sendiri**
@@ -64,10 +71,15 @@ Yang perlu: panggil `new MejaNongkrong(...)` di kedua runtime, daftarkan
 *Biaya kecil, menutup dua janji, dan langsung memberi Braga alasan untuk
 dikunjungi selain melihat-lihat.*
 
-### P0.2 · Mode duduk Bogor — STUB
-`BogorSpotRuntime.js` masih memunculkan "Mode duduk — animasi & pose menyusul".
-Bangku Bogor sudah punya `InteractionVolume`. Sambungkan ke jalur duduk yang
-sama.
+</details>
+
+### ~~P0.2 · Mode duduk Bogor~~ — **SELESAI 11 Sep**
+Dua bangku Bogor jadi social node bergaya `bangku`: geometri sosial yang
+BERBEDA dari meja — orang duduk bersebelahan menghadap arah yang sama, bukan
+berhadapan.
+
+> **Seluruh stub duduk kini tertutup.** Yang tersisa di Spot hanya katalog
+> toko (P2.2) dan galeri/foto/selancar, dan semuanya menunggu ekonomi nyata.
 
 ### P0.3 · Gate playtest Benteng — FAHMI
 20 match manusia (10 varian A, 10 varian B), ±1 jam. Semua perkakas siap;
