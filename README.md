@@ -4,9 +4,10 @@
 tanpa install, tanpa akun kalau cuma mau lihat-lihat.
 
 Dunia 3D sosial yang settingnya Indonesia, bukan dunia generik yang diberi skin
-Indonesia. Enam Spot berdasarkan tempat nyata (Oola, Bogor, Monas, Malioboro,
-Losari, Kuta, Braga), rumah adat dengan proporsi terukur, siklus hari yang
-mengikuti waktu Nusantara, dan satu permainan tangkap-tawan bernama **Benteng**.
+Indonesia. **Oola** sebagai kota kedatangan, plus **enam Spot** berdasarkan
+tempat nyata — Bogor, Monas, Malioboro, Losari, Kuta, Braga. Rumah adat dengan
+proporsi terukur, siklus hari yang mengikuti waktu Nusantara, dan satu permainan
+tangkap-tawan bernama **Benteng**.
 
 **Status: pra-alpha.** Jujurnya: dunianya bisa dijalani dan enak dilihat, tapi
 sebagian besar interaksinya belum ada. Lihat [Apa yang sudah dan belum](#apa-yang-sudah-dan-belum)
