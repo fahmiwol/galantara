@@ -3,9 +3,22 @@
 #   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY (PEM lengkap), REMOTE_PATH (mis. /www/wwwroot/galantara.io/)
 name: Deploy VPS (static)
 
+# Pemicu otomatis SENGAJA DIMATIKAN sejak 10 Sep 2026.
+#
+# Belum ada server tujuan. Selama itu, setiap push menghasilkan CI merah yang
+# bukan menandakan apa-apa selain "server belum ada" — dan CI yang selalu merah
+# mengajari semua orang untuk berhenti membacanya. Itu kerugian yang nyata,
+# sementara manfaatnya nol.
+#
+# Workflow-nya sendiri TIDAK dihapus: isinya sudah benar dan sudah diperbaiki
+# (benteng.html + assets/ dulu tidak pernah ikut ter-rsync). Begitu servernya
+# ada, kembalikan blok `push:` di bawah dan isi Secrets SSH_HOST, SSH_USER,
+# SSH_PRIVATE_KEY, REMOTE_PATH.
+#
+# on:
+#   push:
+#     branches: [main]
 on:
-  push:
-    branches: [main]
   workflow_dispatch:
 
 concurrency:

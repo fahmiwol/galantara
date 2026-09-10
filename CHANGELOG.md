@@ -2,6 +2,27 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [Unreleased] · 2026-09-10 — status deploy: belum ada server
+
+### Changed
+- Pemicu otomatis `.github/workflows/deploy-vps.yml` **dimatikan**; tinggal
+  `workflow_dispatch`. Belum ada server tujuan, jadi setiap push menghasilkan
+  CI merah yang tidak menandakan apa pun selain "server belum ada" — dan CI
+  yang selalu merah mengajari semua orang berhenti membacanya.
+- Workflow-nya **tidak dihapus**. Isinya sudah diperbaiki di `87f4451`
+  (`benteng.html` dan seluruh `assets/` dulu tidak pernah ikut ter-rsync, jadi
+  3 GLB rumah adat dan 6 manifest Spot akan 404 begitu deploy jalan). Perbaikan
+  itu menunggu di sana. Begitu servernya ada: kembalikan blok `push:` dan isi
+  Secrets `SSH_HOST`, `SSH_USER`, `SSH_PRIVATE_KEY`, `REMOTE_PATH`.
+- `tmp/` masuk `.gitignore` — tangkapan render untuk review visual tidak perlu
+  ikut ke repo.
+
+### Catatan
+Sementara ini Galantara dibangun dan diperiksa **di lokal**: `npx serve -p 4000 .`
+lalu `http://localhost:4000/index.html`; multiplayer `npm run install:server`
+sekali, lalu `npm run dev`. GitHub adalah tempat penyimpanan yang berlaku
+sekarang — commit, bukan live.
+
 ## [Unreleased] · 2026-09-10 — Meja Nongkrong: arahan seni, dan dua alat baru
 
 Arah seninya diserahkan ke GPT-5.6 lewat API langsung, dengan RENDER ASLINYA
