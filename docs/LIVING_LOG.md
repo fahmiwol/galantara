@@ -14,6 +14,34 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-11 · UNIT 5 SELESAI — titik aman untuk Claude
+
+HANDOFF root baru ditautkan dari README; handoff/riset/ADR lama dipertahankan.
+Memuat alasan pilihan, lima unit, batas uji, tiga kandidat berurutan, pertanyaan
+roadmap publik yang tidak memblokir, petunjuk restart lokal dan jebakan tes/lease.
+
+**Verifikasi akhir:** `npm test` **62/62 pass, 0 skip**; **58 Markdown/36 tautan**
+lolos. `node --check` server dan dua tes baru lolos; `git diff --check` lolos.
+Tidak ada build step. Versi root, metadata lockfile, README dan CHANGELOG
+selaras 0.8.1. Tidak ada fitur baru atau dependency komersial yang ditambahkan.
+
+**Risiko tersisa:** instalasi bersih, auth/voice, multiplayer dua pemain,
+ponsel/performa, gate match manusia dan deploy belum diuji sesi ini. Server
+lama port 4000 tidak diubah. Batas ini tertulis di HANDOFF, bukan dianggap lulus.
+Unit 1–4 sudah commit/push sebelum unit ini; penutupan unit 5 dengan commit/push
+akhir dan catatan Brain/mailbox Claude. **Berhenti setelah pendaratan ini.**
+
+---
+
+## 2026-09-11 · Pilihan UNIT 5 — mendarat, bukan membuka pekerjaan baru
+
+Unit 4 sudah push `1e70af5`. Tulis HANDOFF root dan tautkan dari README agar
+Claude menemukan konteks terbaru tanpa menimpa handoff lama. Jalankan suite,
+pemeriksa tautan, pemeriksaan sintaks dan diff terakhir; commit/push lalu
+berhenti. Tidak mengimplementasikan kandidat lanjutan pada unit ini.
+
+---
+
 ## 2026-09-11 · UNIT 4 SELESAI — rilis dicatat tanpa klaim berlebih
 
 CHANGELOG 0.8.1 mencatat dua perbaikan, tes, dan batas verifikasi. README kini

@@ -1,0 +1,129 @@
+# HANDOFF — Galantara 0.8.1 · 11 September 2026
+
+Untuk Claude/sesi berikutnya. **Hasilnya kecil:** dua celah aset diperbaiki;
+tidak ada fitur pemain baru atau perubahan aturan game. Lima unit sesi ini
+ditutup terpisah, masing-masing dengan tes, LIVING_LOG, commit dan push.
+Handoff lama tetap disimpan di [catatan 10 September](docs/HANDOFF-2026-09-10.md).
+
+## Titik masuk dan arah
+
+- Repo kerja: `C:\galantara`, branch `main`, origin `fahmiwol/galantara`.
+  Jangan bekerja pada salinan backup lama sebagai sumber kebenaran.
+- North Star README: **“Pasar malam digital Indonesia di browser.”**
+  PRD §1.1: **“Pasar Malam Digital Indonesia -- Tempat Nongkrong, Jualan,
+  dan Main Bareng.”** Bukan mandat mengganti stack.
+- Baca [LIVING_LOG](docs/LIVING_LOG.md) untuk STATE SEKARANG dan alasan pilihan;
+  [ADR](docs/adr/) untuk 14 keputusan terkunci; [BACKLOG](docs/BACKLOG.md)
+  untuk janji interaksi yang belum ditutup.
+- Oola adalah kota kedatangan, bukan Spot ketujuh. Enam Spot, meja Oola,
+  bubble chat, daily challenge dan Benteng bot sudah ada sebelum sesi ini.
+- Tetap vanilla ES modules/global THREE r128, tanpa bundler/traverse per frame.
+  Kursi diturunkan dari posisi; tidak membuat seat server baru. Tidak ada
+  hadiah koin palsu. Benteng tetap harness web dan kontrak CSV tidak berubah.
+- **Belum ada server deploy.** Workflow tetap manual-only sesuai ADR-0007.
+  Jangan menghidupkan trigger otomatis atau menyimpulkan VPS rusak.
+
+## Apa yang dikerjakan dan kenapa
+
+Orientasi membaca README, arah/PRD/spec, CHANGELOG, LIVING_LOG, TODO/BACKLOG,
+14 ADR dan handoff terkini; 20 commit terakhir diperiksa, issue terbuka **0**.
+Baseline `8e133d0`: 60 tes lulus, tetapi server `--local` mengembalikan 404
+untuk empat vendor yang dirujuk index. Bug boot nyata mengalahkan prioritas
+fitur meja Braga/Malioboro. Tidak memilih pivot dari dokumen lama yang berbeda.
+
+| Unit | Perubahan | Commit sebelum handoff ini |
+| --- | --- | --- |
+| 1 | Allowlist vendor Express, port uji ephemeral, tes HTTP aset/internal path | `6ba93f0` |
+| 2 | Vendor/font/lisensi ikut rsync, tes kontrak paket manual | `dcd4f84` |
+| 3 | Root package + metadata paket induk lockfile menjadi 0.8.1 | `cb2025c` |
+| 4 | CHANGELOG dan README menjelaskan hasil serta batas uji | `1e70af5` |
+| 5 | Handoff ini, tautan README dan log akhir; tanpa kode baru | commit yang memuat dokumen ini |
+
+Semua commit unit 1–4 telah di-push sebelum unit berikutnya dimulai. Unit 5
+ditutup dengan pemeriksaan akhir dan push; cocokkan `git status -sb` dengan
+remote saat melanjutkan karena dokumen tidak dapat memuat hash commit dirinya.
+
+## Kondisi verifikasi
+
+- **Hijau: `npm test` 62/62 pass, 0 skip** di lingkungan ini. Pemeriksa
+  tautan Markdown juga lolos. Tidak ada build step di repo ini.
+- Tes baru `tests/localServer.test.mjs` menjalankan subprocess server asli,
+  memeriksa byte vendor dan font, halaman/aset dasar, serta memastikan
+  `.git`, source server, package dan dokumen internal tidak disajikan.
+- Tes `tests/deployAssets.test.mjs` terbukti merah tanpa baris vendor lalu
+  hijau setelah fix. Ini **kontrak struktur**, bukan uji deploy sungguhan.
+- Smoke browser 1280×720: Oola dirender → pintu Benteng → masuk arena → kembali
+  Oola; tidak ada console error/warning. Tidak menyimpulkan timing/rAF benar
+  dari browser pane tersembunyi. Tab dan server uji sudah ditutup.
+- Tidak diuji sesi ini: instalasi bersih dependency, auth/voice, multiplayer
+  dua pemain, uji ponsel/performa, match manusia penuh, SSH/rsync/deploy nyata.
+  Tidak memanggil API model berbayar dan tidak menyentuh kredensial.
+
+## Menjalankan lokal
+
+```powershell
+cd C:\galantara
+npm run install:server  # jika dependency server belum terpasang
+npm run dev
+```
+
+Buka `http://127.0.0.1:4000`. Proses lama di port 4000 **tidak dimatikan**
+oleh sesi ini; hentikan dari terminal pemiliknya lalu jalankan kembali untuk
+memakai patch. Jangan membunuh semua proses Node. Tes otomatis memakai
+`GALANTARA_LOCAL_PORT=0` sehingga tidak mengambil port sesi pengguna; health
+melaporkan port aktual. Default normal tetap 4000, hanya loopback.
+
+`npm test` memberi skip eksplisit untuk tes HTTP bila dependency server tidak
+ada. Untuk menyatakan seluruh pemeriksaan lengkap, pastikan **0 skip**.
+
+## Tiga kandidat berikutnya, berurutan
+
+1. **BACKLOG P0.1 — duduk di Braga, lalu lesehan Malioboro.** Pakai ulang
+   MejaNongkrong, pecah per Spot/varian menjadi unit sendiri. Ini menutup janji
+   tombol yang sekarang masih toast. Periksa mount/dispose, lampu, radius
+   interaksi dan okupansi dua klien. Jangan mengklaim chat radius sudah jadi:
+   chat sekarang seluruh room, bukan per meja.
+2. **P0.2 — sambungkan bangku Bogor ke jalur duduk.** Interaksi sudah ada;
+   menutup stub lebih defensible daripada menambah Spot atau sistem baru.
+   Pertahankan aturan resource dan kursi deterministik.
+3. **P0.3 — gate 20 match manusia Benteng (10 A, 10 B).** Perkakas siap,
+   memerlukan pemain sungguhan. Bantu Fahmi mengumpulkan CSV dan mengevaluasi;
+   jangan mengganti bukti manusia dengan bot. Metrik tawanan menganggur masih
+   belum tervalidasi; tidak ada klaim “sudah seimbang”.
+
+## Pertanyaan terbuka, tidak memblokir patch ini
+
+Sebelum fase ekonomi/publikasi: istilah dan milestone mana yang hendak
+dipublikasikan? [Roadmap publik Tiranyx](https://tiranyx.co.id/galantara#roadmap)
+masih menyebut V0 coming soon, V1 satu Spot dan GLC/GLP, berbeda dari snapshot
+lokal dan dokumen Mighan Coin. Tidak menebak arah ekonomi baru atau mengubah
+situs publik sesi ini. Tidak ada jawaban yang diperlukan untuk menjalankan
+hasil 0.8.1 ini.
+
+## Jebakan yang jangan diulang
+
+- Tes modul hijau tidak menjamin static allowlist benar. Uji **jalur server
+  yang didokumentasikan**, jangan hanya `npx serve` dari root.
+- Three dimuat lewat `muat('/vendor/...')`, bukan atribut src biasa. Ekstraktor
+  awal tes melewatkannya; guard jumlah path menangkap kesalahan instrumen.
+- Tes workflow sengaja mendukung rsync satu baris saat ini. Jika formatnya
+  berubah, perbarui parser/kontrak; jangan melonggarkan assertion supaya hijau.
+- Bridge session baru tidak memiliki claim lama. Heartbeat gagal berarti
+  berhenti menulis. Jangan batch heartbeat + patch tanpa membaca hasil.
+  Satu edit sempat terlanjur pada kasus ini; setelahnya menunggu expiry dan
+  claim ulang resmi. Gunakan lease 600 detik dengan pembaruan berkala.
+- rAF di Browser pane bisa berhenti. Smoke render bukan bukti durasi gameplay.
+  Hindari menulis ulang file dengan metode yang bisa mengosongkan berkas saat
+  encoding gagal; gunakan patch kecil dan periksa diff.
+- Root `package.json` sumber versi; lockfile server punya metadata paket
+  induk `packages[".."]` yang perlu ikut diselaraskan, bukan versi servernya.
+
+## Persistensi dan koordinasi
+
+Pakai Omiga Brain global serta bridge root **`C:\galantara`**, bukan folder
+induk. Temuan tersimpan: `Lc142aa5037` (HTTP/vendor), `L927abfa07d` (lease dan
+batch edit), `L046eea8afa` (dua perbaikan sudah push), `L42645c3e5f` (roadmap
+publik berbeda snapshot lokal). Tidak menyimpan kredensial. Pesan handoff ke
+mailbox Claude dikirim setelah commit/push akhir; pesan tidak membangunkan agen.
+
+**Berhenti di sini. Tidak ada unit fitur yang sengaja ditinggalkan setengah jadi.**

@@ -18,6 +18,7 @@ sebagian besar interaksinya belum ada. Lihat [Apa yang sudah dan belum](#apa-yan
 - **Backlog jujur:** [docs/BACKLOG.md](docs/BACKLOG.md)
 - **Keputusan teknis:** [docs/adr/](docs/adr/)
 - **Catatan metode:** [PAPER.md](PAPER.md)
+- **Lanjutkan pengembangan:** [HANDOFF.md](HANDOFF.md)
 
 ---
 
