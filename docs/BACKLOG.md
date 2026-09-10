@@ -159,6 +159,35 @@ Butuh server — jadi ini menunggu hal yang sama dengan deploy.
 
 ---
 
+## P0.5 — MEMBLOKIR peluncuran publik: keselamatan
+
+Ditambahkan 11 Sep setelah pertanyaan "kapan launching, harus ramah anak".
+Analisis lengkap: **[KESIAPAN_PELUNCURAN.md](KESIAPAN_PELUNCURAN.md)**.
+
+Chat sekarang **terbuka, tanpa saring, tanpa lapor, tanpa blokir, tanpa gerbang
+umur**. Ini satu-satunya butir di seluruh backlog yang **memblokir, bukan
+menunda** — kalau anak-anak masuk ke keadaan ini dan sesuatu terjadi, yang rusak
+bukan retensi.
+
+| Butuh | Ada? |
+| --- | :---: |
+| Tombol lapor pemain/pesan | ✗ |
+| Blokir pemain | ✗ |
+| Bisukan per-pemain | ✗ |
+| Saring kata + batas laju chat | ✗ |
+| Antrean laporan + jejak audit admin | ✗ |
+| Gerbang umur 13+ | ✗ |
+| ToS + kebijakan privasi (UU PDP) | ✗ |
+
+Server sekarang merelai apa pun; batasnya cuma "≤ 100 huruf" dan "tamu tidak
+boleh chat", dan tidak ada yang mencatat siapa mengirim apa.
+
+**Rekomendasi:** luncurkan sebagai **13+ dengan jujur**, dan jadwalkan "semua
+usia" hanya setelah ada anggaran moderator manusia. Mengaku ramah anak tanpa
+penopangnya adalah risiko terbesar di proyek ini.
+
+---
+
 ## P3 — Yang belum punya dasar sama sekali (PRD)
 
 Diambil dari `docs/GALANATARA_CURRENT_STATE.md` §"Yang masih kosong":
@@ -201,10 +230,19 @@ Diambil dari `docs/GALANATARA_CURRENT_STATE.md` §"Yang masih kosong":
 
 ## Kalau harus memilih satu
 
-**P0.1 — pasang Meja Nongkrong di Braga dan Malioboro.**
+**Server.**
 
-Biayanya paling kecil (modulnya sudah ada dan sudah teruji, 15 uji), menutup
-dua janji yang sudah terlanjur dibuat ke pemain, dan memberi dua Spot yang
-sekarang cuma pemandangan sebuah alasan untuk berhenti dan tinggal.
+Bukan fitur. P0.1 dan P0.2 sudah selesai 11 Sep, dan seluruh stub duduk
+tertutup — jadi yang paling kurang sekarang bukan lagi hal untuk dilakukan di
+dunia, melainkan **orang sungguhan yang melakukannya**.
 
-Menambah Spot ketujuh tidak akan menambah siapa pun yang bertahan.
+Server membuka T0 (uji tertutup), dan T0 memberi dua hal yang tidak bisa
+didapat dengan cara lain: gate playtest Benteng bisa ditutup dengan pemain
+manusia, dan setiap keputusan di backlog ini jadi bisa diambil dari data, bukan
+dari dugaan saya.
+
+Setelah itu: **P0.5 keselamatan**, karena ia memblokir semua peluncuran publik.
+
+Menambah Spot ketujuh tidak akan menambah siapa pun yang bertahan — dan sesudah
+membaca ulang PRD, menambah Spot buatan tim **berapa pun jumlahnya** juga tidak.
+Yang membuat orang kembali adalah konten buatan pemain lain, dan itu T3.
