@@ -13,33 +13,59 @@
 <!-- Google Analytics -->
 <script>
 window.G_LOCAL = ['localhost','127.0.0.1'].includes(location.hostname);
-if (!window.G_LOCAL) {
-  const ga = document.createElement('script'); ga.src='https://www.googletagmanager.com/gtag/js?id=G-WNDQL8J455'; document.head.appendChild(ga);
-  window.dataLayer=window.dataLayer||[]; window.gtag=function(){dataLayer.push(arguments)}; gtag('js',new Date()); gtag('config','G-WNDQL8J455');
+
+// ── SATU-SATUNYA permintaan pihak ketiga yang tersisa di klien ──
+// Google Analytics. Semua sisanya (Three.js, Socket.io, font Nunito) sudah
+// di-vendor ke /vendor/ sehingga Galantara jalan penuh tanpa jaringan luar.
+//
+// Dibiarkan menyala di produksi karena ini keputusan produk pemiliknya, bukan
+// keputusan teknis saya — tetapi dikumpulkan di SATU tempat supaya bisa
+// dimatikan dengan satu baris. Setel false untuk mematikan sepenuhnya:
+window.G_ANALITIK = true;
+window.G_ANALITIK_ID = 'G-WNDQL8J455';
+
+if (!window.G_LOCAL && window.G_ANALITIK) {
+  const ga = document.createElement('script');
+  ga.src = 'https://www.googletagmanager.com/gtag/js?id=' + window.G_ANALITIK_ID;
+  document.head.appendChild(ga);
+  window.dataLayer = window.dataLayer || [];
+  window.gtag = function(){ dataLayer.push(arguments) };
+  gtag('js', new Date()); gtag('config', window.G_ANALITIK_ID);
 }
 </script>
 
-<!-- Three.js: self-hosted di VPS, CDN fallback untuk dev lokal -->
+<!-- Three.js r128 — DI-VENDOR di /vendor/. Bukan CDN.
+     Jalur lama menunjuk /three.min.js yang tidak pernah ada di repo ini, jadi
+     ia SELALU jatuh ke CDN dan dev offline tidak mungkin. Fallback CDN tetap
+     ada sebagai jaring pengaman, tapi sekarang benar-benar cuma jaring. -->
 <script>
 (function() {
-  function tryLoad(src, fallback) {
+  function muat(src, cadangan) {
     var s = document.createElement('script');
     s.src = src;
-    s.onerror = function() { if (fallback) tryLoad(fallback, null); };
+    s.onerror = function() { if (cadangan) muat(cadangan, null); };
     document.head.appendChild(s);
   }
-  tryLoad('/three.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
+  muat('/vendor/three.r128.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/three.js/r128/three.min.js');
 })();
 </script>
 
-<!-- Supabase UMD -->
-<script>if(!window.G_LOCAL) document.write('<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2/dist/umd/supabase.js"><\/script>');</script>
+<!-- Supabase UMD — DI-VENDOR. Pustakanya lokal; LAYANANNYA tetap komersial.
+     Dimuat di dev maupun produksi supaya keduanya berperilaku sama; dulu ia
+     hanya dimuat di produksi, jadi jalur login tidak pernah benar-benar
+     terlihat saat dikembangkan. Tanpa Supabase, dunia tetap jalan penuh
+     sebagai tamu — lihat docs/adr/0010. -->
+<script src="/vendor/supabase-js.2.min.js"></script>
 
-<!-- Socket.io client — multiplayer -->
-<script>document.write('<script src="'+(window.G_LOCAL?'/mp/socket.io/socket.io.js':'https://cdn.socket.io/4.7.4/socket.io.min.js')+'"><\/script>');</script>
+<!-- Socket.io client 4.8.3 — DI-VENDOR. Versi CDN lama (4.7.4) tidak cocok
+     dengan server (4.8.3); memakai berkas yang sama untuk keduanya
+     menghilangkan satu kelas ketidakcocokan yang gejalanya membingungkan. -->
+<script src="/vendor/socket.io.4.8.3.min.js"></script>
 
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<!-- Nunito DI-VENDOR (subset latin + latin-ext, SIL OFL 1.1).
+     Google Fonts menerima alamat IP tiap pengunjung; untuk dunia sosial yang
+     mengaku self-hosted, itu kebocoran yang tidak perlu. -->
+<link href="/vendor/nunito.css" rel="stylesheet">
 
 <style>
 *{box-sizing:border-box;margin:0;padding:0}

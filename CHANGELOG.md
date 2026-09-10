@@ -2,9 +2,35 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
-## [Unreleased] · 2026-09-10 — status deploy: belum ada server
+## [0.8.0] · 2026-09-11
+> **Berkumpul, dan berdiri sendiri.** Bubble chat, Meja Nongkrong, dan seluruh
+> pustaka klien dipindah ke dalam repo sehingga Galantara jalan tanpa satu pun
+> permintaan pihak ketiga.
 
-### Changed
+### Dokumentasi & persistensi (FASE 7)
+- **`LICENSE`** — MIT.
+- **`PAPER.md`** — catatan metode, dalam bahasa Inggris. Dibuka dengan
+  pernyataan bahwa ini **bukan riset baru**, dan ditutup dengan bagian kritik
+  diri yang menyebut apa yang masih lemah.
+- **`docs/adr/`** — 14 keputusan teknis, tiap satu dengan bagian *Yang dibayar*
+  dan *Alternatif yang ditolak*. Aturannya: kalau bagian *Yang dibayar* kosong,
+  ADR-nya belum selesai dipikirkan.
+- **`docs/LIVING_LOG.md`** — catatan berjalan.
+- **`README.md`** ditulis ulang, dengan tabel **"Belum ada"** yang sengaja tidak
+  dipoles.
+- **Versi**: `package.json` ditetapkan sebagai satu-satunya sumber kebenaran
+  versi (ADR-0014), dinaikkan 0.5.1 → 0.8.0.
+
+#### Diperbaiki di CHANGELOG ini sendiri
+Berkas ini punya **dua blok bernomor `v0.7.2`** dengan isi berbeda, dan **empat
+blok `[Unreleased]`**. Dinomori ulang jadi monoton mengikuti urutan berkas:
+"Benteng bernuansa senja" 09-09 menjadi **v0.7.1**, "near-miss 0,5" 09-09
+menjadi **v0.7.2**, dan seluruh pekerjaan 10–11 Sep menjadi **0.8.0** ini.
+Dicatat di sini, bukan diam-diam.
+
+### Status deploy: belum ada server
+
+#### Changed
 - Pemicu otomatis `.github/workflows/deploy-vps.yml` **dimatikan**; tinggal
   `workflow_dispatch`. Belum ada server tujuan, jadi setiap push menghasilkan
   CI merah yang tidak menandakan apa pun selain "server belum ada" — dan CI
@@ -17,18 +43,18 @@
 - `tmp/` masuk `.gitignore` — tangkapan render untuk review visual tidak perlu
   ikut ke repo.
 
-### Catatan
+#### Catatan
 Sementara ini Galantara dibangun dan diperiksa **di lokal**: `npx serve -p 4000 .`
 lalu `http://localhost:4000/index.html`; multiplayer `npm run install:server`
 sekali, lalu `npm run dev`. GitHub adalah tempat penyimpanan yang berlaku
 sekarang — commit, bukan live.
 
-## [Unreleased] · 2026-09-10 — Meja Nongkrong: arahan seni, dan dua alat baru
+### Meja Nongkrong: arahan seni, dan dua alat baru
 
 Arah seninya diserahkan ke GPT-5.6 lewat API langsung, dengan RENDER ASLINYA
 sebagai masukan — bukan deskripsi. Untuk itu dibangun dua alat, disimpan di repo.
 
-### Added
+#### Added
 - `tools/tanya-gpt.mjs` — minta pendapat kedua ke OpenAI dari dalam repo.
   Peran siap pakai (`seni`, `desain`, `kode`), bisa menyertakan berkas dan
   GAMBAR. Kunci dibaca dari env, tidak pernah masuk berkas atau chat. Ada
@@ -42,7 +68,7 @@ sebagai masukan — bukan deskripsi. Untuk itu dibangun dua alat, disimpan di re
   dengan pendamping yang jauh lebih lemah terbaca sebagai tempat yang hangat;
   semua lampu sama terang terbaca sebagai penerangan umum.
 
-### Changed — bentuk mejanya, atas temuan art director
+#### Changed — bentuk mejanya, atas temuan art director
 Diagnosis yang paling tajam: **daun bundar + kaki tengah + dingklik bundar +
 lampu globe adalah bahasa visual set patio / kafe taman**, dan teko gerabah
 saja tidak mengubahnya jadi Indonesia.
@@ -66,7 +92,7 @@ saja tidak mengubahnya jadi Indonesia.
 - **Atap sengkuap menaungi meja.** Dua tiang + palang tanpa atap terbaca
   sebagai gawang atau ayunan taman bermain.
 
-### Fixed
+#### Fixed
 - Arah rotasi letak kursi berlawanan dengan rotasi Three.js
   (`x' = x·cos + z·sin`, bukan `x·cos − z·sin`). Akibatnya letak kursi
   tercermin terhadap dingklik yang digambar — di meja Oola yang diputar 45°,
@@ -77,7 +103,7 @@ saja tidak mengubahnya jadi Indonesia.
 - Bidang tanah menghadap ke BAWAH (`rotation.x = +π/2` memutar normal +Z jadi
   −Y) sehingga tidak pernah terlihat sama sekali.
 
-### Catatan: satu angka arahan seni sengaja ditimpa
+#### Catatan: satu angka arahan seni sengaja ditimpa
 Arahan aslinya meminta atap pelana DANGKAL, nok 2,12 m di atas bibir 1,92 m —
 kemiringan 20°. Dicoba dua kali dan dilihat hasilnya: dari jarak kamera
 Galantara kemiringan itu tidak terbaca sama sekali dan atapnya tampak sebagai
@@ -87,14 +113,14 @@ orang duduk. Diganti **sengkuap** — ditopang dua tiang belakang yang sudah ada
 menjulur menaungi meja, dan kemiringannya terbaca karena tepi depannya jelas
 lebih rendah. Itu juga bentuk yang paling lazim untuk warung dan kaki lima.
 
-## [Unreleased] · 2026-09-10 — Meja Nongkrong v1
+### Meja Nongkrong v1
 
 Social node pertama. PRD `GALANTARA_BUILDER_SYSTEM` §SocialNode registry:
 *"warung, bangku, panggung = node pertama, bukan dekorasi terakhir"*, dan
 `RESOURCES_RESEARCH` menaruh "InteractionVolume + satu aksi (bangku duduk)"
 sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
 
-### Added
+#### Added
 - `src/world/MejaNongkrong.js` — meja bundar rendah + 4 dingklik + teko dan
   gelas, dengan lampu gantung sendiri yang ikut siklus magrib. Ukurannya nyata
   (meja 68 cm, dingklik 38 cm): meja warung Indonesia rendah, dan itulah yang
@@ -109,7 +135,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
   berdiri` kalau tidak ada tempat.
 - `tests/mejaNongkrong.test.mjs` — 13 uji.
 
-### Changed
+#### Changed
 - Oola sekarang bisa punya `InteractionVolume`. Sebelumnya hanya Spot runtime
   yang boleh; Oola cuma punya `ZONES` statis dari config, sehingga social node
   tidak mungkin ada di kota kedatangan — tempat yang justru paling ramai.
@@ -120,7 +146,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
   dipatok. Tanpa ini kamu melihat dirimu duduk sementara orang lain melihatmu
   berdiri di atas dingklik.
 
-### Fixed
+#### Fixed
 - Posisi hanya dikirim saat `isMoving`. Duduk membuat `isMoving` false padahal
   posisinya baru saja di-snap ke kursi — klien lain akan melihat orang itu
   tetap berdiri di tempat lamanya. Sekarang duduk dan berdiri memaksa satu emit.
@@ -128,7 +154,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
   memakan ~1,2 m, jadi hint lama baru muncul ketika orang sudah berdiri di
   antara dingklik — terlambat untuk jadi ajakan.
 
-### Catatan jujur
+#### Catatan jujur
 - **Keterisian kursi tidak memakai state server.** Posisi tiap pemain sudah
   disiarkan lewat `player_move`, jadi tiap klien menghitung sendiri siapa duduk
   di kursi mana. Aman hanya karena aturannya deterministik — pasangan
@@ -141,7 +167,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
 - Yang dilihat baru meja di Oola. Braga — Spot nongkrong menurut
   `RISET_3D_NUSANTARA` §14 — belum diberi meja.
 
-## [Unreleased] · 2026-09-10 — polish overlay, checkpoint GPT
+### Polish overlay
 
 - Bubble mengukur ulang kotaknya saat resize/font mengubah layout; cache tetap
   dipakai saat stabil. Snapshot ukuran lapisan dibaca sekali per update, ukur
@@ -157,10 +183,9 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
 
 ---
 
-## [v0.7.2] · 2026-09-10
-> **Bubble chat di atas kepala — PRD BAB 5.1.1**
+### Bubble chat di atas kepala — PRD BAB 5.1.1
 
-### Added
+#### Added
 - `src/ui/ChatBubble.js` — satu lapisan bubble untuk avatar lokal **dan** avatar
   pemain lain, jadi hanya ada satu jalur proyeksi 3D→2D yang harus dijaga benar.
   Bubble dipetakan lewat `socketId`, bukan pencocokan nama; nama bisa kembar.
@@ -181,7 +206,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
 - `tests/chatBubble.test.mjs` — 10 uji mengunci durasi, ambang 24 px, daur hidup
   (kedaluwarsa → transisi keluar → lepas dari DOM), dan penjaga viewport 0.
 
-### Changed
+#### Changed
 - Toast `💬 nama: pesan` kini **hanya** muncul bila bubble pengirimnya tidak
   terlihat (di luar layar, di belakang kamera, terlalu jauh, atau belum ada di
   roster). Sebelumnya satu pesan tampil tiga kali sekaligus: bubble, panel chat,
@@ -194,23 +219,23 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
   arah visual "Nusantara syahdu 90-an s.d. awal 2000-an". Menghormati
   `prefers-reduced-motion`.
 
-### Removed
+#### Removed
 - `Avatar.showChat()` / `Avatar.updateBubble()` beserta field `_bubble`.
   Komentarnya mengaku *"Dipanggil tiap frame dari Game.js"*, padahal `grep`
   menemukan **nol** pemanggil dan CSS `.av-bubble` tidak pernah ada.
   Mempertahankannya berarti dua mekanisme untuk satu hal.
 
-### Fixed
+#### Fixed
 - Nilai layout yang terbaca `0` (layout belum jadi) tidak lagi menyembunyikan
   **semua** bubble. Uji ukuran dilewati bila tinggi viewport tidak diketahui —
   fitur yang diam-diam kosong tidak akan pernah dilaporkan sebagai bug.
 
 ---
 
-## [v0.7.1] · 2026-09-09
+## [v0.7.2] · 2026-09-09
 > **Benteng — near-miss 0,5 dan polish keterbacaan yang terukur**
 
-### Changed
+#### Changed
 - `nearMiss.distance` **0,3 → 0,5**. Radius tag 0,6 m, jadi pita lama 0,6-0,9 m
   dilintasi dalam ~60 ms (±4 frame) pada 5 m/detik — terlalu singkat untuk
   terbaca. Near-miss 2,20 → **3,50 per match**; **kelima gate Fase 0 lulus**.
@@ -222,7 +247,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
   sementara "Rajawali" selebar 49 px — labelnya menyatu jadi satu gumpalan.
   Identitasnya sudah terbaca di roster lewat ikon rantai.
 
-### Added
+#### Added
 - `nearMiss.slowOnlyForPlayer` (default **true**). Diukur 40 match: 100%
   near-miss terjadi antar-bot, nol melibatkan pemain — menghentikan waktu untuk
   kejadian yang pemain tak lihat terbaca sebagai tersendat, bukan hadiah.
@@ -237,7 +262,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
   melebar, tanpa membesarkan kotak yang terlihat.
 - `npm run sim:benteng` sebagai jalan pintas ke gate Fase 0.
 
-### Fixed
+#### Fixed
 - Zoom halaman tidak lagi dikunci. `maximum-scale=1,user-scalable=no` melanggar
   WCAG 2.2 SC 1.4.4 (Resize Text 200%). Tombol diberi `touch-action:manipulation`
   supaya jeda tap-ganda 300 ms tetap hilang.
@@ -250,7 +275,7 @@ sebagai **P1** dengan alasan *"jadi betah tanpa nambah mesh"*.
 
 ---
 
-## [v0.7.2] · 2026-09-09
+## [v0.7.1] · 2026-09-09
 > **Benteng bernuansa senja 90-an** — palet, huruf, dan lapangan
 
 ### Kenapa

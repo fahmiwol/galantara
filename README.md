@@ -1,35 +1,207 @@
 # Galantara
 
-**Galantara — buat duniamu sendiri: pasar malam digital Indonesia di browser.**
+**Pasar malam digital Indonesia di browser.** Jalan-jalan, ngobrol, nongkrong —
+tanpa install, tanpa akun kalau cuma mau lihat-lihat.
 
-Galantara adalah **pasar malam digital Indonesia** di browser: kamu bisa **jalan-jalan**, **ngobrol**, dan lama-lama **membangun dunia sendiri** — Spot **publik atau privat**, **prop dan bangunan** dari preset dan generator, plus **avatar** yang bisa kamu bedakan. Proyek ini **open source**: format dunia dan aset dirancang supaya kontributor dan creator kecil bisa ikut, **tanpa** wajib punya tim modeling besar. Kami mengandalkan **procedural mesh**, **template**, **AI-aset** (mis. text→3D), dan **aset terbuka** yang dikurasi — supaya tampilan dan fungsi builder tetap hidup walau tim internal tetap ringan.
+Dunia 3D sosial yang settingnya Indonesia, bukan dunia generik yang diberi skin
+Indonesia. Enam Spot berdasarkan tempat nyata (Oola, Bogor, Monas, Malioboro,
+Losari, Kuta, Braga), rumah adat dengan proporsi terukur, siklus hari yang
+mengikuti waktu Nusantara, dan satu permainan tangkap-tawan bernama **Benteng**.
 
-**Galantara** is a browser-based **digital night market** for Indonesia: hang out, chat, and grow toward **user-built worlds** — public or private Spots, props and structures from **presets + procedural generators + AI-assisted assets**, plus **customizable avatars**. The stack is **open source** and data-driven so contributors can extend it without a large in-house art team. Visual richness comes from **smart reuse, templates, and curated open assets** — not from pretending we ship a AAA art pipeline on day one.
+**Status: pra-alpha.** Jujurnya: dunianya bisa dijalani dan enak dilihat, tapi
+sebagian besar interaksinya belum ada. Lihat [Apa yang sudah dan belum](#apa-yang-sudah-dan-belum)
+— tidak ada yang dilebihkan di sana.
 
-## Kenapa beda
+- **Lisensi:** MIT
+- **Versi:** 0.8.0 · [CHANGELOG](CHANGELOG.md)
+- **Backlog jujur:** [docs/BACKLOG.md](docs/BACKLOG.md)
+- **Keputusan teknis:** [docs/adr/](docs/adr/)
+- **Catatan metode:** [PAPER.md](PAPER.md)
 
-- **Tanpa install** — Web + WebGL; masuk lewat link.
-- **Hyperlocal** — Indonesia sebagai setting produk, bukan skin generik.
-- **Creator path** — Arah map / object / logic builder + Spot publik-privat (per roadmap).
-- **Open source** — Kode dan arah format transparan untuk komunitas.
-- **Realistis soal art** — Generator, AI mesh, preset, dan CC0; ekspektasi jelas untuk kontributor.
+---
 
-## Stack (ringkas)
+## Jalankan
 
-- **Klien:** Three.js (vanilla ES modules), UI vanilla — `index.html`, `src/`.
-- **Realtime:** Socket.io — `galantara-server/`.
-- **Data / auth (arah):** Supabase.
+Tidak ada langkah build. Tidak ada bundler. Klon, sajikan, buka.
 
-## Dokumen produk & salinan publik
+```bash
+npx serve -p 4000 .
+```
 
-- **Value prop & variasi tagline:** [`docs/PUBLIC_VALUE_PROP.md`](docs/PUBLIC_VALUE_PROP.md)
-- **Arah engine + builder:** [`docs/GALANTARA_BUILDER_SYSTEM.md`](docs/GALANTARA_BUILDER_SYSTEM.md)
-- **Konteks agen / operasi:** [`docs/AGENT_SHARED_KNOWLEDGE.md`](docs/AGENT_SHARED_KNOWLEDGE.md)
+Buka `http://localhost:4000`. Selesai — dunia jalan penuh sebagai tamu.
 
-## Kontributor
+**Dengan multiplayer:**
 
-Kamu **tidak** perlu jago Blender untuk membantu: **bugfix**, **JSON map**, **preset procedural**, **dokumentasi**, **integrasi API aset**, dan **UI builder** sama berartinya dengan mengirim satu file `.blend`.
+```bash
+npm run install:server
+npm run dev
+```
 
-## Demo
+**Uji:**
 
-Live: [galantara.io](https://galantara.io)
+```bash
+npm test
+```
+
+60 uji, semuanya di Node murni tanpa browser.
+
+### Offline
+
+Semua pustaka klien ada di [`vendor/`](vendor/README.md): Three.js r128,
+Socket.io 4.8.3, Supabase JS, dan font Nunito (subset latin). **Klien tidak
+membuat satu pun permintaan pihak ketiga.** Diverifikasi, bukan diasumsikan —
+lihat [ADR-0010](docs/adr/0010-vendor-semua-pustaka-klien-supabase-tetap-pengecualian-yan.md).
+
+Dua pengecualian yang disebut terang-terangan:
+
+| Apa | Kapan | Cara mematikan |
+| --- | --- | --- |
+| Google Analytics | Hanya di produksi, bukan localhost | `window.G_ANALITIK = false` di `index.html` |
+| Layanan Supabase | Hanya untuk login, chat, preferensi avatar | Tidak perlu dimatikan — tanpanya dunia tetap jalan penuh sebagai tamu |
+
+---
+
+## Apa yang sudah dan belum
+
+Bagian ini sengaja tidak dipoles. Dunia yang mengaku punya fitur yang belum ada
+akan membuat orang datang sekali dan tidak kembali.
+
+### Sudah jalan
+
+| | |
+| --- | --- |
+| **Dunia & gerak** | Pulau melayang Oola, kamera isometrik terkunci, avatar chibi, 76 prop |
+| **Siklus hari** | Delapan fase Nusantara (subuh sampai malam), lampu menyala saat magrib |
+| **Enam Spot** | Bogor, Monas, Malioboro, Losari, Kuta, Braga — semuanya 3D, bukan kotak abu-abu |
+| **Rumah adat** | Joglo, sulah nyanda, rumah panggung — dibangun dari proporsi terukur, bukan tebakan |
+| **Multiplayer** | Lihat pemain lain, gerak tersinkron, chat, voice proximity |
+| **Bubble chat** | Pesan muncul di atas kepala, hilang sendiri |
+| **Meja Nongkrong** | Duduk bareng dengan `[F]`, keterisian kursi kelihatan |
+| **Benteng** | Permainan tangkap-tawan lengkap dengan bot, harness balans, audit visual |
+| **Tantangan harian** | Runtutan harian, tanpa hadiah palsu |
+
+### Belum ada
+
+| | |
+| --- | --- |
+| **Ekonomi** | Mighan Coin belum end-to-end. HUD menampilkan `0/500` yang belum berarti apa-apa |
+| **Toko** | Empat katalog Spot masih toast "menyusul" |
+| **Moderasi** | Report, block, mute — **belum ada sama sekali.** Ini kewajiban, bukan fitur |
+| **Server-authoritative** | Benteng seluruhnya klien. Belum bisa dipercaya untuk kompetisi apa pun |
+| **Builder** | Membuat Spot sendiri masih toast |
+| **Deploy** | Belum ada server. Untuk sekarang jalan di lokal |
+
+**Sepuluh titik interaksi di dalam Spot masih toast "menyusul".** Itu masalah
+yang berbeda dari fitur yang belum ada: pemain sudah berjalan ke sana dan
+menekan `[F]`. Menutupnya lebih berharga daripada menambah Spot ketujuh —
+alasan lengkapnya di [BACKLOG](docs/BACKLOG.md).
+
+---
+
+## Bentuknya
+
+51 modul, ~10.800 baris JavaScript, tanpa framework.
+
+```
+index.html          Titik masuk. Memuat vendor, lalu src/main.js sebagai modul.
+benteng.html        Halaman terpisah untuk permainan Benteng (kanvas 2D).
+src/
+  core/Game.js      Perekat: loop, wiring, keadaan sesi.
+  world/            Dunia, siklus hari, Spot, social node (MejaNongkrong).
+  entities/         Avatar, NPC.
+  multiplayer/      Socket, pemain remote, voice.
+  ui/               Chat, bubble, HUD, panel, toast.
+  games/benteng/    Aturan, bot, renderer, logger playtest.
+  data/             Konfigurasi, peta, tantangan harian.
+tools/              Perkakas milik sendiri (lihat di bawah).
+vendor/             Pustaka pihak ketiga, disalin sengaja.
+tests/              Uji Node murni, tanpa browser.
+docs/adr/           Kenapa tiap keputusan diambil.
+```
+
+**Aturan yang mengikat** (pelanggarannya senyap, jadi disebut di sini):
+
+1. `THREE` itu **global**. Jangan pernah `import 'three'` — modulnya akan mati
+   tanpa satu pun pesan error. [ADR-0001](docs/adr/0001-three-global-lewat-script-tag-tanpa-build-step.md)
+2. Jangan `scene.traverse()`. Catat referensi saat objek dibuat.
+   [ADR-0002](docs/adr/0002-larangan-scene-traverse-kumpulkan-referensi-saat-objek-dib.md)
+3. Kamera terkunci: theta 0–360°, phi 18–76°. Bukan selera — PRD BAB 2.4.
+
+### Perkakas milik sendiri
+
+Dibangun untuk proyek ini, disimpan di repo, bukan skrip sekali pakai:
+
+| | |
+| --- | --- |
+| `tools/benteng-sim.mjs` | Harness balans headless, 7 arketipe pemain, sweep parameter |
+| `tools/benteng-visual-audit.mjs` | Kontras WCAG + jarak warna ΔE di bawah tiga simulasi buta warna |
+| `tools/rupa3d/*.py` | Pembangun rumah adat lewat Blender headless, dari konstanta bernama |
+| `tools/tanya-gpt.mjs` | Pendapat kedua, bisa mengirim render sungguhan |
+| `tools/penerima-render.mjs` | Mengeluarkan tangkapan render dari halaman ke berkas |
+
+---
+
+## Cara kerja yang dipakai di sini
+
+Tiga aturan yang lahir dari kesalahan nyata, bukan dari teori. Rinciannya di
+[PAPER.md](PAPER.md).
+
+**1. Periksa instrumennya sebelum percaya ukurannya.** Empat kali di proyek ini
+angka hasil ukur diterima atau ditolak berdasarkan harapan, bukan berdasarkan
+sehat-tidaknya alat ukurnya. Sekali menghasilkan klaim "bias 87%" yang murni
+karangan harness.
+
+**2. Jangan pernah menyembunyikan sesuatu atas dasar data yang belum diketahui.**
+Nilai layout bisa terbaca `0` sebelum halaman selesai. Kode yang menyembunyikan
+UI karena pembaginya nol menghasilkan fitur yang **diam-diam kosong** — dan itu
+tidak akan pernah dilaporkan sebagai bug.
+
+**3. Kalau angka mengejutkan, curigai alat ukurnya dulu. Kalau angka pas dengan
+dugaan, curigai lebih keras lagi.**
+
+---
+
+## Technical summary (English)
+
+Browser-based 3D social world set in Indonesia. Vanilla ES modules, no build
+step, Three.js r128 as a global. Socket.io for multiplayer; Supabase for auth
+only — the world runs fully as a guest without it.
+
+**Run:** `npx serve -p 4000 .` · **Test:** `npm test` (60 tests, pure Node)
+
+Two patterns here may be of general interest, both documented with their
+failure modes in [PAPER.md](PAPER.md):
+
+- **Deriving shared social state from already-synchronised data.** Table seat
+  occupancy is computed independently on every client from broadcast positions
+  rather than tracked as server state. This removes a class of desync entirely,
+  but converts determinism from a nice property into a correctness obligation —
+  including a geometric invariant that must hold whenever furniture is moved.
+- **Sizing HTML overlays by projected on-screen size, not world distance.**
+  HTML overlays do not shrink with distance, so a fixed distance cut-off is
+  wrong under any change of FOV or viewport. Deriving the threshold from the
+  perspective projection makes it self-adjusting.
+
+Neither is novel. Both are written up because the *failure modes* are subtle and
+were found the hard way.
+
+---
+
+## Kontribusi
+
+Pull request diterima. Tiga hal yang membantu:
+
+- Baca [ADR](docs/adr/) yang relevan sebelum mengubah keputusan besar. Kalau
+  tidak setuju, tulis ADR baru — jangan diam-diam mengembalikannya.
+- Uji yang **menghitung** nilai yang diharapkan, bukan menghafalnya.
+  [ADR-0012](docs/adr/0012-stub-uji-harus-memodelkan-perilaku-nyata-bukan-nilai-yang-.md)
+- Kalau hasilnya biasa saja, tulis "hasilnya biasa saja". Dokumen di repo ini
+  tidak melebih-lebihkan, dan itu properti yang perlu dijaga.
+
+## Lisensi
+
+[MIT](LICENSE) © 2026 Fahmi Ghani.
+
+Pustaka pihak ketiga di `vendor/` memakai lisensinya masing-masing (MIT untuk
+Three.js dan Socket.io, SIL OFL 1.1 untuk Nunito) — lihat
+[`vendor/README.md`](vendor/README.md).
