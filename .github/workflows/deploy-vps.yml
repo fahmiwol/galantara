@@ -1,4 +1,4 @@
-# Deploy statis ke VPS saat push ke main (atau manual).
+# Deploy statis ke VPS secara manual; tanpa pemicu push sampai server tersedia.
 # GitHub → Settings → Secrets and variables → Actions:
 #   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY (PEM lengkap), REMOTE_PATH (mis. /www/wwwroot/galantara.io/)
 name: Deploy VPS (static)
@@ -60,4 +60,7 @@ jobs:
           # keduanya 404 di live: rumah adat tidak muncul dan Spot gagal memuat
           # manifestnya, padahal di lokal semuanya benar.
           rsync -avz --delete -e "ssh $SSH_BASE" ./assets/ "${DEST}assets/"
+          # Pustaka dan font lokal harus ikut agar index tidak bergantung CDN
+          # atau gagal boot. Seluruh vendor/ termasuk fonts/ dan lisensinya.
+          rsync -avz --delete -e "ssh $SSH_BASE" ./vendor/ "${DEST}vendor/"
           echo "Deploy finished."

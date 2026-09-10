@@ -14,6 +14,33 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-11 · UNIT 2 SELESAI — vendor ikut paket statis
+
+Workflow manual sekarang menyalin seluruh `vendor/` ke URL yang sama, termasuk
+font dan lisensi. Komentar pembuka diperjelas: tidak ada trigger push.
+Tes kontrak membaca baris rsync aktif, memastikan tujuan mempertahankan path,
+dan memeriksa aset dari empat HTML serta font CSS; juga menjaga manual-only.
+
+**Verifikasi:** tes baru merah pada baseline dengan pesan kehilangan
+`vendor/three.r128.min.js`, kemudian hijau setelah satu baris rsync ditambahkan.
+`npm test` **62/62 pass, 0 skip**; 57 Markdown/31 tautan lolos.
+**Belum diuji/risiko:** parser kontrak sengaja hanya mendukung bentuk rsync
+satu baris saat ini, bukan parser YAML/shell umum. Tidak menjalankan SSH,
+rsync, workflow maupun deploy nyata; belum ada server tujuan. Hasilnya kecil:
+menutup paket aset yang pasti tidak lengkap, bukan membuktikan deploy siap.
+
+---
+
+## 2026-09-11 · Pilihan UNIT 2 — paket deploy tidak boleh kehilangan vendor
+
+Unit 1 sudah push `6ba93f0`. Prioritas berikutnya masih perbaikan jalur rusak:
+workflow statis belum menyalin `vendor/` yang diperlukan index. Tambahkan
+direktori itu dan tes kontrak paket. Tes ini **struktural**, bukan simulasi
+SSH/rsync atau bukti deploy sukses. Pemicu tetap manual-only (ADR-0007), tidak
+membaca Secrets dan tidak menjalankan workflow. Maksimal tiga file termasuk log.
+
+---
+
 ## 2026-09-11 · UNIT 1 SELESAI — boot lokal memakai vendor
 
 Allowlist Express `--local` sekarang menyajikan `vendor/`, tetap menolak
