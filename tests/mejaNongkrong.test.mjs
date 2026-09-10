@@ -83,6 +83,59 @@ test('koordinat lokal kursi TIDAK ikut diputar, koordinat dunia ikut', () => {
   assert.ok(Math.abs(k.z + lurus.kursi[0].lx) < 1e-9, `z dunia ${k.z} vs ${-lurus.kursi[0].lx}`);
 });
 
+test('invarian jangkauan kursi berlaku di SEMUA gaya, bukan cuma warung', () => {
+  // Ini menangkap bug nyata: pola 2+1+1 meja warung dipakai ulang untuk
+  // lesehan membuat dua orang berjarak 0,33 m — lebih sempit daripada badan
+  // orang, dan melanggar invarian. Uji yang hanya memeriksa gaya bawaan akan
+  // meloloskannya diam-diam, dan akibatnya baru terlihat sebagai "kadang
+  // orangnya duduk di kursi yang salah" di layar orang lain.
+  for (const [gaya, jumlah] of [['warung', 4], ['lesehan', 3], ['kafe', 2]]) {
+    const m = buat({ gaya, kursi: jumlah });
+    assert.equal(m.kursi.length, jumlah, `${gaya} harus punya ${jumlah} kursi`);
+    assert.ok(
+      m.jarakKursiTerdekat > m.toleransiKursi * 2,
+      `${gaya}: kursi terdekat ${m.jarakKursiTerdekat.toFixed(3)} m harus > ${(m.toleransiKursi * 2).toFixed(2)} m`,
+    );
+  }
+});
+
+test('badan tidak saling tembus — ambang KEDUA, bukan toleransi kursi', () => {
+  // Dua pertanyaan yang berbeda, dan menjaga yang pertama saja tidak cukup:
+  //   toleransiKursi * 2  → penetapan kursi tidak ambigu (kebenaran)
+  //   lebarBadan          → orangnya tidak saling tembus (tampilan)
+  // Bug nyata: tikar lesehan 4 kursi lolos ambang pertama (0,73 > 0,68) tapi
+  // gagal yang kedua (0,73 < 0,90), dan tiga avatar chibi tumpang tindih.
+  // Tidak ada uji yang menangkapnya sampai terlihat di render.
+  for (const [gaya, jumlah] of [['warung', 4], ['lesehan', 3], ['kafe', 2]]) {
+    const m = buat({ gaya, kursi: jumlah });
+    assert.ok(
+      m.jarakKursiTerdekat >= m.lebarBadan,
+      `${gaya}: kursi terdekat ${m.jarakKursiTerdekat.toFixed(3)} m harus >= lebar badan ${m.lebarBadan} m`,
+    );
+  }
+});
+
+test('gaya lesehan menaruh semua kursi DI ATAS tikar', () => {
+  // Tikar 1,60 x 1,20. Kursi di luar tepinya berarti orang duduk di tanah
+  // sebelah tikar, dan tidak ada yang akan melaporkannya sebagai bug.
+  const m = buat({ gaya: 'lesehan', kursi: 3 });
+  for (const k of m.kursi) {
+    assert.ok(Math.abs(k.x - m.x) <= 1.60 / 2, `kursi ${k.i} keluar tepi panjang tikar`);
+    assert.ok(Math.abs(k.z - m.z) <= 1.20 / 2, `kursi ${k.i} keluar tepi lebar tikar`);
+  }
+});
+
+test('tinggi duduk ikut gayanya, bukan satu angka untuk semua', () => {
+  // Orang lesehan duduk di lantai; orang di kursi kafe duduk lebih tinggi
+  // daripada di dingklik. Satu konstanta global akan salah di dua tempat.
+  const tinggi = (gaya, n) => buat({ gaya, kursi: n }).kursi[0].tinggiDuduk;
+  const warung = tinggi('warung', 4);
+  const lesehan = tinggi('lesehan', 3);
+  const kafe = tinggi('kafe', 2);
+  assert.ok(lesehan < warung, 'lesehan harus paling rendah');
+  assert.ok(kafe > warung, 'kursi kafe harus paling tinggi');
+});
+
 // ── Pemetaan kursi ───────────────────────────────────
 test('pemain yang berdiri di kursi terhitung menempatinya', () => {
   const m = buat();
@@ -118,9 +171,11 @@ test('meja 4 kursi: jangkauan kursi tidak saling tumpang tindih', () => {
 });
 
 test('kalau jangkauan MEMANG tumpang tindih, satu orang tetap hanya dapat satu kursi', () => {
-  // Meja 8 kursi memampatkan kursinya sampai jangkauannya beririsan. Di situlah
-  // aturan "satu pemain sekali pakai" harus bekerja.
-  const m = buat({ kursi: 8 });
+  // Butuh konfigurasi yang jangkauannya benar-benar beririsan. Meja warung
+  // 8 kursi TIDAK lagi begitu setelah kursinya direnggangkan demi lebar badan;
+  // tikar lesehan 8 kursi masih, karena lingkarnya kecil. Prasyaratnya
+  // diperiksa di bawah, jadi uji ini tidak akan pernah lulus secara hampa.
+  const m = buat({ gaya: 'lesehan', kursi: 8 });
   const a = m.kursi[0], b = m.kursi[1];
   const antar = Math.hypot(a.x - b.x, a.z - b.z);
   assert.ok(antar < m.toleransiKursi * 2, 'prasyarat uji: jangkauannya memang tumpang tindih');

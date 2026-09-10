@@ -398,22 +398,29 @@ export class Game {
 
       const vol = vols.find((v) => v.id === meja.id);
       if (!vol) continue;
-      vol.hint = `🍵 ${meja.nama} · ${jumlah}/${meja.jumlahKursi}`;
+      // Ikon dan ajakan datang dari MEJANYA, bukan di-hardcode di sini.
+      // Braga itu kopi, Malioboro teh, dan "ikut nimbrung" tidak pas untuk
+      // meja kafe dua kursi.
+      vol.hint = `${meja.ikon} ${meja.nama} · ${jumlah}/${meja.jumlahKursi}`;
       if (this.avatar.sedangDuduk && this.avatar.kursi?.mejaId === meja.id) {
         vol.useKeyHint = '[F] berdiri';
       } else if (jumlah >= meja.jumlahKursi) {
         vol.useKeyHint = 'penuh, tunggu ada yang berdiri';
       } else {
-        vol.useKeyHint = '[F] ikut nimbrung';
+        vol.useKeyHint = `[F] ${meja.ajakan}`;
       }
     }
 
     // Pose duduk untuk pemain lain diturunkan dari peta kursi yang sama —
     // tidak ada state duduk yang dikirim lewat socket, jadi tidak ada yang
     // bisa jadi basi.
-    const duduk = new Set();
+    // Map, bukan Set: tingginya ikut GAYA mejanya. Lesehan duduk di lantai,
+    // kursi kafe lebih tinggi daripada dingklik.
+    const duduk = new Map();
     for (const meja of daftar) {
-      for (const k of meja.terisi ?? []) if (k) duduk.add(k.kunci);
+      (meja.terisi ?? []).forEach((k, i) => {
+        if (k) duduk.set(k.kunci, meja.kursi[i]?.tinggiDuduk ?? -0.16);
+      });
     }
     this.remotePlayers?.setDuduk(duduk);
 

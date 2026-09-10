@@ -6,6 +6,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
+import { MejaNongkrong } from '../MejaNongkrong.js';
 import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
 
 // THREE global — klien memuat three.min.js lewat tag script. Bare import
@@ -41,6 +42,9 @@ export class MalioboroSpotRuntime {
     this._warpRing = null;
     /** @type {InteractionVolume[]} */
     this.interactionVolumes = [];
+    /** Social node Spot ini — dibaca Game untuk keterisian kursi.
+     *  @type {MejaNongkrong[]} */
+    this.meja = [];
   }
 
   /**
@@ -110,17 +114,33 @@ export class MalioboroSpotRuntime {
       }
     }
 
-    // Lesehan — gelaran tikar di tepi jalan.
+    // Lesehan — sekarang social node sungguhan, bukan tikar hiasan.
+    //
+    // Sebelumnya tiga balok 1,60 x 0,06 x 1,20 yang tidak bisa diapa-apakan,
+    // dan volume [F]-nya cuma memunculkan toast "menyusul". 6 cm itu tebal
+    // PAPAN; tikar pandan sekitar 8 mm, dan yang membuatnya terbaca sebagai
+    // tikar adalah anyamannya — dibangun di Rupa3D, dimuat sebagai GLB oleh
+    // MejaNongkrong gaya `lesehan`.
     const LESEHAN_Z = -6;
     const LESEHAN_X = -JALAN_LEBAR / 2 + 2.2;
     for (let i = 0; i < 3; i += 1) {
-      const tikar = new THREE.Mesh(
-        new THREE.BoxGeometry(1.6, 0.06, 1.2),
-        MS(PALET.lesehan, 0.92),
-      );
-      tikar.position.set(LESEHAN_X, 0.04, LESEHAN_Z + i * 1.7);
-      tikar.receiveShadow = true;
-      g.add(tikar);
+      const meja = new MejaNongkrong({
+        id: `malioboro_lesehan_${i + 1}`,
+        nama: 'Lesehan Malioboro',
+        gaya: 'lesehan',
+        x: LESEHAN_X,
+        z: LESEHAN_Z + i * 1.9,
+        // TIGA, bukan empat. Tikar 1,60 x 1,20 memang cuma muat tiga orang
+        // tanpa badan saling tembus — lihat SPEK.lebarBadan.
+        kursi: 3,
+        // Sedikit miring bergantian — tikar yang digelar orang tidak pernah
+        // sejajar sempurna, dan tiga tikar sejajar presisi terbaca sebagai
+        // display, bukan tempat yang dipakai.
+        rotasi: (i - 1) * 0.09,
+      });
+      meja.bangun(g);
+      this.meja.push(meja);
+      this._lampu.push(...meja.getLampu());
     }
 
     // Kios bertenda ungu — warna sekunder PRD dipakai di sini, bukan
@@ -169,17 +189,17 @@ export class MalioboroSpotRuntime {
             else T.show('Buka Peta Spot dari bar bawah (ikon peta) 🗺', 'g');
           },
         }),
-        new InteractionVolume({
-          id: 'malioboro_lesehan',
+        // Satu volume per tikar. Bukan satu volume besar: hint-nya menyebut
+        // keterisian tikar TERTENTU, dan [F] mendudukkan di tikar yang memang
+        // sedang didekati.
+        ...this.meja.map((m) => new InteractionVolume({
+          id: m.id,
           shape: 'sphere',
-          center: { x: LESEHAN_X, z: LESEHAN_Z + 1.7 },
-          radius: 2.6,
-          hint: '🍵 Lesehan — duduk & ngobrol',
-          useKeyHint: '[F]',
-          onUse: () => {
-            T.show('Duduk lesehan + proximity chat — menyusul 🍵', 'g');
-          },
-        }),
+          center: { x: m.x, z: m.z },
+          radius: m.jariInteraksi,
+          hint: `🍵 ${m.nama}`,
+          useKeyHint: '[F] ikut lesehan',
+        })),
         new InteractionVolume({
           id: 'malioboro_batik',
           shape: 'sphere',

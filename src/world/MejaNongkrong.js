@@ -108,6 +108,28 @@ const SPEK = Object.freeze({
   batuTepi: 6,
   batuPijak: 7,
 
+  // Lesehan — dicocokkan dengan tikar GLB (1,60 x 1,20 m) dari Rupa3D.
+  lesehanPanjang: 1.60,
+  lesehanLebar: 1.20,
+  /** Jari-jari lingkar duduk di atas tikar. 0,55 m memberi jarak antar orang
+   *  0,95 m pada tiga orang — cukup supaya badan chibi tidak saling tembus,
+   *  dan masih di dalam tepi tikar (setengah lebar 0,60 m). */
+  lesehanJariDuduk: 0.55,
+
+  /** Lebar badan avatar chibi. Ini ambang KEDUA, terpisah dari toleransi
+   *  kursi: `jariKursi * 2` menjaga penetapan kursi tidak ambigu, angka ini
+   *  menjaga orangnya tidak saling tembus. Dua pertanyaan berbeda, dan
+   *  menjaga yang pertama saja pernah membuat tiga orang di satu tikar
+   *  tumpang tindih di layar. */
+  lebarBadan: 0.90,
+  dulangJari: 0.27,
+  dulangTinggi: 0.14,
+
+  // Kafe — mengikuti meja kafe yang sudah ada di BragaSpotRuntime.
+  kafeJariDaun: 0.42,
+  kafeTinggiMeja: 0.74,
+  kafeTinggiDudukan: 0.46,
+
   /** Sejauh mana pemain boleh berdiri dari sebuah kursi untuk dihitung
    *  menempatinya. Harus lebih kecil dari SETENGAH jarak kursi terdekat,
    *  kalau tidak satu posisi bisa masuk jangkauan dua kursi. Dijaga oleh
@@ -119,9 +141,32 @@ const SPEK = Object.freeze({
   jariKursi: 0.34,
 });
 
+/**
+ * Gaya meja. Yang berbeda bukan cuma tampilannya — TINGGI DUDUK ikut berbeda,
+ * dan itu harus datang dari kursinya, bukan dari konstanta global di Avatar.
+ * Orang yang lesehan duduk di lantai; orang di kursi kafe duduk lebih tinggi
+ * daripada di dingklik. Satu angka untuk ketiganya akan salah di dua tempat.
+ *
+ * tinggiDuduk = pergeseran Y badan avatar terhadap posisi berdirinya.
+ */
+const GAYA = Object.freeze({
+  // Meja warung + dingklik 0,38 m. Dasar, dan yang sudah diverifikasi di Oola.
+  warung:  { tinggiDuduk: -0.16, jariInteraksiTambahan: 0.75, ikon: '🍵', ajakan: 'ikut nimbrung' },
+  // Tikar di tanah. Duduk bersila, badan turun jauh lebih dalam.
+  lesehan: { tinggiDuduk: -0.30, jariInteraksiTambahan: 0.70, ikon: '🍵', ajakan: 'ikut lesehan' },
+  // Kursi kafe Braga: dudukan 0,46 m, lebih tinggi dari dingklik.
+  // Braga itu kopi, bukan teh. Ikon ikut gayanya, bukan di-hardcode di Game.
+  kafe:    { tinggiDuduk: -0.09, jariInteraksiTambahan: 0.85, ikon: '☕', ajakan: 'duduk' },
+});
+
 /** Palet: kayu jati tua, bambu, gerabah, dan tanah terinjak. */
 const PALET = Object.freeze({
   daun: 0xa8703f,
+  tikar: 0xa37637,
+  tikarLintang: 0xbd924c,
+  bisTikar: 0x603028,
+  kursiKafe: 0xe8836b,
+  logamKafe: 0x3a3a3a,
   kayuTua: 0x7a4f2a,
   bambu: 0xc9a86a,
   gerabah: 0x9c5b3f,
@@ -141,13 +186,15 @@ export class MejaNongkrong {
    * @param {{ id: string, x: number, z: number, kursi?: number,
    *           rotasi?: number, nama?: string }} spek
    */
-  constructor({ id, x, z, kursi = 4, rotasi = 0, nama = 'Meja Nongkrong' }) {
+  constructor({ id, x, z, kursi = 4, rotasi = 0, nama = 'Meja Nongkrong', gaya = 'warung' }) {
     this.id = id;
     this.x = x;
     this.z = z;
     this.jumlahKursi = Math.max(2, Math.min(8, kursi));
     this.rotasi = rotasi;
     this.nama = nama;
+    this.gaya = GAYA[gaya] ? gaya : 'warung';
+    this.spekGaya = GAYA[this.gaya];
 
     /** @type {THREE.Group | null} */
     this.grup = null;
@@ -166,28 +213,87 @@ export class MejaNongkrong {
    * presisi — meja warung tidak pernah rapi. Pergeserannya angka TETAP, bukan
    * acak, karena tiap klien harus menghasilkan letak yang sama persis.
    */
+  /**
+   * Jejak tempat duduk per gaya.
+   *
+   * Kursi meja warung ada di jari-jari 0,86 m. Memakai angka itu untuk lesehan
+   * akan menaruh orang DI LUAR TIKAR yang lebarnya cuma 1,20 m. Jadi jejaknya
+   * ikut gayanya.
+   */
+  _jejak() {
+    if (this.gaya === 'lesehan') {
+      // Mengelilingi dulang, semuanya masih di atas tikar 1,60 x 1,20.
+      return { setengahP: 0.32, setengahL: 0.14, renggang: 0.28 };
+    }
+    if (this.gaya === 'kafe') {
+      return { setengahP: SPEK.kafeJariDaun, setengahL: SPEK.kafeJariDaun, renggang: 0.36 };
+    }
+    // renggang 0,40 — bukan 0,31. Angka lama menaruh kursi cukup renggang
+    // untuk penetapan yang tidak ambigu (0,76 m > 0,68 m) tetapi TERLALU
+    // RAPAT untuk badan chibi selebar 0,90 m, sehingga orangnya saling tembus.
+    // Lolos uji, gagal di mata. Lihat SPEK.lebarBadan.
+    return {
+      setengahP: SPEK.panjangDaun / 2,
+      setengahL: SPEK.lebarDaun / 2,
+      renggang: SPEK.sisiDudukan / 2 + 0.26,
+    };
+  }
+
   _hitungLetakKursi() {
-    const setengahP = SPEK.panjangDaun / 2;
-    const setengahL = SPEK.lebarDaun / 2;
-    const renggang = SPEK.sisiDudukan / 2 + 0.17;
+    const { setengahP, setengahL, renggang } = this._jejak();
 
     /**
-     * Titik lokal sebelum diputar — susunannya 2 + 1 + 1, BUKAN satu per sisi.
+     * Meja warung: susunan 2 + 1 + 1, BUKAN satu per sisi.
      *
-     * Avatar Galantara chibi: kepalanya besar, jadi empat orang tersebar merata
-     * di empat sisi akan menutup seluruh daun meja dari kamera atas-serong,
-     * berapa pun ukuran mejanya. Dengan satu sisi panjang sengaja DIKOSONGKAN,
-     * selalu ada satu tepi meja yang tidak terhalang badan siapa pun.
+     * Avatar chibi berkepala besar — empat orang tersebar merata di empat sisi
+     * akan menutup seluruh daun meja dari kamera atas-serong, berapa pun ukuran
+     * mejanya. Dengan satu sisi panjang sengaja DIKOSONGKAN, selalu ada satu
+     * tepi meja yang tidak terhalang badan siapa pun.
      *
-     * Dua kursi di sisi yang sama membuat jaraknya cuma 0,76 m — itulah
-     * sebabnya toleransi kursi ikut diturunkan ke 0,34 m.
+     * Konsekuensinya dua kursi sesisi hanya berjarak 0,76 m, dan itulah sebabnya
+     * toleransi kursi turun ke 0,34 m.
      */
-    const dasar = [
-      { x: 0.38, z: setengahL + renggang },   // sisi jauh, kiri
-      { x: -0.38, z: setengahL + renggang },  // sisi jauh, kanan
+    const polaWarung = [
+      { x: 0.48, z: setengahL + renggang },   // sisi jauh, kiri
+      { x: -0.48, z: setengahL + renggang },  // sisi jauh, kanan
       { x: setengahP + renggang, z: -0.10 },  // ujung, digeser sedikit
-      { x: -(setengahP + renggang), z: 0 },   // ujung seberang
+      { x: -(setengahP + renggang), z: -0.06 }, // ujung seberang, digeser juga
     ];
+
+    /**
+     * Lesehan: CINCIN mengelilingi dulang.
+     *
+     * Bukan satu-per-sisi persegi. Tikar 1,60 x 1,20 itu kecil; empat orang
+     * satu per sisi memberi jarak terdekat 0,73 m, yang LOLOS invarian
+     * penetapan kursi (> 0,68 m) tetapi tetap membuat badan chibi selebar
+     * ~0,90 m saling tembus. Terlihat di render, tidak terlihat di uji —
+     * karena ujinya menjaga pertanyaan yang berbeda.
+     *
+     * Cincin jari-jari 0,55 m dengan TIGA orang memberi 0,95 m: lolos
+     * dua-duanya, dan tiga orang memang muat wajar di tikar sebesar ini.
+     */
+    const polaLesehan = Array.from({ length: this.jumlahKursi }, (_, i) => {
+      const sudut = (i / this.jumlahKursi) * Math.PI * 2;
+      return {
+        x: Math.sin(sudut) * SPEK.lesehanJariDuduk,
+        z: Math.cos(sudut) * SPEK.lesehanJariDuduk,
+      };
+    });
+
+    /**
+     * Dua kursi harus BERHADAPAN, bukan mengambil dua entri pertama dari pola
+     * empat — dua entri pertama meja warung ada di sisi panjang yang SAMA, jadi
+     * dua orang akan duduk bersebelahan menatap arah yang sama. Untuk meja kafe
+     * dua kursi, berhadapan itu justru intinya.
+     */
+    const polaBerdua = [
+      { x: setengahP + renggang, z: 0 },
+      { x: -(setengahP + renggang), z: 0 },
+    ];
+
+    const pola = this.jumlahKursi === 2
+      ? polaBerdua
+      : (this.gaya === 'warung' ? polaWarung : polaLesehan);
 
     const out = [];
     const cos = Math.cos(this.rotasi);
@@ -196,13 +302,14 @@ export class MejaNongkrong {
     for (let i = 0; i < this.jumlahKursi; i++) {
       let lx;
       let lz;
-      if (this.jumlahKursi <= dasar.length && i < dasar.length) {
-        ({ x: lx, z: lz } = dasar[i]);
+      if (this.jumlahKursi <= pola.length && i < pola.length) {
+        ({ x: lx, z: lz } = pola[i]);
       } else {
         // Meja bisa diminta lebih dari empat kursi. Selebihnya melingkar di
         // jari-jari yang sama besarnya — tetap deterministik.
         const jari = setengahP + renggang;
         const sudut = (i / this.jumlahKursi) * Math.PI * 2;
+        // (deret melingkar untuk jumlah kursi di luar pola bernama)
         lx = Math.sin(sudut) * jari;
         lz = Math.cos(sudut) * jari;
       }
@@ -223,7 +330,12 @@ export class MejaNongkrong {
       const rz = -lx * sin + lz * cos;
       const x = this.x + rx;
       const z = this.z + rz;
-      out.push({ i, x, z, lx, lz, facing: Math.atan2(this.x - x, this.z - z) });
+      out.push({
+        i, x, z, lx, lz,
+        facing: Math.atan2(this.x - x, this.z - z),
+        // Tinggi duduk ikut kursinya, bukan konstanta global.
+        tinggiDuduk: this.spekGaya.tinggiDuduk,
+      });
     }
     return out;
   }
@@ -252,14 +364,26 @@ export class MejaNongkrong {
     return min;
   }
 
+  get ikon() { return this.spekGaya.ikon; }
+  get ajakan() { return this.spekGaya.ajakan; }
+
   get toleransiKursi() { return SPEK.jariKursi; }
+
+  /** Ambang KEDUA: jarak minimum supaya badan avatar tidak saling tembus.
+   *  Berbeda dari toleransiKursi, yang menjaga penetapan kursi tidak ambigu. */
+  get lebarBadan() { return SPEK.lebarBadan; }
 
   /**
    * Radius InteractionVolume. Melingkupi BIDANG tempatnya, bukan cuma mejanya
    * — hint yang baru muncul saat orang sudah berdiri di antara dingklik
    * terlambat untuk jadi ajakan.
    */
-  get jariInteraksi() { return SPEK.panjangBidang / 2 + 0.75; }
+  get jariInteraksi() {
+    if (this.gaya === 'warung') return SPEK.panjangBidang / 2 + this.spekGaya.jariInteraksiTambahan;
+    // Gaya lain tidak punya bidang tanah sendiri; ukurannya dari lingkar kursi.
+    const terjauh = Math.max(...this._kursi.map((k) => Math.hypot(k.x - this.x, k.z - this.z)));
+    return terjauh + this.spekGaya.jariInteraksiTambahan;
+  }
 
   // ── BANGUN 3D ────────────────────────────────────────
   /** @param {THREE.Object3D} induk */
@@ -268,12 +392,18 @@ export class MejaNongkrong {
     g.position.set(this.x, 0, this.z);
     g.rotation.y = this.rotasi;
 
-    this._pasangWilayah(g);
-    this._pasangMeja(g);
-    this._pasangAtap(g);
-    this._pasangDingklik(g);
-    this._pasangBendaMeja(g);
-    this._pasangRangkaLampu(g);
+    if (this.gaya === 'warung') {
+      this._pasangWilayah(g);
+      this._pasangMeja(g);
+      this._pasangAtap(g);
+      this._pasangDingklik(g);
+      this._pasangBendaMeja(g);
+      this._pasangRangkaLampu(g);
+    } else if (this.gaya === 'lesehan') {
+      this._pasangLesehan(g);
+    } else {
+      this._pasangKafe(g);
+    }
 
     induk.add(g);
     this.grup = g;
@@ -829,6 +959,163 @@ export class MejaNongkrong {
     buatBohlam(0, 0, SPEK.jariTudung, 1, 2.35);
     buatBohlam(SPEK.jarakPendamping, zTiang * 0.55, SPEK.jariTudung * 0.55, 0.3, 1.55);
     buatBohlam(-SPEK.jarakPendamping, zTiang * 0.55, SPEK.jariTudung * 0.55, 0.3, 1.55);
+  }
+
+  /**
+   * LESEHAN — tikar digelar di tanah, satu dulang rendah, orang duduk bersila.
+   *
+   * Tikarnya GLB dari Rupa3D (`assets/models/tikar_pandan.glb`), bukan kotak
+   * pipih. Yang digantikan adalah balok 1,60 x 0,06 x 1,20 di Malioboro:
+   * 6 cm itu tebal PAPAN, tikar pandan sekitar 8 mm. Dan yang membuat sesuatu
+   * terbaca sebagai tikar bukan tebalnya, melainkan ANYAMANNYA — bilah
+   * bersilangan dua arah pada tinggi berbeda supaya ada bayangan di tiap
+   * persilangan.
+   *
+   * Kalau GLB-nya gagal dimuat, tikar sementara dari geometri dipakai supaya
+   * tempatnya tetap ada dan tetap bisa diduduki. Lebih baik tikar sederhana
+   * daripada orang duduk di udara.
+   *
+   * @param {THREE.Group} g
+   */
+  _pasangLesehan(g) {
+    const P = SPEK.lesehanPanjang;
+    const L = SPEK.lesehanLebar;
+
+    const sementara = new THREE.Mesh(
+      new THREE.BoxGeometry(P, 0.016, L),
+      MS(PALET.tikar, 0.94),
+    );
+    sementara.position.y = 0.008;
+    sementara.receiveShadow = true;
+    this._catat(g, sementara);
+    this._tikarSementara = sementara;
+
+    // GLTFLoader dimuat lewat script tag yang sama dengan THREE (r128 global).
+    const Pemuat = THREE.GLTFLoader;
+    if (typeof Pemuat === 'function') {
+      new Pemuat().load(
+        'assets/models/tikar_pandan.glb',
+        (hasil) => {
+          if (!this.grup) return;           // meja sudah dilepas sebelum GLB tiba
+          const tikar = hasil.scene;
+          tikar.position.y = 0.002;
+          this.grup.add(tikar);
+          this._tikarGlb = tikar;
+          // Kumpulkan mesh GLB ke daftar dispose. Ditelusuri SEKALI di sini,
+          // saat objeknya masih di tangan — bukan dengan menyapu scene nanti
+          // (PRD BAB 2.4). Tumpukan manual, bukan .traverse(), mengikuti pola
+          // yang sudah dipakai World.disposeContent.
+          const tumpuk = [tikar];
+          while (tumpuk.length) {
+            const o = tumpuk.pop();
+            if (o.isMesh) this.objek.push(o);
+            if (o.children?.length) tumpuk.push(...o.children);
+          }
+          // Tikar sementara baru dilepas SETELAH penggantinya benar-benar ada,
+          // supaya tidak pernah ada frame tanpa tikar sama sekali.
+          sementara.visible = false;
+        },
+        undefined,
+        () => { /* biarkan tikar sementara; tempatnya tetap bisa dipakai */ },
+      );
+    }
+
+    // Dulang rendah di tengah — permukaan taruh gelas, bukan meja makan.
+    const dulang = new THREE.Mesh(
+      new THREE.CylinderGeometry(SPEK.dulangJari, SPEK.dulangJari * 0.88, SPEK.dulangTinggi, 14),
+      MS(PALET.daun, 0.82),
+    );
+    dulang.position.y = SPEK.dulangTinggi / 2 + 0.016;
+    dulang.castShadow = true;
+    this._catat(g, dulang);
+
+    const teko = new THREE.Mesh(new THREE.SphereGeometry(0.085, 9, 7), MS(PALET.gerabah, 0.8));
+    teko.scale.y = 0.78;
+    teko.position.set(0, SPEK.dulangTinggi + 0.08, 0);
+    this._catat(g, teko);
+
+    const imGelas = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.029, 0.024, 0.075, 8), MS(PALET.kain, 0.55), 2,
+    );
+    imGelas.name = `${this.id}_gelas_lesehan`;
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const p = new THREE.Vector3();
+    const sk = new THREE.Vector3(1, 1, 1);
+    [[0.17, 0.09], [-0.15, -0.11]].forEach(([gx, gz], i) => {
+      p.set(gx, SPEK.dulangTinggi + 0.054, gz);
+      m.compose(p, q, sk);
+      imGelas.setMatrixAt(i, m);
+    });
+    imGelas.instanceMatrix.needsUpdate = true;
+    g.add(imGelas);
+    this.objek.push(imGelas);
+  }
+
+  /**
+   * KAFE — meja bundar berkaki tunggal + dua kursi bersandaran.
+   *
+   * Bentuk ini SENGAJA bahasa kafe, bukan warung: Braga art deco memang
+   * budaya kafe trotoar, dan memaksakan dingklik warung di sana akan salah
+   * tempat. Geometrinya mengikuti meja kafe yang sudah ada di
+   * BragaSpotRuntime supaya tidak ada dua bahasa visual di satu Spot.
+   *
+   * @param {THREE.Group} g
+   */
+  _pasangKafe(g) {
+    const daun = new THREE.Mesh(
+      new THREE.CylinderGeometry(SPEK.kafeJariDaun, SPEK.kafeJariDaun * 0.86, 0.08, 14),
+      MS(PALET.daun, 0.82),
+    );
+    daun.position.y = SPEK.kafeTinggiMeja;
+    daun.castShadow = true;
+    this._catat(g, daun);
+
+    const kaki = new THREE.Mesh(
+      new THREE.CylinderGeometry(0.06, 0.09, SPEK.kafeTinggiMeja - 0.04, 10),
+      MS(PALET.logamKafe, 0.7),
+    );
+    kaki.position.y = (SPEK.kafeTinggiMeja - 0.04) / 2;
+    this._catat(g, kaki);
+
+    const m = new THREE.Matrix4();
+    const q = new THREE.Quaternion();
+    const p = new THREE.Vector3();
+    const sk = new THREE.Vector3(1, 1, 1);
+    const sumbuY = new THREE.Vector3(0, 1, 0);
+    const n = this._kursi.length;
+
+    const imDudukan = new THREE.InstancedMesh(
+      new THREE.CylinderGeometry(0.24, 0.21, 0.08, 10), MS(PALET.kursiKafe, 0.84), n,
+    );
+    imDudukan.name = `${this.id}_dudukan_kafe`;
+    imDudukan.castShadow = true;
+
+    const imSandaran = new THREE.InstancedMesh(
+      new THREE.BoxGeometry(0.42, 0.5, 0.06), MS(PALET.kursiKafe, 0.84), n,
+    );
+    imSandaran.name = `${this.id}_sandaran_kafe`;
+
+    this._kursi.forEach((k, i) => {
+      p.set(k.lx, SPEK.kafeTinggiDudukan, k.lz);
+      m.compose(p, q, sk);
+      imDudukan.setMatrixAt(i, m);
+
+      // Sandaran di sisi LUAR kursi, menghadap meja — arah keluar dari pusat.
+      const jarak = Math.hypot(k.lx, k.lz) || 1;
+      const ux = k.lx / jarak;
+      const uz = k.lz / jarak;
+      p.set(k.lx + ux * 0.2, SPEK.kafeTinggiDudukan + 0.26, k.lz + uz * 0.2);
+      q.setFromAxisAngle(sumbuY, Math.atan2(ux, uz) + Math.PI / 2);
+      m.compose(p, q, sk);
+      imSandaran.setMatrixAt(i, m);
+      q.identity();
+    });
+
+    imDudukan.instanceMatrix.needsUpdate = true;
+    imSandaran.instanceMatrix.needsUpdate = true;
+    g.add(imDudukan, imSandaran);
+    this.objek.push(imDudukan, imSandaran);
   }
 
   // ── KETERISIAN ───────────────────────────────────────

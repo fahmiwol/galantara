@@ -8,6 +8,7 @@ import { getSavedAvatarColorIndex, setSavedAvatarColorIndex } from '../data/avat
 
 /** Turunnya badan saat duduk: dudukan dingklik 0,38 m dikurangi tenggelamnya
  *  badan chibi ke dalam dudukan. */
+/** Cadangan kalau kursinya tidak menyebutkan tingginya sendiri. */
 const TINGGI_DUDUK = -0.16;
 
 export class Avatar {
@@ -176,7 +177,11 @@ export class Avatar {
     // tulang, INI yang membedakan duduk dari berdiri diam — dan dari kamera
     // isometrik Galantara, itu sudah cukup terbaca.
     if (this._kursi) {
-      bobY = TINGGI_DUDUK + Math.sin(this._bobTimer * 0.9) * 0.012;
+      // Tinggi datang dari KURSINYA, bukan konstanta global: lesehan duduk di
+      // lantai, kursi kafe lebih tinggi daripada dingklik. Satu angka untuk
+      // ketiganya akan salah di dua tempat.
+      const turun = this._kursi.tinggiDuduk ?? TINGGI_DUDUK;
+      bobY = turun + Math.sin(this._bobTimer * 0.9) * 0.012;
     }
 
     this.mesh.position.set(this.pos.x, bobY, this.pos.z);

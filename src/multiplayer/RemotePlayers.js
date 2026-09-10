@@ -2,8 +2,10 @@
 // RemotePlayers.js — Render & update avatar pemain lain
 // ═══════════════════════════════════════════════════════
 
-/** Sama dengan Avatar.TINGGI_DUDUK — kalau berbeda, orang akan terlihat
- *  melayang di kursinya sendiri dibanding di layar orang lain. */
+/** Cadangan saja. Tinggi yang sebenarnya dikirim per pemain oleh Game, karena
+ *  ia bergantung pada GAYA meja — lesehan di lantai, kursi kafe lebih tinggi.
+ *  Kalau angka ini sampai berbeda dari yang dipakai Avatar, orang akan terlihat
+ *  melayang di layar orang lain sementara di layarnya sendiri duduk benar. */
 const TINGGI_DUDUK = -0.16;
 
 export class RemotePlayers {
@@ -16,8 +18,8 @@ export class RemotePlayers {
      *  posisi oleh Game (bukan dikirim server), lalu dipakai di sini semata
      *  untuk POSE — supaya orang yang duduk terlihat duduk di layar orang
      *  lain, bukan berdiri di atas dingkliknya.
-     *  @type {Set<string>} */
-    this._duduk = new Set();
+     *  @type {Map<string, number>} socketId -> pergeseran Y saat duduk */
+    this._duduk = new Map();
   }
 
   // ── ADD PLAYER ────────────────────────────────────────
@@ -78,9 +80,16 @@ export class RemotePlayers {
     });
   }
 
-  /** @param {Set<string>|string[]} daftar socketId yang sedang duduk */
+  /**
+   * @param {Map<string, number>|Set<string>|string[]} daftar
+   *   Map socketId -> tinggi duduk (pergeseran Y). Set/array masih diterima
+   *   dan memakai tinggi bawaan, supaya pemanggil lama tidak patah.
+   */
   setDuduk(daftar) {
-    this._duduk = daftar instanceof Set ? daftar : new Set(daftar || []);
+    if (daftar instanceof Map) { this._duduk = daftar; return; }
+    const m = new Map();
+    for (const sid of (daftar || [])) m.set(sid, TINGGI_DUDUK);
+    this._duduk = m;
   }
 
   // ── UPDATE POSISI ─────────────────────────────────────
@@ -118,7 +127,7 @@ export class RemotePlayers {
       mx.z += (p.targetZ - mx.z) * 0.15;
       // Turun/naik dilerp, bukan dipatok, supaya duduk terlihat sebagai
       // gerakan menurunkan badan dan bukan sebagai kedutan satu frame.
-      const yTarget = this._duduk.has(sid) ? TINGGI_DUDUK : 0;
+      const yTarget = this._duduk.get(sid) ?? 0;
       mx.y += (yTarget - mx.y) * 0.18;
       p.mesh.rotation.y = p.facing;
 

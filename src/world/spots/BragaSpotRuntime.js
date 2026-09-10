@@ -12,6 +12,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
+import { MejaNongkrong } from '../MejaNongkrong.js';
 import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
 
 // THREE global — jangan `import 'three'`; klien memuatnya lewat tag script.
@@ -52,6 +53,9 @@ export class BragaSpotRuntime {
     this._warpRing = null;
     /** @type {InteractionVolume[]} */
     this.interactionVolumes = [];
+    /** Social node Spot ini — dibaca Game untuk keterisian kursi.
+     *  @type {MejaNongkrong[]} */
+    this.meja = [];
     /**
      * Unsur BERULANG dikumpulkan sebagai transform dulu, lalu digambar
      * sekali lewat InstancedMesh. Versi pertama membuat satu mesh untuk tiap
@@ -199,41 +203,6 @@ export class BragaSpotRuntime {
     buat(lengkungGeo, MS(PALET.aksenTeal, 0.8), this._ulang.lengkung, 'braga_lengkung');
   }
 
-  /** Meja kafe trotoar + dua kursi. Inilah "nongkrong"-nya. */
-  _mejaKafe(g, x, z) {
-    const meja = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.42, 0.36, 0.08, 12),
-      MS(PALET.kayu, 0.82),
-    );
-    meja.position.set(x, 0.74, z);
-    meja.castShadow = true;
-    g.add(meja);
-
-    const kaki = new THREE.Mesh(
-      new THREE.CylinderGeometry(0.06, 0.09, 0.72, 8),
-      MS(0x3a3a3a, 0.7),
-    );
-    kaki.position.set(x, 0.36, z);
-    g.add(kaki);
-
-    for (const s of [-1, 1]) {
-      const dudukan = new THREE.Mesh(
-        new THREE.CylinderGeometry(0.24, 0.21, 0.08, 10),
-        MS(PALET.coral, 0.84),
-      );
-      dudukan.position.set(x + s * 0.78, 0.46, z);
-      dudukan.castShadow = true;
-      g.add(dudukan);
-
-      const sandaran = new THREE.Mesh(
-        new THREE.BoxGeometry(0.42, 0.5, 0.06),
-        MS(PALET.coral, 0.84),
-      );
-      sandaran.position.set(x + s * 0.98, 0.72, z);
-      sandaran.rotation.y = Math.PI / 2;
-      g.add(sandaran);
-    }
-  }
 
   /**
    * @param {THREE.Scene} scene
@@ -300,7 +269,24 @@ export class BragaSpotRuntime {
     // Kafe trotoar — meja-meja di sisi barat, menghadap jalan.
     const KAFE_X = -(JALAN_LEBAR / 2 + TROTOAR_LEBAR * 0.5);
     for (let i = 0; i < 4; i += 1) {
-      this._mejaKafe(g, KAFE_X, -8 + i * 4.2);
+      // Meja kafe yang BISA DIDUDUKI, bukan hiasan.
+      //
+      // Bentuknya sengaja tetap bahasa kafe — daun bundar, kaki tunggal, kursi
+      // bersandaran — bukan dingklik warung. Braga art deco memang budaya kafe
+      // trotoar; memaksakan meja warung di sini akan salah tempat, dan akan
+      // membuat dua bahasa visual bertabrakan di satu Spot.
+      const meja = new MejaNongkrong({
+        id: `braga_kafe_${i + 1}`,
+        nama: 'Kafe trotoar',
+        gaya: 'kafe',
+        x: KAFE_X,
+        z: -8 + i * 4.2,
+        kursi: 2,
+        // Menghadap jalan, seperti meja kafe trotoar sungguhan.
+        rotasi: Math.PI / 2,
+      });
+      meja.bangun(g);
+      this.meja.push(meja);
     }
 
     // Tenda kafe coral. Aksen dipakai HEMAT — kalau coral ditaburkan
@@ -374,17 +360,14 @@ export class BragaSpotRuntime {
             else T.show('Buka Peta Spot dari bar bawah (ikon peta) 🗺', 'g');
           },
         }),
-        new InteractionVolume({
-          id: 'braga_kafe',
+        ...this.meja.map((m) => new InteractionVolume({
+          id: m.id,
           shape: 'sphere',
-          center: { x: KAFE_X, z: -3.8 },
-          radius: 3.4,
-          hint: '☕ Kafe trotoar — duduk & ngobrol',
-          useKeyHint: '[F]',
-          onUse: () => {
-            T.show('Duduk di trotoar Braga + proximity chat — menyusul ☕', 'g');
-          },
-        }),
+          center: { x: m.x, z: m.z },
+          radius: m.jariInteraksi,
+          hint: `☕ ${m.nama}`,
+          useKeyHint: '[F] duduk',
+        })),
         new InteractionVolume({
           id: 'braga_galeri',
           shape: 'sphere',
