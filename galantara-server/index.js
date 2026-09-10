@@ -283,14 +283,15 @@ io.on('connection', (socket) => {
 
 if (LOCAL) {
   const root = path.resolve(__dirname, '..');
-  app.get('/local-health', (_, res) => res.json({ ok: true, app: 'galantara-local', mode: 'guest', port: 4000 }));
+  app.get('/local-health', (_, res) => res.json({ ok: true, app: 'galantara-local', mode: 'guest', port: server.address().port }));
   app.get('/three.min.js', (_, res) => res.sendFile(require.resolve('three/build/three.min.js')));
   app.get('/vendor/GLTFLoader.js', (_, res) => res.sendFile(path.join(__dirname, 'node_modules/three/examples/js/loaders/GLTFLoader.js')));
-  for (const dir of ['src', 'assets', 'data']) app.use('/' + dir, express.static(path.join(root, dir), { dotfiles: 'deny' }));
+  for (const dir of ['src', 'assets', 'data', 'vendor']) app.use('/' + dir, express.static(path.join(root, dir), { dotfiles: 'deny' }));
   for (const file of ['index.html', 'benteng.html', 'about.html']) app.get('/' + file, (_, res) => res.sendFile(path.join(root, file)));
   app.get('/', (_, res) => res.sendFile(path.join(root, 'index.html')));
 }
-const PORT = LOCAL ? 4000 : (process.env.PORT || 3005);
+// Tests use 0 for an OS-assigned port; normal local launches stay on 4000.
+const PORT = LOCAL ? Number(process.env.GALANTARA_LOCAL_PORT ?? 4000) : (process.env.PORT || 3005);
 server.listen(PORT, LOCAL ? '127.0.0.1' : undefined, () => {
-  console.log(`✅ Galantara multiplayer server running on :${PORT}`);
+  console.log(`✅ Galantara multiplayer server running on :${server.address().port}`);
 });

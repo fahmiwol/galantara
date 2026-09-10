@@ -14,6 +14,92 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-11 · UNIT 1 SELESAI — boot lokal memakai vendor
+
+Allowlist Express `--local` sekarang menyajikan `vendor/`, tetap menolak
+dotfile dan tidak membuka root repo. `GALANTARA_LOCAL_PORT=0` memungkinkan
+tes memakai port dari OS; default tetap 4000/loopback. Health melaporkan port
+aktual. Tes HTTP menjalankan server sungguhan, memeriksa byte pustaka/font,
+halaman/aset utama, serta penolakan berkas internal.
+
+**Verifikasi:** `npm test` **61/61 pass, 0 skip**, 57 Markdown/31 tautan lolos;
+`git diff --check` lolos. Smoke browser: Oola tampil, pintu Benteng terbuka,
+masuk arena dan kembali ke Oola; tidak ada console error/warning. Proses dan
+tab uji ditutup, proses lama port 4000 tidak diubah.
+
+**Belum diuji/risiko:** bukan uji gameplay realtime, multiplayer dua pemain,
+auth/voice atau deploy. Server lama perlu dimulai ulang untuk memakai patch.
+Tes HTTP memberi skip eksplisit jika dependency server belum dipasang.
+
+**Yang salah:** ekstraktor awal hanya membaca atribut HTML sehingga melewatkan
+loader `muat('/vendor/...')`; guard jumlah path menangkapnya, regex diperbaiki.
+Bridge berganti sesi: satu patch terlanjur berjalan dalam batch setelah
+heartbeat gagal. Edit kemudian dihentikan sampai lease lama kedaluwarsa dan
+claim baru berhasil. Jangan batch heartbeat dengan edit tanpa memeriksa hasil;
+gunakan lease 600 detik, bukan 1800. Temuan disimpan di Omiga `Lc142aa5037`
+dan `L927abfa07d`.
+
+**Penyesuaian batas sesi:** lima unit, tetap maksimal tiga file per unit.
+Unit 3 menyelaraskan package + metadata lockfile; unit 4 catatan rilis/README;
+unit 5 hanya HANDOFF dan verifikasi akhir. Tidak menambah fitur.
+
+---
+
+## 2026-09-11 · Sesi GPT — Fase 0, STATE SEKARANG
+
+**Sebelum menulis kode:** checkout C:\galantara bersih pada `8e133d0`, sama
+dengan origin/main. README, PRD utama v4, rekonsiliasi Benteng/web, rencana
+Fase 0, builder v1.3, CHANGELOG, log ini, TODO, BACKLOG, 14 ADR dan handoff
+terbaru dibaca; 20 commit terakhir diperiksa. GitHub issue terbuka: **0**
+(`gh issue list --repo fahmiwol/galantara --state open`).
+
+**North Star, bukan arah karangan:** PRD §1.1: “Pasar Malam Digital Indonesia
+-- Tempat Nongkrong, Jualan, dan Main Bareng.” README: “Pasar malam digital
+Indonesia di browser.” Builder §Final Goal: “Build Galantara as a creator
+platform, not just a game”. Ini tujuan platform yang bertahap, bukan izin
+mengganti runtime atau langsung membuat builder penuh.
+
+**Sudah jadi:** Oola kota kedatangan + enam Spot, guest movement/presence,
+bubble chat, Meja Nongkrong di Oola, tantangan harian tanpa koin, Benteng 4v4
+bot dan alat playtest, vendor pustaka Oola, dokumentasi ADR. Baseline
+`npm test`: **60/60 pass**, 57 Markdown/31 tautan relatif lolos. **Tidak ada
+build step** menurut README dan ADR-0001; tidak mengarang perintah build.
+
+**Rusak/tertahan:** pemeriksaan server Express `--local` pada port ephemeral
+mereproduksi `/` **200**, tetapi `/vendor/three.r128.min.js`, `/vendor/nunito.css`,
+`/vendor/socket.io.4.8.3.min.js`, `/vendor/supabase-js.2.min.js` semuanya **404**.
+Direktori vendor belum masuk allowlist server. Workflow rsync juga belum
+menyalin vendor, meskipun index memerlukannya. Artinya tes hijau belum menjamin
+jalur `npm run dev` bisa membuka dunia. Sepuluh stub interaksi Spot, ekonomi,
+moderasi, chat radius meja, dan gate 20 match manusia masih backlog.
+
+**LOCKED:** THREE global r128/tanpa bundler (ADR-0001); kepemilikan resource
+tanpa traverse (0002); kursi deterministik turunan posisi (0003); overlay
+berdasarkan ukuran layar + toast cadangan (0004–5); daily challenge tanpa koin
+palsu (0006); **deploy manual-only sampai ada server** (0007); lampu relatif dan
+atap sengkuap (0008–9); vendor lokal dengan pengecualian layanan Supabase dan
+analytics produksi (0010); instrumen sesuai objek yang diukur (0011–12);
+review API hanya alat opsional, tidak dipakai sesi ini (0013); package.json
+sumber versi, PATCH untuk perbaikan (0014). Benteng tetap harness web, tidak
+migrasi Unity/Nakama dan tidak menyentuh kontrak CSV.
+
+**Dokumen yang bertentangan:** PRD lama menulis R3F/Fastify/LiveKit dan TODO
+April masih menyebut deploy otomatis/VPS. ADR September, README dan kode
+menegaskan vanilla Three/Express/WebRTC + manual-only. Arsip lama tidak
+ditulis ulang. Bukti server 404 tetap benar apa pun aspirasi platformnya.
+
+**Pilihan sebelum mulai — UNIT 1:** perbaiki allowlist vendor lokal dan tambah
+tes HTTP server sungguhan, termasuk batas akses file internal. Prioritas 1
+(rusak), lebih defensible daripada P0.1 meja Braga/Malioboro. Port ephemeral
+untuk tes tidak boleh mengganggu server/user pada port 4000.
+
+**Batas sesi:** rencana empat unit kecil: (1) server lokal, (2) kelengkapan
+vendor di workflow manual, (3) versi/changelog, (4) README/handoff/pendaratan.
+Setiap unit maksimal tiga file termasuk log, diverifikasi lalu commit/push.
+Tidak memulai fitur baru; push tidak menyalakan deploy sesuai ADR-0007.
+
+---
+
 ## 2026-09-11 · Dokumentasi, dan membuat klaim "self-hosted" jadi benar
 
 **Yang dikerjakan:** LICENSE (MIT), README ditulis ulang, `PAPER.md`, 14 ADR,
