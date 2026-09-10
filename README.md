@@ -14,7 +14,7 @@ sebagian besar interaksinya belum ada. Lihat [Apa yang sudah dan belum](#apa-yan
 — tidak ada yang dilebihkan di sana.
 
 - **Lisensi:** MIT
-- **Versi:** 0.8.0 · [CHANGELOG](CHANGELOG.md)
+- **Versi:** 0.8.1 · [CHANGELOG](CHANGELOG.md)
 - **Backlog jujur:** [docs/BACKLOG.md](docs/BACKLOG.md)
 - **Keputusan teknis:** [docs/adr/](docs/adr/)
 - **Catatan metode:** [PAPER.md](PAPER.md)
@@ -38,14 +38,23 @@ npm run install:server
 npm run dev
 ```
 
+Buka `http://127.0.0.1:4000`. Mode ini menyajikan halaman, vendor lokal dan
+Socket.io dari proses yang sama, hanya pada loopback. Jika proses dev sudah
+berjalan sebelum pembaruan server, hentikan dari terminalnya lalu jalankan
+`npm run dev` lagi. `GALANTARA_LOCAL_PORT` boleh diisi port lain; `0` memilih
+port kosong dari OS dan port aktual ditampilkan saat server siap.
+
 **Uji:**
 
 ```bash
 npm test
 ```
 
-60 uji di Node murni tanpa browser, **lalu pemeriksa tautan dokumen**. Yang
-kedua ikut karena di repo ini dokumentasi adalah hasil kerja, dan tautan rusak
+62 uji di Node tanpa browser, **lalu pemeriksa tautan dokumen**. Termasuk tes
+HTTP server sungguhan untuk aset vendor dan batas akses berkas. Pasang
+dependency server melalui `npm run install:server` agar tes HTTP tidak skip.
+Tes paket deploy hanya memeriksa kontrak workflow, bukan menjalankan deploy.
+Pemeriksa tautan ikut karena di repo ini dokumentasi adalah hasil kerja, dan tautan rusak
 tidak menghasilkan error apa pun — ia cuma membuat pembaca buntu, dan pembaca
 yang buntu tidak melapor, ia pergi.
 
@@ -144,7 +153,7 @@ Dibangun untuk proyek ini, disimpan di repo, bukan skrip sekali pakai:
 | `tools/rupa3d/*.py` | Pembangun rumah adat lewat Blender headless, dari konstanta bernama |
 | `tools/tanya-gpt.mjs` | Pendapat kedua, bisa mengirim render sungguhan |
 | `tools/penerima-render.mjs` | Mengeluarkan tangkapan render dari halaman ke berkas |
-| `tools/periksa-tautan.mjs` | Memastikan tautan relatif di 57 dokumen menunjuk berkas yang ada |
+| `tools/periksa-tautan.mjs` | Memastikan tautan relatif dokumen menunjuk berkas yang ada |
 
 ---
 
@@ -174,7 +183,7 @@ Browser-based 3D social world set in Indonesia. Vanilla ES modules, no build
 step, Three.js r128 as a global. Socket.io for multiplayer; Supabase for auth
 only — the world runs fully as a guest without it.
 
-**Run:** `npx serve -p 4000 .` · **Test:** `npm test` (60 tests, pure Node)
+**Run:** `npx serve -p 4000 .` · **Test:** `npm test` (62 Node tests; install server dependencies for the HTTP test)
 
 Two patterns here may be of general interest, both documented with their
 failure modes in [PAPER.md](PAPER.md):

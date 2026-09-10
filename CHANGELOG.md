@@ -2,6 +2,33 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [0.8.1] · 2026-09-11
+
+Hasilnya kecil: menutup celah penyajian aset lokal, bukan fitur pemain baru.
+
+### Fixed
+- Server `npm run dev` kini menyajikan `vendor/`. Sebelumnya index terbuka
+  tetapi pustaka/font vendor 404; tes unit lama tidak memeriksa jalur HTTP ini.
+  Allowlist tetap terbatas dan dotfile/berkas internal tetap tidak disajikan.
+- Paket deploy statis menyertakan seluruh `vendor/`, termasuk font/lisensi.
+  Pemicu tetap **manual-only** dan deploy tidak dijalankan; belum ada server.
+
+### Tests & tooling
+- Tes HTTP menjalankan server lokal sungguhan di port OS-assigned, mencocokkan
+  byte aset dan memeriksa penolakan path internal. `GALANTARA_LOCAL_PORT=0`
+  untuk tes; pemakaian biasa tetap `127.0.0.1:4000`, health memakai port aktual.
+- Tes kontrak struktur workflow menjaga kelengkapan aset dan trigger manual.
+  Bukan uji SSH/rsync/deploy nyata. Terbukti merah sebelum perbaikan vendor.
+- **62/62 tes lulus, 0 skip** pada lingkungan dengan dependency server terpasang;
+  tes HTTP memberi skip jelas bila dependency server belum dipasang.
+- Root package dan metadata paket link lokal di lockfile selaras **0.8.1**.
+
+### Batas verifikasi
+- Smoke browser Oola → Benteng → masuk arena → Oola berhasil tanpa console
+  error/warning. Tidak mengklaim validasi gameplay realtime, login, voice,
+  multiplayer dua pemain, instalasi bersih atau deploy. Proses lama port 4000
+  tidak dimatikan; mulai ulang `npm run dev` untuk memakai patch server.
+
 ## [0.8.0] · 2026-09-11
 > **Berkumpul, dan berdiri sendiri.** Bubble chat, Meja Nongkrong, dan seluruh
 > pustaka klien dipindah ke dalam repo sehingga Galantara jalan tanpa satu pun

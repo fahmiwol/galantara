@@ -14,6 +14,25 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-11 · UNIT 4 SELESAI — rilis dicatat tanpa klaim berlebih
+
+CHANGELOG 0.8.1 mencatat dua perbaikan, tes, dan batas verifikasi. README kini
+menjelaskan server loopback, restart setelah patch, port uji, 62 tes dan skip
+jika dependency belum tersedia. **Verifikasi:** `npm test` 62/62 pass, 0 skip;
+57 Markdown/31 tautan lolos; `git diff --check` lolos. Tidak ada perubahan
+runtime pada unit ini; batas uji tetap sama. Berikutnya hanya handoff akhir.
+
+---
+
+## 2026-09-11 · Pilihan UNIT 4 — catatan rilis yang sesuai bukti
+
+Unit 3 sudah push `cb2025c`. Lengkapi ritual pendaratan dengan CHANGELOG 0.8.1
+dan README: URL server loopback, kebutuhan restart proses lama, serta cakupan
+tes HTTP versus kontrak deploy. Tidak mengubah dokumen riset/ADR lama atau
+mengklaim deploy/fitur baru. Setelah unit ini hanya handoff akhir.
+
+---
+
 ## 2026-09-11 · UNIT 3 SELESAI — metadata 0.8.1 selaras
 
 Root package dan metadata paket induk di lockfile server kini **0.8.1**.
