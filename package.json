@@ -1,6 +1,6 @@
 {
   "name": "galantara-repo",
-  "version": "0.8.0",
+  "version": "0.8.1",
   "private": true,
   "description": "Galantara — static web (Three.js + ES modules) + Socket.io multiplayer server",
   "engines": {

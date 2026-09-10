@@ -14,6 +14,26 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-11 · UNIT 3 SELESAI — metadata 0.8.1 selaras
+
+Root package dan metadata paket induk di lockfile server kini **0.8.1**.
+Tidak ada dependency baru atau perubahan resolusi. `npm test` **62/62 pass,
+0 skip**, 57 Markdown/31 tautan lolos; assertion Node memverifikasi dua versi
+sama. Belum menguji instalasi bersih dependency (yang berubah hanya metadata
+versi paket link lokal). CHANGELOG/README masih 0.8.0 sampai unit 4 pendaratan.
+
+---
+
+## 2026-09-11 · Pilihan UNIT 3 — versi patch dan metadata paket
+
+Unit 2 sudah push `dcd4f84`. Dua perbaikan selesai; mulai pendaratan.
+Menurut ADR-0014, hasil kecil ini menaikkan 0.8.0 ke **0.8.1**, bukan MINOR.
+Selaraskan juga metadata paket induk `packages[".."]` dalam lockfile server
+yang masih 0.5.1. Tidak mengubah versi/dependency server atau resolusi paket.
+Catatan rilis/README menyusul unit 4; unit 5 khusus handoff akhir.
+
+---
+
 ## 2026-09-11 · UNIT 2 SELESAI — vendor ikut paket statis
 
 Workflow manual sekarang menyalin seluruh `vendor/` ke URL yang sama, termasuk
