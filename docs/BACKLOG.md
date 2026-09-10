@@ -131,6 +131,20 @@ Bogor (warung), Malioboro (batik), Monas (oleh-oleh), Losari (pisang epe).
 Semuanya menunggu P2.1; membangun katalog sebelum koin berarti hanya
 memindahkan janji kosong ke tempat yang lebih dalam.
 
+### P2.3 · Lepas dari Supabase — KOSONG
+
+Lahir dari ADR-0010. Setelah semua pustaka klien di-vendor, **Supabase adalah
+satu-satunya layanan komersial yang tersisa di runtime**. Pustakanya sudah
+lokal; layanannya tidak.
+
+Yang menahannya jadi masalah kecil: **dunia jalan penuh sebagai tamu tanpa
+Supabase** — jalan-jalan, multiplayer, Benteng, Spot, meja nongkrong. Yang butuh
+Supabase hanya login, chat, dan preferensi avatar.
+
+Jalur keluar paling masuk akal: **PostgREST + GoTrue self-hosted**. Supabase
+memang lapisan di atas keduanya, jadi bentuk APInya tidak berubah drastis.
+Butuh server — jadi ini menunggu hal yang sama dengan deploy.
+
 ---
 
 ## P3 — Yang belum punya dasar sama sekali (PRD)

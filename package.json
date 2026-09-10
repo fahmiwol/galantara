@@ -8,7 +8,9 @@
   },
   "scripts": {
     "dev": "node galantara-server/index.js --local",
-    "test": "node --experimental-default-type=module --test tests/*.test.mjs",
+    "test": "node --experimental-default-type=module --test tests/*.test.mjs && npm run periksa:tautan",
+    "test:unit": "node --experimental-default-type=module --test tests/*.test.mjs",
+    "periksa:tautan": "node tools/periksa-tautan.mjs",
     "install:server": "cd galantara-server && npm install",
     "server": "cd galantara-server && npm start",
     "server:dev": "cd galantara-server && npm run dev",

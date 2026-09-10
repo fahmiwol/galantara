@@ -43,7 +43,12 @@ npm run dev
 npm test
 ```
 
-60 uji, semuanya di Node murni tanpa browser.
+60 uji di Node murni tanpa browser, **lalu pemeriksa tautan dokumen**. Yang
+kedua ikut karena di repo ini dokumentasi adalah hasil kerja, dan tautan rusak
+tidak menghasilkan error apa pun — ia cuma membuat pembaca buntu, dan pembaca
+yang buntu tidak melapor, ia pergi.
+
+`npm run test:unit` kalau cuma mau ujinya.
 
 ### Offline
 
@@ -138,6 +143,7 @@ Dibangun untuk proyek ini, disimpan di repo, bukan skrip sekali pakai:
 | `tools/rupa3d/*.py` | Pembangun rumah adat lewat Blender headless, dari konstanta bernama |
 | `tools/tanya-gpt.mjs` | Pendapat kedua, bisa mengirim render sungguhan |
 | `tools/penerima-render.mjs` | Mengeluarkan tangkapan render dari halaman ke berkas |
+| `tools/periksa-tautan.mjs` | Memastikan tautan relatif di 57 dokumen menunjuk berkas yang ada |
 
 ---
 
