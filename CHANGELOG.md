@@ -23,9 +23,27 @@
   (layar `#5E8C7A`, bukan usulan brief `#BFE3D0` yang hanya Delta-E 17,4);
   halo jadi busur 225° yang diam.
 
+### Added
+- **Collider dan batas sendiri** untuk Bogor (38), Monas (41), dan Malioboro
+  (21) — bangunan tidak lagi bisa ditembus, dan pemain berhenti di tepi
+  alun-alun, plaza, dan jalan yang terlihat (bukan di cincin 17 m bawaan).
+  Braga, Kuta, dan Losari menyusul.
+
+### Fixed
+- **Dingklik warung bisa dinaiki.** Ambang naik nyata kapsul 0,40 m, bukan
+  parameter 0,35; collider dingklik dan alas portal dinaikkan ke 0,60 m.
+- **Kapsul menembus dinding sesaat** sampai 7 cm saat menapak sambil menyentuh
+  dinding. `normalNudgeFactor` 3e-3, dipilih dari dua set lintasan: 0 langkah
+  > 2 cm, tanpa tersendat, tanpa getar.
+- **Monas:** atap miring rumah kebaya terpasang terbalik, tiang teras tidak
+  menopang apa pun, tugu melayang 8 cm.
+- **Malioboro:** PointLight 10 → 3, dan kios tidak lagi gelap di malam hari.
+
 ### Tests
 - `tests/dayNight.test.mjs`: model Lambert r128 dijangkarkan ke piksel terukur
   (±6 %), lalu menjaga tidak ada jam dengan kanal ≥ 250, siang hijau, malam biru.
+- `tests/fisikaSpot-{bogor,monas,malioboro}.test.mjs`: titik muncul, 16 arah,
+  titik berdiri tiap kursi, pelepasan kelompok, lampu.
 
 ## [0.9.0] · 2026-09-15
 > **Dunia yang bisa ditabrak.** Pemain tidak lagi menembus pohon, rumah, dan

@@ -14,6 +14,45 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-15 · Enam agen, enam Spot — dan dua temuan yang lebih besar dari Spot-nya
+
+Collider enam Spot dikerjakan paralel oleh enam agen, satu berkas runtime
+masing-masing, dengan aturan ADR-0016 dan uji wajib yang sama. Yang paling
+berguna bukan collider-nya, tapi dua temuan tentang MESIN yang tidak akan
+ketahuan dari Oola:
+
+**Ambang naik nyata 0,40 m** (agen Bogor). Parameter `naikTangga` 0,35, tapi
+ujung kapsul bundar masih menaiki benda 0,40. Dingklik warung Oola — yang
+collider-nya setinggi dudukan, 0,40 — ternyata bisa dinaiki. Diukur ulang,
+benar; dinaikkan ke 0,60 dan diberi uji.
+
+**Tembus dinding sesaat** (agen Malioboro): sampai 9 cm dari ±1,5 juta langkah.
+Saya ukur lima nilai `normalNudgeFactor` — dan hasilnya tidak monoton. Di set
+lintasan pertama 5e-3 terlihat terbaik; di set kedua 3e-3 jelas terbaik dan
+5e-3 kalah. Kalau saya berhenti di set pertama, saya akan memasang nilai yang
+salah dengan bukti yang tampak meyakinkan. Dipilih 3e-3 dari dua set, dengan
+metrik tersendat dan getar sekaligus.
+
+Satu laporan agen **tidak** tereproduksi (collider basi setelah teleport). Tetap
+dipasang pengamannya karena murah, dan komentarnya bilang terus terang bahwa
+belum tereproduksi.
+
+Agen Monas menemukan tiga cacat visual dengan mengukur, bukan melihat: atap
+rumah kebaya terbalik (tepi luar 3,105 di atas tepi dalam 2,335, sementara
+gigi balang digantung di 2,34 — hanya cocok kalau tandanya dibalik), tiang
+teras yang tidak menopang apa pun, dan tugu melayang 8 cm. Diperbaiki.
+
+Agen Malioboro mengikuti letak lampu dari brief GPT, lalu mencatat sendiri
+bahwa letak itu membuat kedua kios gelap. Saya menyimpang dari brief: cahaya
+untuk tempat orang berhenti, bukan untuk ritme hiasan. Uji "lampu bergantian
+sisi" diganti uji "tiap titik kumpul ≤ 5 m dari lampu".
+
+**Yang dibayar:** tiap agen menghabiskan 280–360 rb token dan 20–30 menit.
+Enam salinan angka alas portal di enam runtime — dipusatkan setelah semua
+selesai.
+
+---
+
 ## 2026-09-15 · Pulau yang putih — instrumen yang salah selama berminggu-minggu
 
 Saat menilai hasil brief suasana di browser, tanah Oola jam 15.30 tampak nyaris
