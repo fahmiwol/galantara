@@ -4,10 +4,17 @@
 // Palet dari PRD BAB 4.2 — Merah-oranye primer, Biru Navy sekunder.
 // Rumah panggung Bugis-Makassar datang dari
 // assets/spots/losari/manifest.json (dibangun dengan Rupa3D).
+//
+// Fisika (ADR-0016): tanah, batas, dan collider prop dinyatakan di sini, di
+// sebelah mesh masing-masing. `fisikaTanah = true` membuat Game TIDAK memasang
+// lantai datar + cincin 17 m bawaan. Rumah panggung dari manifest belum punya
+// collider — Galantara belum membaca collider dari GLB (ADR-0016, belum
+// diputuskan), jadi tiang dan tangganya masih bisa ditembus.
+// Diuji: tests/fisikaSpot-losari.test.mjs.
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
-import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
+import { animateSpotWarpPortal, createSpotWarpPortal, FISIKA_ALAS_PORTAL } from '../spotWarpPortal.js';
 
 // THREE global — jangan `import 'three'`; klien memuatnya lewat tag script.
 const MS = (color, roughness = 0.78) =>
@@ -26,9 +33,54 @@ const PALET = {
 
 // Anjungan menghadap laut. Sumbu X = garis pantai, +Z = arah darat,
 // -Z = laut. Semua penempatan mengacu ke situ supaya tidak saling tabrak.
-const ANJUNGAN_LEBAR = 30;   // sepanjang garis pantai
-const ANJUNGAN_DALAM = 13;   // dari bibir air ke darat
-const BIBIR_Z = -ANJUNGAN_DALAM / 2;
+// "Kiri/kanan" pada nama collider = dilihat dari darat menghadap laut (−X/+X).
+//
+// Diekspor untuk tests/fisikaSpot-losari.test.mjs: area yang boleh diinjak
+// diturunkan dari angka yang sama dengan mesh, bukan disalin ke uji.
+export const ANJUNGAN_LEBAR = 30;   // sepanjang garis pantai
+export const ANJUNGAN_DALAM = 13;   // dari bibir air ke darat
+export const BIBIR_Z = -ANJUNGAN_DALAM / 2;
+// Lis di bibir air. 0,34 m — jauh di bawah ambang panjat nyata (pendekatan
+// serong memanjat sampai ±0,50 m), jadi batas lautnya dinding penuh; lihat mount().
+export const LIS_TINGGI = 0.34;
+export const LIS_DALAM = 0.5;       // bertumpu separuh di anjungan, separuh di atas air
+// Dermaga menjorok ke laut dari bibir air.
+export const DERMAGA_X = -7;
+export const DERMAGA_LEBAR = 2.6;
+export const DERMAGA_PANJANG = 9;
+const DERMAGA_TEBAL = 0.3;
+const DERMAGA_Y = 0.05;
+/** Permukaan dermaga: 0,20 di atas paving anjungan (y = 0). */
+export const DERMAGA_ATAS = DERMAGA_Y + DERMAGA_TEBAL / 2;
+
+// Tepi-tepi yang dipakai collider, diturunkan dari angka di atas.
+const TEPI_KIRI = -ANJUNGAN_LEBAR / 2;
+const TEPI_KANAN = ANJUNGAN_LEBAR / 2;
+const TEPI_DARAT = ANJUNGAN_DALAM / 2;
+const BIBIR_DALAM = BIBIR_Z + LIS_DALAM / 2;   // muka lis yang menghadap darat
+const BIBIR_LUAR = BIBIR_Z - LIS_DALAM / 2;    // muka lis yang menghadap laut
+const DERMAGA_KIRI = DERMAGA_X - DERMAGA_LEBAR / 2;
+const DERMAGA_KANAN = DERMAGA_X + DERMAGA_LEBAR / 2;
+const DERMAGA_UJUNG = BIBIR_Z - DERMAGA_PANJANG;
+
+// Batas tak terlihat. Tebal dan tinggi sama dengan bawaan dindingPersegi.
+const BATAS_TEBAL = 0.6;
+const BATAS_TINGGI = 3;
+const PUSAT = Object.freeze({ x: 0, y: 0, z: 0 });
+
+/**
+ * Deskriptor kotak sejajar sumbu dari rentang DUNIA [min, max] per sumbu,
+ * untuk didaftarkan dengan induk (0, 0, 0). Batas dan ambang paling jelas
+ * dibaca sebagai "dari sini sampai sini"; menghitung pusat dan ukuran penuh
+ * di kepala adalah tempat salah tanda terjadi.
+ */
+function kotakRentang([x0, x1], [y0, y1], [z0, z1]) {
+  return {
+    bentuk: 'kotak',
+    ukuran: [x1 - x0, y1 - y0, z1 - z0],
+    letak: [(x0 + x1) / 2, (y0 + y1) / 2, (z0 + z1) / 2],
+  };
+}
 
 export class LosariSpotRuntime {
   constructor() {
@@ -54,10 +106,24 @@ export class LosariSpotRuntime {
    * @param {{
    *   toast: { show: (msg: string, type?: string) => void },
    *   openPanel?: (id: string) => void,
+   *   fisika?: import('../../fisika/Fisika.js').Fisika,
+   *   kelompokFisika?: string,
    * }} [ctx]
    */
   mount(scene, ctx = null) {
     const g = this.root;
+
+    // Spot ini menyatakan tanah dan batasnya sendiri. Bawaan Game (lantai
+    // 120 × 120 di y = 0 + cincin 17 m) salah di sini: lantainya menutupi laut
+    // sehingga pemain berjalan di atas air, dan cincinnya jauh melewati tepi
+    // darat anjungan (13 m dalamnya).
+    this.fisikaTanah = true;
+    const fisika = ctx?.fisika ?? null;
+    const kelompok = ctx?.kelompokFisika;
+    // Aman tanpa fisika (no-op) dan sebelum fisika siap (antrean di Fisika).
+    const daftarFisika = (pemilik, deskriptor, induk = PUSAT) => {
+      fisika?.daftarkan(kelompok, deskriptor, induk, 0, `losari:${pemilik}`);
+    };
 
     // Anjungan — permukaan yang bisa dijalani.
     const anjungan = new THREE.Mesh(
@@ -68,17 +134,40 @@ export class LosariSpotRuntime {
     anjungan.receiveShadow = true;
     g.add(anjungan);
     this.raycastMeshes.push(anjungan);
+    // Tanah: permukaan atas collider = paving yang terlihat, y = 0.
+    daftarFisika('anjungan', [{ bentuk: 'kotak', ukuran: [ANJUNGAN_LEBAR, 0.9, ANJUNGAN_DALAM] }], anjungan.position);
+    // Batas di tiga tepi darat. Di balik tepi ini tidak ada apa-apa — anjungan
+    // menggantung di udara — jadi tanpa dinding pemain jatuh sampai BATAS_JATUH
+    // lalu dikembalikan ke titik muncul. Muka dalam dinding = tepi paving:
+    // pusat pemain berhenti 0,42 m (jari kapsul + offset) di dalamnya, badannya
+    // tidak menggantung di atas kekosongan. Tepi laut dijaga lis di bawah.
+    daftarFisika('batas-anjungan', [
+      kotakRentang([TEPI_KIRI - BATAS_TEBAL, TEPI_KANAN + BATAS_TEBAL], [0, BATAS_TINGGI], [TEPI_DARAT, TEPI_DARAT + BATAS_TEBAL]),
+      kotakRentang([TEPI_KIRI - BATAS_TEBAL, TEPI_KIRI], [0, BATAS_TINGGI], [BIBIR_LUAR, TEPI_DARAT + BATAS_TEBAL]),
+      kotakRentang([TEPI_KANAN, TEPI_KANAN + BATAS_TEBAL], [0, BATAS_TINGGI], [BIBIR_LUAR, TEPI_DARAT + BATAS_TEBAL]),
+    ]);
 
     // Lis di bibir air — penanda batas yang jelas dari kamera atas, sekaligus
     // pagar visual supaya pemain tahu di mana daratannya berhenti.
     const lis = new THREE.Mesh(
-      new THREE.BoxGeometry(ANJUNGAN_LEBAR, 0.34, 0.5),
+      new THREE.BoxGeometry(ANJUNGAN_LEBAR, LIS_TINGGI, LIS_DALAM),
       MS(PALET.tepi, 0.8),
     );
-    lis.position.set(0, 0.17, BIBIR_Z);
+    lis.position.set(0, LIS_TINGGI / 2, BIBIR_Z);
     g.add(lis);
+    // Batas laut: jejak XZ sama dengan lis, tingginya dinding penuh. Volume
+    // setinggi mesh (0,34) DINAIKI pengendali karakter — pemain naik ke lis
+    // lalu jatuh ke laut; kontrol itu dijaga uji. Ini batas laut, bukan
+    // bangku, jadi tidak ada alasan menyisakan tinggi yang bisa dilangkahi.
+    // Mulut dermaga dibiarkan terbuka; ambangnya dinyatakan di dermaga.
+    daftarFisika('batas-bibir', [
+      kotakRentang([TEPI_KIRI, DERMAGA_KIRI], [0, BATAS_TINGGI], [BIBIR_LUAR, BIBIR_DALAM]),
+      kotakRentang([DERMAGA_KANAN, TEPI_KANAN], [0, BATAS_TINGGI], [BIBIR_LUAR, BIBIR_DALAM]),
+    ]);
 
     // Laut. Bidang besar, jauh melewati anjungan, warnanya navy sesuai PRD.
+    // Tanpa collider: tidak untuk diinjak, dan batas di atas menjaga pemain
+    // tidak pernah sampai ke sana.
     const laut = new THREE.Mesh(
       new THREE.PlaneGeometry(120, 90),
       MS(PALET.laut, 0.42),
@@ -91,6 +180,7 @@ export class LosariSpotRuntime {
 
     // Garis buih tipis di batas air. Tanpa ini, laut dan anjungan cuma dua
     // bidang yang bersentuhan — tidak terbaca sebagai pantai.
+    // Hiasan di atas air, di luar batas: tanpa collider.
     const buih = new THREE.Mesh(
       new THREE.BoxGeometry(ANJUNGAN_LEBAR + 6, 0.04, 0.7),
       MS(PALET.buih, 0.6),
@@ -99,17 +189,41 @@ export class LosariSpotRuntime {
     g.add(buih);
 
     // Dermaga menjorok ke laut.
-    const DERMAGA_X = -7;
-    const DERMAGA_PANJANG = 9;
     const dermaga = new THREE.Mesh(
-      new THREE.BoxGeometry(2.6, 0.3, DERMAGA_PANJANG),
+      new THREE.BoxGeometry(DERMAGA_LEBAR, DERMAGA_TEBAL, DERMAGA_PANJANG),
       MS(PALET.kayu, 0.86),
     );
-    dermaga.position.set(DERMAGA_X, 0.05, BIBIR_Z - DERMAGA_PANJANG / 2);
+    dermaga.position.set(DERMAGA_X, DERMAGA_Y, BIBIR_Z - DERMAGA_PANJANG / 2);
     dermaga.receiveShadow = true;
     g.add(dermaga);
     this.raycastMeshes.push(dermaga);
+    // Dermaga BISA DIJALANI. Tiga hal di kode ini yang memutuskannya:
+    // permukaannya 0,20 di atas anjungan (satu anak tangga), menempel tepat di
+    // bibir air, dan volume "lihat matahari terbenam" di tengahnya (jari 3 m
+    // di z = −11) tidak terjangkau dari anjungan, tempat pusat pemain paling
+    // jauh sampai z ≈ −5,8.
+    daftarFisika('dermaga', [
+      { bentuk: 'kotak', ukuran: [DERMAGA_LEBAR, DERMAGA_TEBAL, DERMAGA_PANJANG] },
+    ], dermaga.position);
+    // Ambang di mulut dermaga. Lis dibangun sebagai satu balok selebar
+    // anjungan, jadi 0,34 m-nya melintang juga di sini. Volume permainannya
+    // disamakan dengan lantai dermaga: naiknya 0,20, bukan 0,34 yang hanya
+    // 1 cm di bawah PARAM.naikTangga dan akan putus diam-diam begitu angka itu
+    // diturunkan. Yang dibayar: kaki tenggelam 14 cm di lis sepanjang 0,5 m.
+    daftarFisika('ambang-dermaga', [
+      kotakRentang([DERMAGA_KIRI, DERMAGA_KANAN], [0, DERMAGA_ATAS], [BIBIR_LUAR, BIBIR_DALAM]),
+    ]);
+    // Batas kedua sisi dan ujung dermaga, muka dalamnya = tepi papan. Sisi-
+    // sisinya diteruskan sampai muka darat lis supaya BERTUMPUK dengan batas
+    // lis, bukan sekadar bersentuhan — sudut mulut dermaga tanpa celah.
+    daftarFisika('batas-dermaga', [
+      kotakRentang([DERMAGA_KIRI - BATAS_TEBAL, DERMAGA_KIRI], [0, BATAS_TINGGI], [DERMAGA_UJUNG - BATAS_TEBAL, BIBIR_DALAM]),
+      kotakRentang([DERMAGA_KANAN, DERMAGA_KANAN + BATAS_TEBAL], [0, BATAS_TINGGI], [DERMAGA_UJUNG - BATAS_TEBAL, BIBIR_DALAM]),
+      kotakRentang([DERMAGA_KIRI - BATAS_TEBAL, DERMAGA_KANAN + BATAS_TEBAL], [0, BATAS_TINGGI], [DERMAGA_UJUNG - BATAS_TEBAL, DERMAGA_UJUNG]),
+    ]);
 
+    // Tiang dermaga tanpa collider: seluruhnya di bawah papan (puncaknya rata
+    // dengan permukaan dermaga), pemain tidak pernah menyentuhnya.
     for (let i = 0; i < 4; i += 1) {
       const tiang = new THREE.Mesh(
         new THREE.CylinderGeometry(0.13, 0.13, 1.4, 6),
@@ -125,6 +239,9 @@ export class LosariSpotRuntime {
 
     // Pinisi — siluet perahu layar. Bukan model detail; yang dikenali dari
     // kejauhan cuma lambung gelap dan dua layar segitiga.
+    // Tanpa collider: berlabuh ±11 m dari bibir, lebih dari 10 m dari titik
+    // mana pun yang bisa diinjak. Ia juga bergoyang (animate), jadi collider
+    // tetap akan salah seandainya pun terjangkau.
     const pinisi = new THREE.Group();
     pinisi.name = 'losari_pinisi';
     const lambung = new THREE.Mesh(
@@ -157,6 +274,9 @@ export class LosariSpotRuntime {
     gerobak.position.set(EPE_X, 0.48, EPE_Z);
     gerobak.castShadow = true;
     g.add(gerobak);
+    // Padat setinggi gerobaknya (0,95 m, jauh di atas batas naik tangga).
+    // Tungku di atasnya masuk jejak gerobak — tidak butuh volume sendiri.
+    daftarFisika('gerobak-epe', [{ bentuk: 'kotak', ukuran: [2.0, 0.95, 1.1] }], gerobak.position);
 
     const tungku = new THREE.Mesh(
       new THREE.BoxGeometry(0.7, 0.16, 0.5),
@@ -186,6 +306,9 @@ export class LosariSpotRuntime {
       tiang.position.set(x, 1.5, BIBIR_Z + 1.4);
       tiang.castShadow = true;
       g.add(tiang);
+      // Tiangnya saja, selebar pangkalnya; bohlam 3,1 m di atas kepala.
+      // Celah tiang–lis 1,04 m > lebar kapsul 0,84 m: bibir tetap bisa disusuri.
+      daftarFisika(`tiang-lampu-${i}`, [{ bentuk: 'silinder', ukuran: [0.22, 3.0, 0.22] }], tiang.position);
 
       const bohlam = new THREE.Mesh(
         new THREE.SphereGeometry(0.24, 10, 8),
@@ -211,6 +334,8 @@ export class LosariSpotRuntime {
     const warpZ = ANJUNGAN_DALAM / 2 - 2.5;
     const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
     this._warpRing = warpRing;
+    // Alasnya saja, deskriptor bersama semua Spot (alasan tingginya di sana).
+    daftarFisika('alas-portal', FISIKA_ALAS_PORTAL, { x: warpX, y: 0, z: warpZ });
 
     this.interactionVolumes = [];
     if (ctx?.toast) {
