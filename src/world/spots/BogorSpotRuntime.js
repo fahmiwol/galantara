@@ -7,7 +7,7 @@ import { cincinTepi } from '../../fisika/Fisika.js';
 import { UKURAN_KAPSUL } from '../../fisika/Karakter.js';
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
 import { MejaNongkrong } from '../MejaNongkrong.js';
-import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
+import { animateSpotWarpPortal, createSpotWarpPortal, FISIKA_ALAS_PORTAL } from '../spotWarpPortal.js';
 
 const MS = (color, roughness = 0.72) =>
   new THREE.MeshStandardMaterial({
@@ -189,15 +189,9 @@ export class BogorSpotRuntime {
     const warpZ = -5.2;
     const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
     this._warpRing = warpRing;
-    // Mesh portal dibangun spotWarpPortal.js (berkas bersama), jadi collider-nya
-    // di sini dengan angka alasnya: CylinderGeometry(0,45, 0,65, 0,45) di y 0,22.
-    // Hanya alas yang padat — cincinnya BERPUTAR di animate() dan melangkah ke
-    // cincin portal memang yang diharapkan; piringan (1,45 m) dan label (2,75 m)
-    // di atas kepala. Diameter bawah 1,30, sama dengan portal Oola.
-    // Tinggi 0,60, bukan 0,45: ujung kapsul bundar, dan terukur ia MEMANJAT tepi
-    // silinder 0,45 (kaki naik sampai 0,40 m) walau batas naik tangga 0,35.
-    this._daftarFisika([{ bentuk: 'silinder', ukuran: [1.3, 0.6, 1.3], letak: [0, 0.3, 0] }],
-      { x: warpX, y: 0, z: warpZ }, 0, 'bogor_portal');
+    // Collider alas portal dinyatakan sekali di spotWarpPortal.js (angka dan
+    // alasannya di sana), bukan disalin per Spot.
+    this._daftarFisika(FISIKA_ALAS_PORTAL, { x: warpX, y: 0, z: warpZ }, 0, 'bogor_portal');
 
     this.interactionVolumes = [];
     if (ctx?.toast) {

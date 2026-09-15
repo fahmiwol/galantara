@@ -6,7 +6,7 @@
 import { cincinTepi } from '../../fisika/Fisika.js';
 import { UKURAN_KAPSUL } from '../../fisika/Karakter.js';
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
-import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
+import { animateSpotWarpPortal, createSpotWarpPortal, FISIKA_ALAS_PORTAL } from '../spotWarpPortal.js';
 
 const MS = (color, roughness = 0.72) =>
   new THREE.MeshStandardMaterial({
@@ -294,12 +294,9 @@ export class MonasSpotRuntime {
     const warpZ = 0.5;
     const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
     this._warpRing = warpRing;
-    // Mesh portal ada di spotWarpPortal.js (bersama semua Spot); angka ini
-    // SALINAN pedestalnya: CylinderGeometry(0.45, 0.65, 0.45) di y 0,22.
-    // Ubah keduanya bersamaan. Hanya pedestal yang padat — cincinnya
-    // berputar, sama dengan portal Oola (World._buildWarpPortal).
-    this._daftarFisika([{ bentuk: 'silinder', ukuran: [1.3, 0.45, 1.3], letak: [0, 0.22, 0] }],
-      { x: warpX, y: 0, z: warpZ }, 0, 'monas_portal');
+    // Collider alas portal dinyatakan sekali di spotWarpPortal.js. Salinan
+    // lama di sini memakai tinggi mesh 0,45 — terukur bisa dipanjat.
+    this._daftarFisika(FISIKA_ALAS_PORTAL, { x: warpX, y: 0, z: warpZ }, 0, 'monas_portal');
 
     this.interactionVolumes = [];
     if (ctx?.toast) {

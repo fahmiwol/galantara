@@ -422,9 +422,10 @@ export class World {
     // Hanya pedestal yang padat. Cincinnya BERPUTAR di sumbu Y (animate), jadi
     // collider tetap yang mana pun salah separuh waktu — dan ini portal:
     // melangkah ke dalam cincinnya memang yang diharapkan orang.
-    // Volume 0,60 walau pedestalnya 0,50: benda 0,40–0,45 m masih bisa dinaiki
-    // kapsul (ambang nyata), jadi 0,50 terlalu dekat dengan ambangnya.
-    this._daftarFisika([{ bentuk: 'silinder', ukuran: [1.4, 0.6, 1.4], letak: [0, 0.3, 0] }], { x, y, z }, 0, 'warp_portal');
+    // Volume 0,70 walau pedestalnya 0,50: pendekatan serong memanjat benda
+    // sampai 0,50 m (tools/fisika/sapu-panjat.mjs) — sama dengan alas portal
+    // Spot di spotWarpPortal.js.
+    this._daftarFisika([{ bentuk: 'silinder', ukuran: [1.4, 0.7, 1.4], letak: [0, 0.35, 0] }], { x, y, z }, 0, 'warp_portal');
 
     // Label sign
     this._buildSign(x, y + 2.8, z, '🌀 Warp Portal', 0x4F46E5);

@@ -26,6 +26,7 @@ const {
   cariTempatBerdiri, calonMelingkar, lepasKarakter, LANGKAH, UKURAN_KAPSUL,
 } = await import('../src/fisika/Karakter.js');
 const { MonasSpotRuntime, JARI_TEPI, SEGMEN_TEPI } = await import('../src/world/spots/MonasSpotRuntime.js');
+const { FISIKA_ALAS_PORTAL } = await import('../src/world/spotWarpPortal.js');
 
 const muatRapier = () => import(new URL('../vendor/rapier3d-compat.0.20.0.js', import.meta.url).href).then((m) => m.default);
 const JARI = UKURAN_KAPSUL[0] / 2;
@@ -184,7 +185,14 @@ test('Monas: collider tiap benda padat setinggi dan setapak mesh-nya; hiasan dan
   for (const m of padat) {
     const p = m.geometry.parameters;
     const nama = `${m.geometry.type}(${Object.values(p).slice(0, 3).join(', ')})`;
-    const puncak = new THREE.Vector3(0, p.height / 2, 0).applyMatrix4(m.matrixWorld).y;
+    // Satu pengecualian yang DISENGAJA: alas portal lebih tinggi dari mesh-nya
+    // (0,70 vs 0,445) karena pendekatan serong memanjat benda sampai 0,50 m —
+    // volume permainan, ADR-0016. Angkanya dibaca dari deskriptor bersama,
+    // bukan diketik ulang.
+    const alasPortal = m.parent?.name === 'spot:warp_portal_anchor';
+    const puncak = alasPortal
+      ? FISIKA_ALAS_PORTAL[0].ukuran[1]
+      : new THREE.Vector3(0, p.height / 2, 0).applyMatrix4(m.matrixWorld).y;
     const kotak = m.geometry.type === 'BoxGeometry';
     // Titik di ruang LOKAL mesh, jadi putaran rumah kebaya ikut teruji.
     const dalam = kotak

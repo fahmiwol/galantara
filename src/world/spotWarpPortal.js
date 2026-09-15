@@ -3,6 +3,24 @@
 // Pakai global THREE (three.min.js dari index.html), bukan import npm — sama World.js.
 // ═══════════════════════════════════════════════════════
 
+/**
+ * Collider alas portal, SATU untuk semua Spot — dulu enam runtime menyalin
+ * angkanya sendiri-sendiri, dan dua di antaranya (Monas, Malioboro) menyalin
+ * tinggi mesh 0,45 yang ternyata bisa dipanjat.
+ *
+ * Tinggi 0,70, bukan 0,45 seperti mesh-nya. Disapu dari 32 arah × 5 geser
+ * (tools/fisika/sapu-panjat.mjs, 15 Sep 2026): silinder Ø1,3 setinggi 0,45
+ * dipanjat 129 dari 160 pendekatan; 0,50 masih 109; mulai 0,54 nol — tetapi
+ * silinder sempit sekali terpanjat di 0,60. 0,70 memberi margin. Hanya alas
+ * yang padat: cincinnya berputar dan memang untuk dimasuki; piringan (1,45 m)
+ * dan label (2,75 m) di atas kepala. Diameter = pangkal mesh (jari 0,65).
+ *
+ * Didaftarkan dengan induk = posisi portal (x, 0, z).
+ */
+export const FISIKA_ALAS_PORTAL = Object.freeze([
+  Object.freeze({ bentuk: 'silinder', ukuran: [1.3, 0.7, 1.3], letak: [0, 0.35, 0] }),
+]);
+
 const MS = (color, roughness = 0.72) =>
   new THREE.MeshStandardMaterial({
     color,

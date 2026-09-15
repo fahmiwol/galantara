@@ -36,12 +36,15 @@ supaya proksi yang diukur di satu tempat berlaku di tempat lain.
    - batang, bukan kanopi;
    - penghalang dimulai dari tanah (kolong meja 0,68 m tidak bisa dilewati avatar
      1,30 m, jadi tidak dimodelkan);
-   - benda rendah yang tidak boleh dinaiki diberi volume ≥ 0,60 m. **Koreksi
-     15 Sep (agen Spot Bogor):** yang dinaiki bukan hanya benda < 0,35 m
-     (parameter `naikTangga`) — ujung kapsul bundar membuat benda **0,40 m**
-     masih dinaiki; tertahan mulai 0,45 (`tools/fisika/ukur-ambang-naik.mjs`).
-     Dingklik warung 0,40 dan alas portal Spot 0,45 ternyata bisa dinaiki;
-     keduanya dinaikkan ke 0,60. Undak yang MEMANG untuk didaki tetap ≤ 0,35;
+   - benda rendah yang tidak boleh dinaiki diberi volume **≥ 0,70 m**. Dikoreksi
+     dua kali pada 15 Sep: pertama (agen Bogor, pendekatan lurus) ambang nyata
+     0,40 → dinaikkan ke 0,60; kedua (agen Braga, pendekatan SERONG, 32 arah ×
+     5 geser, `tools/fisika/sapu-panjat.mjs`) benda sampai **0,50 m** masih
+     dipanjat dan silinder sempit sekali terpanjat di 0,60 → aturan jadi 0,70.
+     Alas portal Spot sekarang satu deskriptor bersama (`FISIKA_ALAS_PORTAL` di
+     `spotWarpPortal.js`); dua Spot sebelumnya menyalin tinggi mesh 0,45 yang
+     dipanjat 129 dari 160 pendekatan. Undak yang MEMANG untuk didaki tetap
+     ≤ 0,35 (0,16–0,35 terpanjat 160/160);
    - benda rapat (rumpun bambu, pagar bilah) jadi satu volume;
    - benda berputar tidak padat, alasnya padat;
    - benda di atas kepala (atap, papan nama, kanopi) tidak diberi collider.

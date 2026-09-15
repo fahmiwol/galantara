@@ -8,7 +8,7 @@
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
 import { MejaNongkrong } from '../MejaNongkrong.js';
-import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
+import { animateSpotWarpPortal, createSpotWarpPortal, FISIKA_ALAS_PORTAL } from '../spotWarpPortal.js';
 import { dindingPersegi } from '../../fisika/Fisika.js';
 
 // THREE global — klien memuat three.min.js lewat tag script. Bare import
@@ -236,13 +236,10 @@ export class MalioboroSpotRuntime {
     const warpZ = JALAN_PANJANG / 2 - 3;
     const { anchor, warpRing } = createSpotWarpPortal(g, warpX, warpZ);
     this._warpRing = warpRing;
-    // Hanya ALAS portal yang padat. Cincinnya berputar di sumbu Y (animate) dan
-    // menyentuh tanah, jadi collider tetap mana pun salah separuh waktu — dan
-    // melangkah ke dalam portal memang yang diharapkan orang. Alasnya
-    // CylinderGeometry(0,45, 0,65, 0,45) di y 0,22 (spotWarpPortal.js): setinggi
-    // 0,45 m, di atas batas naik tangga 0,35. Angkanya disalin di sini karena
-    // berkas bersama itu belum menyatakan collider-nya sendiri.
-    daftarFisika([{ bentuk: 'silinder', ukuran: [1.3, 0.45, 1.3], letak: [0, 0.22, 0] }], anchor.position, 'malioboro_warp_portal');
+    // Collider alas portal dinyatakan sekali di spotWarpPortal.js. Salinan
+    // lama di sini memakai tinggi mesh 0,45 — terukur dipanjat 129 dari 160
+    // pendekatan (tools/fisika/sapu-panjat.mjs).
+    daftarFisika(FISIKA_ALAS_PORTAL, anchor.position, 'malioboro_warp_portal');
 
     this.interactionVolumes = [];
     if (ctx?.toast) {

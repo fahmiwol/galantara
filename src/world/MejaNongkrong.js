@@ -440,9 +440,10 @@ export class MejaNongkrong {
    *   - Penghalang dimulai dari tanah. Daun meja 0,68 m di atas kaki-kaki
    *     tipis tetap tidak bisa dilewati avatar setinggi 1,30 m, jadi kolong
    *     meja tidak perlu dimodelkan.
-   *   - Benda pendek yang tidak boleh DINAIKI diberi volume lebih tinggi dari
-   *     mesh-nya: bangku (0,30 m) dan dulang (0,16 m) ada di bawah batas naik
-   *     tangga pengendali (0,35 m), jadi tanpa ini pemain berjalan di atasnya.
+   *   - Benda pendek yang tidak boleh DINAIKI diberi volume 0,70 m, lebih
+   *     tinggi dari mesh-nya: bangku (0,30 m), dulang (0,16 m), dan dingklik
+   *     (0,40 m). Batas naik tangga pengendali memang 0,35, tapi pendekatan
+   *     serong memanjat benda sampai 0,50 m (tools/fisika/sapu-panjat.mjs).
    * Tikar, bidang tanah, batu pijak, dan atap tidak diberi collider: yang
    * pertama rata dengan tanah, yang terakhir di atas kepala.
    *
@@ -453,17 +454,18 @@ export class MejaNongkrong {
     if (this.gaya === 'warung') {
       out.push({ bentuk: 'kotak', ukuran: [SPEK.panjangDaun, 0.70, SPEK.lebarDaun], letak: [0, 0.35, 0] });
       for (const k of this._kursi) {
-        // 0,60, bukan 0,40 setinggi dudukan: kapsul masih menaiki benda 0,40 m
-        // (ambang nyata, lihat Karakter.js PARAM). Pemain yang duduk tidak
+        // 0,70, bukan 0,40 setinggi dudukan: pendekatan SERONG memanjat benda
+        // sampai 0,50 m (tools/fisika/sapu-panjat.mjs). Pemain yang duduk tidak
         // terpengaruh — kapsulnya dimatikan saat duduk.
-        out.push({ bentuk: 'kotak', ukuran: [0.30, 0.60, 0.30], letak: [k.lx, 0.30, k.lz] });
+        out.push({ bentuk: 'kotak', ukuran: [0.30, 0.70, 0.30], letak: [k.lx, 0.35, k.lz] });
       }
       const zTiang = -(SPEK.lebarDaun / 2 + 0.42);
       for (const x of [SPEK.bentangTiang / 2, -SPEK.bentangTiang / 2]) {
         out.push({ bentuk: 'silinder', ukuran: [0.10, SPEK.tinggiTiang, 0.10], letak: [x, SPEK.tinggiTiang / 2, zTiang] });
       }
     } else if (this.gaya === 'lesehan') {
-      out.push({ bentuk: 'silinder', ukuran: [SPEK.dulangJari * 2 + 0.02, 0.60, SPEK.dulangJari * 2 + 0.02], letak: [0, 0.30, 0] });
+      // Silinder sempit ini sekali terpanjat di 0,60 dari 160 pendekatan; 0,70 nol.
+      out.push({ bentuk: 'silinder', ukuran: [SPEK.dulangJari * 2 + 0.02, 0.70, SPEK.dulangJari * 2 + 0.02], letak: [0, 0.35, 0] });
     } else if (this.gaya === 'kafe') {
       out.push({ bentuk: 'silinder', ukuran: [SPEK.kafeJariDaun * 2, 0.78, SPEK.kafeJariDaun * 2], letak: [0, 0.39, 0] });
       for (const k of this._kursi) {
@@ -472,7 +474,7 @@ export class MejaNongkrong {
         out.push({ bentuk: 'silinder', ukuran: [0.62, 0.97, 0.62], letak: [k.lx, 0.485, k.lz] });
       }
     } else if (this.gaya === 'bangku') {
-      out.push({ bentuk: 'kotak', ukuran: [SPEK.bangkuPanjang, 0.60, SPEK.bangkuDalam], letak: [0, 0.30, 0] });
+      out.push({ bentuk: 'kotak', ukuran: [SPEK.bangkuPanjang, 0.70, SPEK.bangkuDalam], letak: [0, 0.35, 0] });
     }
     return out;
   }
