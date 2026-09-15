@@ -127,6 +127,14 @@ alami ke ekonomi koin (P2) tanpa harus membangun toko penuh dulu.
 
 ---
 
+### ~~P1.5 · Kolisi di enam Spot~~ — **SELESAI 16 Sep**
+Keenam Spot menyatakan tanah, batas, dan collider-nya sendiri (Bogor 38, Braga
+39, Kuta 27, Losari 17 + 18 dari GLB, Malioboro 21, Monas 41), masing-masing
+dengan uji `tests/fisikaSpot-*.test.mjs`. GLB manifest mendapat collider dari
+`<aset>.collider.json`. Catatan asli di bawah dipertahankan.
+
+<details><summary>Catatan asli</summary>
+
 ### P1.5 · Kolisi di enam Spot — STUB bawaan
 Oola lengkap sejak 15 Sep (62 collider, ADR-0015/0016). Enam Spot lain baru
 memakai **tanah dan batas BAWAAN** dari `Game._pasangFisikaBawaanSpot`: lantai
@@ -140,7 +148,13 @@ dan collider tiap bangunan di sebelah mesh-nya. Meja nongkrong Bogor, Braga,
 dan Malioboro sudah punya collider. Uji yang harus ditambah: titik muncul tiap
 Spot bebas, dan tidak ada arah keluar area jalan.
 
-### P1.6 · Suasana betah per Spot — brief ADA, Oola langkah 0-segitiga SELESAI 15 Sep
+</details>
+
+### P1.6 · Suasana betah per Spot — brief ADA, bentroknya DIPUTUSKAN 16 Sep
+Sebelum membangun apa pun dari brief, baca `docs/brief/suasana/KEPUTUSAN.md`:
+anggaran total per Spot (≤ 20.000 segitiga, ≤ 150 draw call, ≤ 3 PointLight,
+diukur `tools/anggaran-spot.mjs`), keputusan atas delapan bentrok, dan cacat
+Braga/Kuta yang harus diperbaiki lebih dulu. Oola hari ini 153 draw call.
 Sudah: Oola (bangku lempeng dihapus, bunga jadi 3 rumpun, pohon dan Dev Hub
 diredam, halo diam) dan kalibrasi cahaya dunia (ADR-0017). Belum: enam Spot,
 panel label Dev Hub/portal, dan elemen bersegitiga dari tabel brief.

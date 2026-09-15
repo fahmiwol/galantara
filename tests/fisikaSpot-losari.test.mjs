@@ -376,3 +376,28 @@ test('Losari: lepasKelompok("spot") mengembalikan jumlah collider ke garis dasar
   }
   lepasKarakter(k);
 });
+
+test('Losari: paling banyak tiga PointLight — bara gerobak dan promenade tengah tetap terang', async () => {
+  // Menelusuri scene SEKALI di uji — kode produk tidak boleh (ADR-0002).
+  const { LosariSpotRuntime } = await import('../src/world/spots/LosariSpotRuntime.js');
+  const rt = new LosariSpotRuntime();
+  rt.mount(new THREE.Scene(), null);
+  const cahaya = [];
+  const bohlam = [];
+  const tumpuk = [rt.root];
+  while (tumpuk.length) {
+    const o = tumpuk.pop();
+    if (o.isPointLight) cahaya.push(o);
+    else if (o.isMesh && o.userData.isLampu) bohlam.push(o);
+    tumpuk.push(...o.children);
+  }
+  assert.ok(cahaya.length >= 1 && cahaya.length <= 3, `${cahaya.length} PointLight di Losari`);
+  assert.ok(bohlam.length > cahaya.length, 'bohlam tanpa PointLight ikut hilang?');
+  const daftar = rt.getLampu ? rt.getLampu() : rt._lampu;
+  for (const l of [...cahaya, ...bohlam]) assert.ok(daftar.includes(l), `${l.type} di luar daftar lampu DayNight`);
+  // Tempat orang berhenti: gerobak pisang epe (8; 2,5) dan pusat promenade (0; bibir).
+  const dekat = (x, z) => Math.min(...cahaya.map((c) => Math.hypot(c.position.x - x, c.position.z - z)));
+  assert.ok(dekat(8, 2.5) <= 2, `gerobak pisang epe gelap: lampu terdekat ${dekat(8, 2.5).toFixed(2)} m`);
+  const zPromenade = Math.max(...cahaya.map((c) => -c.position.z)) * -1;
+  assert.ok(dekat(0, zPromenade) <= 4.5, `promenade tengah gelap: lampu terdekat ${dekat(0, zPromenade).toFixed(2)} m`);
+});

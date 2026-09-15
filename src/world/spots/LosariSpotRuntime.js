@@ -296,7 +296,15 @@ export class LosariSpotRuntime {
     this._lampu.push(baraLight);
 
     // Lampu anjungan sepanjang bibir air.
+    //
+    // Hanya DUA tiang tengah yang membawa PointLight; dua tiang ujung cukup
+    // bohlam emissive. Anggaran ≤ 3 PointLight per Spot (sintesis suasana,
+    // 15 Sep 2026) — Losari sempat 5. three r128 menghitung setiap PointLight
+    // di shader tiap material walau intensitasnya 0. Yang diterangi adalah
+    // yang menjadi identitas Spot ini: promenade tengah yang menghadap laut
+    // (dua tiang ini) dan kerja pisang epe (bara gerobak di atas).
     const JUMLAH_LAMPU = 4;
+    const TIANG_BERCAHAYA = [1, 2];
     for (let i = 0; i < JUMLAH_LAMPU; i += 1) {
       const x = (i / (JUMLAH_LAMPU - 1) - 0.5) * (ANJUNGAN_LEBAR - 8);
       const tiang = new THREE.Mesh(
@@ -321,11 +329,13 @@ export class LosariSpotRuntime {
       g.add(bohlam);
       this._lampu.push(bohlam);
 
-      const nyala = new THREE.PointLight(0xffc98a, 0, 6.5, 2);
-      nyala.position.set(x, 3.1, BIBIR_Z + 1.4);
-      nyala.userData.isLampu = true;
-      g.add(nyala);
-      this._lampu.push(nyala);
+      if (TIANG_BERCAHAYA.includes(i)) {
+        const nyala = new THREE.PointLight(0xffc98a, 0, 6.5, 2);
+        nyala.position.set(x, 3.1, BIBIR_Z + 1.4);
+        nyala.userData.isLampu = true;
+        g.add(nyala);
+        this._lampu.push(nyala);
+      }
     }
 
     scene.add(g);
