@@ -3,11 +3,13 @@
 // Pola sama Monas/Bogor: root, raycast ground, volume + [F], manifest GLB.
 // Palet dari PRD BAB 4.2 — Batik Amber primer, Ungu sekunder.
 // Rumah Joglo datang dari assets/spots/malioboro/manifest.json (Rupa3D).
+// Fisika: tanah, batas, dan collider tiap benda dinyatakan di mount (ADR-0016).
 // ═══════════════════════════════════════════════════════
 
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
 import { MejaNongkrong } from '../MejaNongkrong.js';
 import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
+import { dindingPersegi } from '../../fisika/Fisika.js';
 
 // THREE global — klien memuat three.min.js lewat tag script. Bare import
 // akan mematikan modul ini tanpa error (gotcha tercatat di AGENTS.md).
@@ -26,8 +28,9 @@ const PALET = {
 
 // Malioboro adalah JALAN — bentuknya memanjang, bukan plaza bundar seperti
 // Monas. Itu yang membuatnya langsung terbaca beda dari kamera orbit.
-const JALAN_PANJANG = 34;
-const JALAN_LEBAR = 11;
+// Diekspor supaya uji fisika menghitung batas jalan dari angka yang sama.
+export const JALAN_PANJANG = 34;
+export const JALAN_LEBAR = 11;
 
 export class MalioboroSpotRuntime {
   constructor() {
@@ -52,10 +55,25 @@ export class MalioboroSpotRuntime {
    * @param {{
    *   toast: { show: (msg: string, type?: string) => void },
    *   openPanel?: (id: string) => void,
+   *   fisika?: import('../../fisika/Fisika.js').Fisika,
+   *   kelompokFisika?: string,
    * }} [ctx]
    */
   mount(scene, ctx = null) {
     const g = this.root;
+
+    // Collider tiap benda ditulis TEPAT di bawah mesh-nya, dengan angka yang
+    // sama (ADR-0016). Aman tanpa fisika (ctx null → dilewati) dan sebelum
+    // fisika siap (masuk antrean Fisika). Pelepasannya milik Game: kelompok
+    // Spot dilepas utuh saat warp.
+    const fisika = ctx?.fisika ?? null;
+    const daftarFisika = (deskriptor, induk, pemilik) =>
+      fisika?.daftarkan(ctx.kelompokFisika, deskriptor, induk, 0, pemilik);
+    // Spot ini menyatakan tanah dan batasnya sendiri, jadi Game TIDAK memasang
+    // lantai 120 × 120 + cincin 17 m bawaan. Cincin itu bundar sedangkan jalan
+    // ini persegi panjang: pemain bisa berjalan di udara sampai 11,5 m di luar
+    // tepi jalan.
+    this.fisikaTanah = true;
 
     const trotoar = new THREE.Mesh(
       new THREE.BoxGeometry(JALAN_LEBAR, 0.9, JALAN_PANJANG),
@@ -65,6 +83,15 @@ export class MalioboroSpotRuntime {
     trotoar.receiveShadow = true;
     g.add(trotoar);
     this.raycastMeshes.push(trotoar);
+    // Tanah = balok jalan itu sendiri: permukaan atasnya y = 0, persis yang
+    // terlihat diinjak.
+    daftarFisika([{ bentuk: 'kotak', ukuran: [JALAN_LEBAR, 0.9, JALAN_PANJANG] }], trotoar.position, 'malioboro_trotoar');
+    // Batas: dinding tak terlihat yang permukaan DALAMNYA tepat di tepi balok
+    // jalan, bukan di luarnya. Pusat pemain berhenti jari kapsul + offset
+    // pengendali (0,40 + 0,02) di dalam tepi, jadi badannya tidak menggantung
+    // di atas udara. Dinding yang digeser keluar supaya PUSAT pemain sampai di
+    // tepi akan membuat separuh badannya melayang di luar jalan.
+    daftarFisika(dindingPersegi(JALAN_LEBAR, JALAN_PANJANG), { x: 0, y: 0, z: 0 }, 'malioboro_batas');
 
     // Dua garis tepi. Permukaan datar besar tanpa garis tidak punya ARAH —
     // dari kamera atas ia cuma bidang. Garis inilah yang bilang "ini jalan".
@@ -75,11 +102,37 @@ export class MalioboroSpotRuntime {
       );
       tepi.position.set(sisi * (JALAN_LEBAR / 2 - 0.5), 0.03, 0);
       g.add(tepi);
+      // Tanpa collider, dan itu keputusan: garis ini bagian dari permukaan yang
+      // diinjak, puncaknya cuma 7 cm. Badan avatar memang berpusat di tanah
+      // (Karakter.js), jadi garis setipis ini tidak terbaca menembus kaki;
+      // collider setinggi mesh-nya justru membuat avatar naik-turun 7 cm
+      // setiap kali melintas.
     }
 
     // Lampu jalan berpasangan. Bohlam ditandai userData.isLampu supaya
     // DayNight menyalakannya saat magrib — pola sama dengan prop Oola.
+    //
+    // Hanya TIGA bohlam yang membawa PointLight; tujuh lainnya murni mesh
+    // emissive. Anggaran Spot ≤ 3 PointLight untuk ponsel kelas menengah
+    // (brief suasana Malioboro §3.1; sintesis 15 Sep 2026 §2 "Braga §3 butir 3
+    // dan Malioboro §3 butir 1", §4 urut 4). Tujuh sisanya TIDAK DIBUAT, bukan
+    // dibuat dengan intensitas 0: three r128 memasukkan jumlah PointLight di
+    // scene ke shader setiap material yang menerima cahaya (NUM_POINT_LIGHTS)
+    // tanpa melihat intensitasnya, jadi lampu padam tetap dihitung di tiap
+    // piksel MeshStandardMaterial jalan ini. Bohlam tanpa PointLight tetap ikut
+    // siklus hari — DayNight menyalakan `material.emissiveIntensity` untuk isi
+    // daftar lampu yang bukan light.
+    //
+    // Letaknya MENYIMPANG dari brief §5 (−4,4; −7), (4,4; 0), (−4,4; 7), dengan
+    // alasan terukur: pola bergantian kiri–kanan–kiri membuat kedua kios
+    // (x 3,1; z 4 dan 8,5) gelap di malam hari — kios z 8,5 berjarak ≥ 8,1 m
+    // dari semua lampu, jangkauan 7 m (ditemukan agen Spot Malioboro). Cahaya
+    // di proyek ini dibuat untuk TEMPAT ORANG BERHENTI (lihat MejaNongkrong),
+    // bukan untuk ritme hiasan: (−4,4; −7) menerangi lesehan, (4,4; 0) titik
+    // kedatangan, (4,4; 7) kedua kios. Tetap tiga kolam, tidak seragam.
     const JUMLAH_LAMPU = 5;
+    /** [baris i, sisi] bohlam yang membawa PointLight. */
+    const BERCAHAYA = [[1, -1], [2, 1], [3, 1]];
     for (let i = 0; i < JUMLAH_LAMPU; i += 1) {
       const z = (i / (JUMLAH_LAMPU - 1) - 0.5) * (JALAN_PANJANG - 6);
       for (const sisi of [-1, 1]) {
@@ -92,6 +145,11 @@ export class MalioboroSpotRuntime {
         tiang.position.set(x, 1.7, z);
         tiang.castShadow = true;
         g.add(tiang);
+        // Silinder selebar PANGKAL tiang (jari 0,12), bukan rata-ratanya: tiang
+        // meruncing ke atas, jadi setinggi badan pangkal adalah bagian
+        // terlebar dan tidak ada bagian mesh yang menembus kapsul. Bohlam di
+        // 3,5 m ada di atas kepala — tanpa collider.
+        daftarFisika([{ bentuk: 'silinder', ukuran: [0.24, 3.4, 0.24] }], tiang.position, `malioboro_tiang_${i}_${sisi}`);
 
         const bohlam = new THREE.Mesh(
           new THREE.SphereGeometry(0.26, 10, 8),
@@ -104,13 +162,15 @@ export class MalioboroSpotRuntime {
         g.add(bohlam);
         this._lampu.push(bohlam);
 
-        // Tanpa bayangan — sepuluh lampu bershadow akan menghabiskan HP
-        // kelas menengah, dan kolam cahayanya toh tetap terbaca.
-        const nyala = new THREE.PointLight(0xffd98a, 0, 7, 2);
-        nyala.position.set(x, 3.5, z);
-        nyala.userData.isLampu = true;
-        g.add(nyala);
-        this._lampu.push(nyala);
+        if (BERCAHAYA.some(([baris, s]) => baris === i && s === sisi)) {
+          // Tanpa bayangan — lampu bershadow akan menghabiskan HP kelas
+          // menengah, dan kolam cahayanya toh tetap terbaca.
+          const nyala = new THREE.PointLight(0xffd98a, 0, 7, 2);
+          nyala.position.set(x, 3.5, z);
+          nyala.userData.isLampu = true;
+          g.add(nyala);
+          this._lampu.push(nyala);
+        }
       }
     }
 
@@ -157,6 +217,8 @@ export class MalioboroSpotRuntime {
       tenda.position.set(KIOS_X, 2.4, z);
       tenda.castShadow = true;
       g.add(tenda);
+      // Tenda tanpa collider: bibir bawahnya 1,9 m (pusat 2,4 − setengah tinggi
+      // 0,5), di atas kepala avatar 1,30 m.
 
       const meja = new THREE.Mesh(
         new THREE.BoxGeometry(2.2, 0.9, 1.1),
@@ -165,14 +227,22 @@ export class MalioboroSpotRuntime {
       meja.position.set(KIOS_X, 0.45, z);
       meja.castShadow = true;
       g.add(meja);
+      daftarFisika([{ bentuk: 'kotak', ukuran: [2.2, 0.9, 1.1] }], meja.position, `malioboro_kios_${i + 1}`);
     }
 
     scene.add(g);
 
     const warpX = 0;
     const warpZ = JALAN_PANJANG / 2 - 3;
-    const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
+    const { anchor, warpRing } = createSpotWarpPortal(g, warpX, warpZ);
     this._warpRing = warpRing;
+    // Hanya ALAS portal yang padat. Cincinnya berputar di sumbu Y (animate) dan
+    // menyentuh tanah, jadi collider tetap mana pun salah separuh waktu — dan
+    // melangkah ke dalam portal memang yang diharapkan orang. Alasnya
+    // CylinderGeometry(0,45, 0,65, 0,45) di y 0,22 (spotWarpPortal.js): setinggi
+    // 0,45 m, di atas batas naik tangga 0,35. Angkanya disalin di sini karena
+    // berkas bersama itu belum menyatakan collider-nya sendiri.
+    daftarFisika([{ bentuk: 'silinder', ukuran: [1.3, 0.45, 1.3], letak: [0, 0.22, 0] }], anchor.position, 'malioboro_warp_portal');
 
     this.interactionVolumes = [];
     if (ctx?.toast) {
