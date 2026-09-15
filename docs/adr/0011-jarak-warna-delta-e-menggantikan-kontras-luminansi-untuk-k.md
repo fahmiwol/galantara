@@ -1,6 +1,6 @@
 # ADR-0011 — Jarak warna Delta-E menggantikan kontras luminansi untuk keterbacaan 3D
 
-**Status:** Diterima
+**Status:** Diterima — *instrumennya* dikoreksi ADR-0017: Delta-E dihitung dari piksel yang dirender, bukan dari warna material
 **Tanggal:** 2026-09-11
 **Konteks proyek:** Galantara — dunia 3D sosial Indonesia di browser
 

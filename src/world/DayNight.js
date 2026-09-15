@@ -16,10 +16,117 @@
  *    menggerakkan `lampGlow`, bukan cuma menggelapkan langit.
  *
  * Untuk melihat fase tertentu tanpa menunggu: `?jam=18.5`.
+ *
+ * ── Dua bug yang ditemukan dengan MENGUKUR PIKSEL (15 Sep 2026) ──────────
+ * 1. Renderer memasang AmbientLight 0,6 yang tidak pernah disentuh siklus
+ *    ini. Siang: matahari 1,29 + hemi 0,5 + ambient 0,6 → tanah #a8d5a2
+ *    dirender #ffffff (median 12 titik tanah, jam 12 dan 13.30). Sepanjang
+ *    07:00–17:00 pulau tampak PUTIH; hijaunya hanya muncul setelah magrib.
+ *    Malam: ambient yang sama mengangkat tanah ke hijau terang, jadi kolam
+ *    cahaya lampu warung nyaris tak terbaca.
+ * 2. Kubah langit diserahkan saat konstruksi, SEBELUM World membangunnya —
+ *    referensinya undefined, dan kubah macet di #87ceeb. Palet subuh, jingga
+ *    sore, dan biru tinta malam tidak pernah tampil; hanya kabut yang berubah.
+ * Keputusan warna tanah di ADR-0011 diukur dari warna MATERIAL. Yang dilihat
+ * pemain adalah material × cahaya — instrumen yang benar adalah piksel.
+ *
+ * ── Kenapa KEYFRAME, bukan if/else per fase ─────────────────────────────
+ * Versi lama menghitung tiap fase dengan rumus sendiri, dan batas antarfase
+ * tidak dijamin menyambung (pagi berakhir 1,05, siang mulai 1,00). Tabel di
+ * bawah diinterpolasi linear antar-jam, jadi setiap nilai kontinu dengan
+ * sendirinya — dijaga tests/dayNight.test.mjs.
  */
+
+/**
+ * Keadaan cahaya di jam-jam kunci. Semua angka hidup di pipeline TANPA sRGB
+ * encoding / tone mapping (lihat Renderer.js). Kalau colour pipeline
+ * dinyalakan, angka ini WAJIB dikalibrasi ulang terhadap piksel, bukan
+ * dibiarkan.
+ *
+ * Intensitas DIKALIBRASI, bukan disetel dengan mata: untuk tiap keyframe,
+ * pencarian biner atas skala (matahari, hemi, ambien) sampai median kanal
+ * hijau 10 titik tanah pulau yang dirender mengenai target. Hasil 15 Sep 2026
+ * (Chrome, pipeline tanpa encoding), tanah material #a8d5a2:
+ *
+ *   00:00 #283b4c  biru tinta          12:30 #addca6  hijau segar
+ *   04:30 #223344  subuh               15:00 #a9d296  menghangat
+ *   05:30 #3d5258  fajar dingin        17:15 #b7ae57  zaitun keemasan
+ *   06:45 #b4b16a  terbit keemasan     18:24 #61555e  ungu senja
+ *   10:00 #a5d29c  ≈ warna material    19:45 #283b4a  isya
+ *
+ * Sebelumnya: 12:00 dan 13:30 #ffffff, 09:00 #ffffeb, 15:30 #f8ffe7.
+ * Hemi mengambil warna LANGIT sebagai cahaya isi — keemasan saat jam emas,
+ * tinta saat malam. Dengan hemi biru tetap, jam emas dirender hijau kebiruan.
+ *
+ * @type {ReadonlyArray<{jam:number, langit:number, matahari:{kuat:number, warna:number, x:number, y:number},
+ *   hemi:number, ambien:{kuat:number, warna:number}, lampu:number, catatan:string}>}
+ */
+export const KEYFRAME = Object.freeze([
+  { jam: 0, catatan: 'malam — biru tinta, bukan hitam; cahaya bulan dari atas',
+    langit: 0x1b2140, matahari: { kuat: 0.31, warna: 0x8fa0e8, x: -6, y: 14 }, hemi: 0.43, ambien: { kuat: 0.235, warna: 0x4a5aa8 }, lampu: 1 },
+  { jam: 4.5, catatan: 'subuh — langit belum pecah, udara paling dingin',
+    langit: 0x14182e, matahari: { kuat: 0.39, warna: 0x8fa0e8, x: -14, y: 6 }, hemi: 0.55, ambien: { kuat: 0.33, warna: 0x4a5aa8 }, lampu: 1 },
+  { jam: 5.5, catatan: 'fajar — ufuk mulai merah muda',
+    langit: 0x33405e, matahari: { kuat: 0.58, warna: 0xe0a0b0, x: -18, y: 2 }, hemi: 0.69, ambien: { kuat: 0.4, warna: 0x7a7fb0 }, lampu: 0.55 },
+  { jam: 6.75, catatan: 'pagi — matahari terbit menghangatkan rumput, kabut tipis di lembah',
+    langit: 0xe8a77a, matahari: { kuat: 0.83, warna: 0xffc896, x: -14, y: 9 }, hemi: 0.455, ambien: { kuat: 0.295, warna: 0xffe2c4 }, lampu: 0 },
+  { jam: 10, catatan: 'siang — jernih, hijau paling segar',
+    langit: 0x9fc6de, matahari: { kuat: 0.656, warna: 0xfff1d6, x: -6, y: 17 }, hemi: 0.356, ambien: { kuat: 0.244, warna: 0xfff4e0 }, lampu: 0 },
+  { jam: 12.5, catatan: 'tengah hari — matahari nyaris tegak, udara berkabut panas',
+    langit: 0xb4cfdd, matahari: { kuat: 0.624, warna: 0xfff8ea, x: 0, y: 22 }, hemi: 0.347, ambien: { kuat: 0.243, warna: 0xfff6e8 }, lampu: 0 },
+  { jam: 15, catatan: 'sore — bayangan mulai memanjang, semuanya menghangat',
+    langit: 0xb4cfdd, matahari: { kuat: 0.671, warna: 0xffecc4, x: 6, y: 15 }, hemi: 0.365, ambien: { kuat: 0.249, warna: 0xfff0da }, lampu: 0 },
+  { jam: 17.25, catatan: 'jam emas — jam bermain di halaman sebelum dipanggil pulang',
+    // Matahari rendah (sudut datang ±22°) mengirim sedikit cahaya ke tanah, jadi
+    // kuatnya DINAIKKAN supaya jam emas benar-benar keemasan, dan hemi
+    // diturunkan supaya cahaya datang dari satu arah hangat, bukan rata.
+    langit: 0xf2c48a, matahari: { kuat: 1.38, warna: 0xffb866, x: 14, y: 7 }, hemi: 0.3, ambien: { kuat: 0.3, warna: 0xffc890 }, lampu: 0.2 },
+  { jam: 18.4, catatan: 'magrib habis — jingga ke ungu dalam waktu singkat, lampu menyala',
+    langit: 0x6d4a6b, matahari: { kuat: 0.6, warna: 0xe07a8a, x: 18, y: 0.5 }, hemi: 0.715, ambien: { kuat: 0.477, warna: 0x9a70a0 }, lampu: 0.9 },
+  { jam: 19.75, catatan: 'isya — langit biru tinta, lampu sudah berkuasa',
+    langit: 0x232a4a, matahari: { kuat: 0.294, warna: 0x8fa0e8, x: -6, y: 14 }, hemi: 0.405, ambien: { kuat: 0.221, warna: 0x4a5aa8 }, lampu: 1 },
+  { jam: 24, catatan: 'sama dengan jam 0',
+    langit: 0x1b2140, matahari: { kuat: 0.31, warna: 0x8fa0e8, x: -6, y: 14 }, hemi: 0.43, ambien: { kuat: 0.235, warna: 0x4a5aa8 }, lampu: 1 },
+]);
+
+function lerp(a, b, t) { return a + (b - a) * t; }
+
+/** Interpolasi warna hex per kanal. */
+export function lerpWarna(from, to, t) {
+  const fr = (from >> 16) & 0xff, fg = (from >> 8) & 0xff, fb = from & 0xff;
+  const tr = (to >> 16) & 0xff, tg = (to >> 8) & 0xff, tb = to & 0xff;
+  return (Math.round(lerp(fr, tr, t)) << 16) | (Math.round(lerp(fg, tg, t)) << 8) | Math.round(lerp(fb, tb, t));
+}
+
+/**
+ * Keadaan cahaya untuk sebuah jam (0–24, boleh pecahan). Murni, jadi bisa
+ * diuji tanpa WebGL.
+ * @param {number} jam
+ */
+export function keadaanCahaya(jam) {
+  const h = ((jam % 24) + 24) % 24;
+  let i = 0;
+  while (i < KEYFRAME.length - 2 && KEYFRAME[i + 1].jam <= h) i++;
+  const a = KEYFRAME[i];
+  const b = KEYFRAME[i + 1];
+  const t = (h - a.jam) / (b.jam - a.jam);
+  return {
+    langit: lerpWarna(a.langit, b.langit, t),
+    matahari: {
+      kuat: lerp(a.matahari.kuat, b.matahari.kuat, t),
+      warna: lerpWarna(a.matahari.warna, b.matahari.warna, t),
+      x: lerp(a.matahari.x, b.matahari.x, t),
+      y: lerp(a.matahari.y, b.matahari.y, t),
+    },
+    hemi: lerp(a.hemi, b.hemi, t),
+    ambien: { kuat: lerp(a.ambien.kuat, b.ambien.kuat, t), warna: lerpWarna(a.ambien.warna, b.ambien.warna, t) },
+    lampu: lerp(a.lampu, b.lampu, t),
+  };
+}
+
 export class DayNight {
   constructor(renderer) {
-    this.renderer = renderer; // { sun, hemi, renderer, skyDome }
+    this.renderer = renderer; // { sun, hemi, ambient, renderer, skyDome }
     this.lampGlow = 0;        // 0 = padam, 1 = menyala penuh
     this._lampu = [];         // bohlam emissive yang ikut dinyalakan
   }
@@ -31,6 +138,15 @@ export class DayNight {
   pakaiLampu(daftar) {
     this._lampu = Array.isArray(daftar) ? daftar : [];
     return this._lampu.length;
+  }
+
+  /**
+   * Terima kubah langit SETELAH World membangunnya. Diserahkan saat konstruksi,
+   * kubahnya belum ada — dan langit macet di satu warna selamanya.
+   */
+  pakaiLangit(kubah) {
+    this.renderer.skyDome = kubah ?? null;
+    return !!kubah;
   }
 
   // Dipanggil setiap frame — t = elapsed seconds
@@ -45,93 +161,10 @@ export class DayNight {
   }
 
   _applyTime(hour) {
-    const { sun, hemi, renderer: r, skyDome } = this.renderer;
+    const { sun, hemi, ambient, renderer: r, skyDome } = this.renderer;
+    const k = keadaanCahaya(hour);
+    const lampGlow = k.lampu;
 
-    // Tentukan fase hari. Nilai lampGlow: kapan lampu warung menyala.
-    let skyColor, sunIntensity, hemiIntensity, sunPosY, sunPosX, lampGlow;
-
-    if (hour >= 4.5 && hour < 5.5) {
-      // Subuh — biru tua keunguan, langit belum pecah, udara paling dingin.
-      const t = (hour - 4.5);
-      skyColor      = this._lerp(0x14182e, 0x33405e, t);
-      sunIntensity  = 0.08 + t * 0.12;
-      hemiIntensity = 0.14 + t * 0.12;
-      sunPosY       = -2 + t * 4;
-      sunPosX       = -18;
-      lampGlow      = 1 - t * 0.45;
-    } else if (hour >= 5.5 && hour < 6.75) {
-      // Fajar — ufuk memerah cepat, kabut tipis di lembah.
-      const t = (hour - 5.5) / 1.25;
-      skyColor      = this._lerp(0x33405e, 0xe8a77a, t);
-      sunIntensity  = 0.2 + t * 0.7;
-      hemiIntensity = 0.26 + t * 0.19;
-      sunPosY       = 2 + t * 7;
-      sunPosX       = -18 + t * 4;
-      lampGlow      = 0.55 - t * 0.55;
-    } else if (hour >= 6.75 && hour < 10) {
-      // Pagi — jernih, bayangan masih panjang, hijau paling segar.
-      const t = (hour - 6.75) / 3.25;
-      skyColor      = this._lerp(0xe8a77a, 0x9fc6de, Math.min(1, t * 1.6));
-      sunIntensity  = 0.9 + t * 0.15;
-      hemiIntensity = 0.45;
-      sunPosY       = 9 + t * 8;
-      sunPosX       = -14 + t * 8;
-      lampGlow      = 0;
-    } else if (hour >= 10 && hour < 15) {
-      // Siang — matahari nyaris tegak lurus di khatulistiwa, bayangan pendek,
-      // udara berkabut panas sehingga langit sedikit pudar.
-      const t = (hour - 10) / 5;
-      skyColor      = this._lerp(0x9fc6de, 0xb4cfdd, Math.sin(t * Math.PI));
-      sunIntensity  = 1.0 + Math.sin(t * Math.PI) * 0.3;
-      hemiIntensity = 0.5;
-      sunPosY       = 17 + Math.sin(t * Math.PI) * 5;
-      sunPosX       = -6 + t * 12;
-      lampGlow      = 0;
-    } else if (hour >= 15 && hour < 17.25) {
-      // Sore — jam emas. Bayangan memanjang, semuanya menghangat.
-      // Ini jam bermain di halaman sebelum dipanggil pulang.
-      const t = (hour - 15) / 2.25;
-      skyColor      = this._lerp(0xb4cfdd, 0xf2c48a, t);
-      sunIntensity  = 1.0 - t * 0.25;
-      hemiIntensity = 0.5 - t * 0.08;
-      sunPosY       = 15 - t * 8;
-      sunPosX       = 6 + t * 8;
-      lampGlow      = t * 0.2;
-    } else if (hour >= 17.25 && hour < 18.4) {
-      // Magrib — jendela paling sempit dan paling tajam perubahannya.
-      // Jingga ke ungu dalam waktu singkat; lampu mulai dinyalakan.
-      const t = (hour - 17.25) / 1.15;
-      skyColor      = this._lerp(0xf2c48a, 0x6d4a6b, t);
-      sunIntensity  = 0.75 - t * 0.6;
-      hemiIntensity = 0.42 - t * 0.2;
-      sunPosY       = 7 - t * 7;
-      sunPosX       = 14 + t * 4;
-      lampGlow      = 0.2 + t * 0.7;
-    } else if (hour >= 18.4 && hour < 19.75) {
-      // Isya — langit biru tinta, tapi belum hitam. Lampu sudah berkuasa.
-      const t = (hour - 18.4) / 1.35;
-      skyColor      = this._lerp(0x6d4a6b, 0x232a4a, t);
-      sunIntensity  = 0.15 - t * 0.1;
-      hemiIntensity = 0.22 - t * 0.08;
-      sunPosY       = 0 - t * 6;
-      sunPosX       = 18;
-      lampGlow      = 0.9 + t * 0.1;
-    } else {
-      // Malam — biru tinta, bukan hitam. Gelap total membuat dunia mati;
-      // yang dicari adalah gelap yang masih punya warna.
-      skyColor      = 0x1b2140;
-      sunIntensity  = 0.06;
-      hemiIntensity = 0.18;
-      sunPosY       = -8;
-      sunPosX       = 0;
-      lampGlow      = 1;
-    }
-
-    // CATATAN SKALA: angka di atas hidup di pipeline TANPA sRGB encoding /
-    // tone mapping (lihat Renderer.js). Sempat saya naikkan untuk pipeline
-    // sRGB+ACES, lalu pipeline itu dikembalikan tapi angkanya tidak — dan
-    // hasilnya seluruh dunia tersapu putih. Kalau colour pipeline dinyalakan
-    // lagi, angka di sini WAJIB ikut disetel ulang, bukan dibiarkan.
     this.lampGlow = lampGlow;
     for (const lampu of this._lampu) {
       // Sebuah lampu boleh menyatakan dirinya lebih redup dari yang lain lewat
@@ -150,15 +183,24 @@ export class DayNight {
 
     // Apply
     if (sun) {
-      sun.intensity = sunIntensity;
-      sun.position.set(sunPosX, sunPosY, 10);
+      sun.intensity = k.matahari.kuat;
+      sun.color.setHex(k.matahari.warna);
+      sun.position.set(k.matahari.x, k.matahari.y, 10);
     }
-    if (hemi)      hemi.intensity = hemiIntensity;
-    if (r?.renderer) r.renderer.setClearColor(skyColor, 1);
-    if (skyDome)   skyDome.material.color.setHex(skyColor);
+    if (hemi) {
+      hemi.intensity = k.hemi;
+      // Cahaya isi dari langit berwarna langit.
+      hemi.color.setHex(k.langit);
+    }
+    if (ambient) {
+      ambient.intensity = k.ambien.kuat;
+      ambient.color.setHex(k.ambien.warna);
+    }
+    if (r?.renderer) r.renderer.setClearColor(k.langit, 1);
+    if (skyDome) skyDome.material.color.setHex(k.langit);
 
     // Sync fog color ke sky
-    if (r?.scene?.fog) r.scene.fog.color.setHex(skyColor);
+    if (r?.scene?.fog) r.scene.fog.color.setHex(k.langit);
 
     // Stars — muncul saat gelap
     const isNight = (hour < 5 || hour >= 19);
@@ -188,13 +230,8 @@ export class DayNight {
     return this;
   }
 
-  // Lerp antara dua hex colors
+  // Lerp antara dua hex colors (dipertahankan untuk pemanggil lama)
   _lerp(from, to, t) {
-    const fr = (from >> 16) & 0xff, fg = (from >> 8) & 0xff, fb = from & 0xff;
-    const tr = (to   >> 16) & 0xff, tg = (to   >> 8) & 0xff, tb = to   & 0xff;
-    const r = Math.round(fr + (tr - fr) * t);
-    const g = Math.round(fg + (tg - fg) * t);
-    const b = Math.round(fb + (tb - fb) * t);
-    return (r << 16) | (g << 8) | b;
+    return lerpWarna(from, to, t);
   }
 }

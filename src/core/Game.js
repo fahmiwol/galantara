@@ -109,6 +109,9 @@ export class Game {
       // build() mengisi world.lampu; DayNight dibuat setelah blok ini, jadi
       // daftarnya diserahkan di sini — bukan di bawah, di mana masih kosong.
       this.dayNight?.pakaiLampu(this.world.lampu);
+      // Kubahnya baru ada SEKARANG. Diserahkan saat DayNight dibuat, ia masih
+      // undefined dan langit macet di satu warna selamanya.
+      this.dayNight?.pakaiLangit(this.world.skyDome);
       queueMicrotask(() =>
         this._syncSpotVisuals(spotIdFromSocketRoom(this._socketRoom)),
       );
@@ -122,6 +125,7 @@ export class Game {
     this.dayNight = new DayNight({
       sun:     this.renderer.sun,
       hemi:    this.renderer.hemi,
+      ambient: this.renderer.ambient,
       renderer: this.renderer,
       skyDome:  this.world.skyDome,
     });

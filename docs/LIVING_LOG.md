@@ -14,6 +14,39 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-15 · Pulau yang putih — instrumen yang salah selama berminggu-minggu
+
+Saat menilai hasil brief suasana di browser, tanah Oola jam 15.30 tampak nyaris
+putih. Saya hampir menganggapnya efek jam emas. Diukur dari framebuffer
+(render → `readPixels` di 12 titik tanah → median): **jam 12:00 dan 13:30
+`#ffffff`**. Seluruh siang, pulau putih.
+
+Keputusan warna tanah sebelumnya — "#a8d5a2 lolos di semua fase langit, dE 35–85"
+— dihitung dari warna MATERIAL. Angka itu benar dan tidak berguna: pemain
+melihat material × cahaya. Ini kali kelima di proyek ini alat ukur dipercaya
+karena hasilnya cocok dengan dugaan (lihat memori "periksa instrumen dulu").
+
+Dua bug di baliknya, dua-duanya tidak mungkin terlihat dari angka material:
+`AmbientLight` 0,6 sebagai variabel lokal di Renderer yang tak pernah disentuh
+DayNight, dan kubah langit yang diserahkan ke DayNight sebelum World
+membangunnya (undefined → langit macet satu warna).
+
+Perbaikannya bukan menurunkan satu angka. Siklus jadi tabel keyframe; tiap
+keyframe dikalibrasi dengan pencarian biner terhadap piksel tanah; cahaya isi
+hemisphere mengambil warna langit — tanpa itu jam emas tetap dirender hijau
+kebiruan (`#8eb27c`) walau intensitasnya sudah benar. Hasil yang dilihat di
+tangkapan layar: siang hijau dengan bayangan, jam emas dengan bayangan panjang,
+magrib ungu dengan lampu mulai menyala, malam biru tinta dengan kolam cahaya
+di tiap tiang lampu.
+
+**Satu penyimpangan dari brief GPT**, dengan angka: layar Dev Hub `#BFE3D0`
+hanya dE 17,4 terhadap badan gadingnya — hilang. Dipakai `#5E8C7A` (43,7).
+
+**Yang biasa saja:** hanya tanah Oola yang dikalibrasi. Prop, avatar, dan tanah
+enam Spot lain belum punya angka piksel di tiap fase. Ponsel belum.
+
+---
+
 ## 2026-09-15 · Kolisi — empat rancangan saya yang salah, dan satu dari Rupa3D
 
 Tujuan hari ini: pemain tidak lagi menembus dunia, dengan mesin yang sama

@@ -59,9 +59,10 @@ before(async () => { O = await oola(); });
 test('Oola: setiap prop menyatakan collider-nya, tidak ada yang diam-diam tembus', () => {
   const tembus = O.peringatan.filter((p) => p.includes('[fisika]'));
   assert.deepEqual(tembus, []);
-  // 1 tanah + 32 cincin + 8 prop native + 14 prop prosedural + 7 meja warung.
-  assert.equal(O.f.hitung()[KELOMPOK_OOLA], 62);
-  assert.equal(O.f.jumlahDiDunia(), 62);
+  // 1 tanah + 32 cincin + 5 prop native + 14 prop prosedural + 7 meja warung.
+  // (Tiga bangku lempeng native dihapus 15 Sep — lihat LIVING_LOG, suasana Oola.)
+  assert.equal(O.f.hitung()[KELOMPOK_OOLA], 59);
+  assert.equal(O.f.jumlahDiDunia(), 59);
 });
 
 test('Oola: titik muncul bebas dan berdiri di tanah', () => {
@@ -109,14 +110,23 @@ test('Oola: pohon ungu menahan di batangnya, bukan di kanopinya', () => {
   } finally { lepas(k); }
 });
 
-test('Oola: bangku dan meja tidak bisa dinaiki walau lebih rendah dari batas naik tangga', () => {
-  const k = buatKarakter(O.f, { x: 3, y: 0, z: -3.5 });
-  try {
-    // Bangku native di (3, −2): papan 0,10–0,30 m, di bawah batas 0,35.
+test('benda rendah (bangku 0,30 m, dulang 0,16 m) tidak bisa dinaiki walau di bawah batas naik tangga', async () => {
+  // Pengendali menaiki apa pun yang lebih rendah dari 0,35 m. Tanpa volume yang
+  // lebih tinggi dari mesh-nya (ADR-0016), pemain berjalan di atas bangku dan
+  // di atas dulang lesehan.
+  const f = new Fisika({ muatRapier });
+  await f.muat();
+  f.daftarkan('lantai', [{ bentuk: 'kotak', ukuran: [40, 1, 40] }], { x: 0, y: -0.5, z: 0 });
+  const bangku = new MejaNongkrong({ id: 'bangku', x: 0, z: 0, gaya: 'bangku', kursi: 2 });
+  const lesehan = new MejaNongkrong({ id: 'lesehan', x: 0, z: 6, gaya: 'lesehan', kursi: 3 });
+  bangku.daftarkanFisika(f, 'meja');
+  lesehan.daftarkanFisika(f, 'meja');
+  for (const zAwal of [-2.5, 3.5]) {
+    const k = buatKarakter(f, { x: 0.05, y: 0, z: zAwal });
     let yMaks = -1;
     for (let i = 0; i < 90; i++) yMaks = Math.max(yMaks, langkahKarakter(k, { dt: 1 / 60, arah: [0, 1] }).kaki.y);
-    assert.ok(yMaks < 0.05, `pemain naik ke atas bangku: y maks ${yMaks.toFixed(3)}`);
-  } finally { lepas(k); }
+    assert.ok(yMaks < 0.05, `dari z=${zAwal}: pemain naik ke atas benda rendah, y maks ${yMaks.toFixed(3)}`);
+  }
 });
 
 // ── Duduk → berdiri ─────────────────────────────────────────────────

@@ -140,7 +140,10 @@ dan collider tiap bangunan di sebelah mesh-nya. Meja nongkrong Bogor, Braga,
 dan Malioboro sudah punya collider. Uji yang harus ditambah: titik muncul tiap
 Spot bebas, dan tidak ada arah keluar area jalan.
 
-### P1.6 · Suasana betah per Spot — brief ADA, belum dibangun
+### P1.6 · Suasana betah per Spot — brief ADA, Oola langkah 0-segitiga SELESAI 15 Sep
+Sudah: Oola (bangku lempeng dihapus, bunga jadi 3 rumpun, pohon dan Dev Hub
+diredam, halo diam) dan kalibrasi cahaya dunia (ADR-0017). Belum: enam Spot,
+panel label Dev Hub/portal, dan elemen bersegitiga dari tabel brief.
 `docs/brief/suasana/*.md` (gpt-5.6-sol, 15 Sep): cerita tempat, suasana, dan
 tabel elemen 3D berangka untuk ketujuh Spot. Temuan yang bisa langsung
 dikerjakan tanpa geometri baru:

@@ -39,9 +39,11 @@ export class Renderer {
   }
 
   _buildLights() {
-    // Ambient — soft fill
-    const ambient = new THREE.AmbientLight(0xfff4e0, 0.6);
-    this.scene.add(ambient);
+    // Ambient — soft fill. DIKENDALIKAN DayNight (intensitas + warna per jam).
+    // Dulu variabel lokal bernilai tetap 0,6 yang tak tersentuh siklus hari,
+    // dan itu membuat pulau dirender putih sepanjang siang. Lihat DayNight.js.
+    this.ambient = new THREE.AmbientLight(0xfff4e0, 0.6);
+    this.scene.add(this.ambient);
 
     // Sun — directional dengan shadow
     this.sun = new THREE.DirectionalLight(0xfff4c0, 1.2);

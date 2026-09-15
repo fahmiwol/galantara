@@ -245,6 +245,11 @@ export class World {
     // #a8d5a2 menjaga rasa surgawi-pastel (PRD tetap dihormati lewat lis emas
     // dan bibir lavender) sambil lolos di SEMUA fase langit:
     //   pagi 40,5 · siang 35,5 · sore 36,5 · magrib 71,9 · malam 85,2
+    //
+    // KOREKSI 15 Sep 2026 (ADR-0017): angka di atas dihitung dari warna
+    // MATERIAL. Diukur dari piksel yang dirender, tanah ini tampil #ffffff
+    // sepanjang siang karena cahaya dunia terlalu kuat. Siklus cahaya sudah
+    // dikalibrasi ulang terhadap piksel (DayNight.js); warna materialnya tetap.
     const top = new THREE.Mesh(
       new THREE.CylinderGeometry(20, 20.55, 0.72, 48),
       MS(0xa8d5a2, 0.86),
@@ -343,7 +348,16 @@ export class World {
     this._daftarFisika([{ bentuk: 'silinder', ukuran: [0.95, 4, 0.95], letak: [0, 2, 0] }], { x, y, z }, 0, id);
 
     // Canopy layers (3 spheres)
-    const canopyColors = [0x7C3AED, 0x8B5CF6, 0x6D28D9];
+    //
+    // Ungu DIREDAM (brief suasana gpt-5.6-sol + sintesis, 15 Sep 2026). Ungu
+    // jenuh #7C3AED membaca sebagai "pohon fantasi aset toko", bukan pohon
+    // tempat orang berteduh. Tiga lapis dengan terang berbeda memberi kedalaman
+    // tanpa menambah bentuk. Keterbacaan diukur dulu (ADR-0011), bukan ditebak:
+    //   dE*ab terhadap tanah #a8d5a2: 85,1 · 74,6 · 66,7
+    //   dE*ab terhadap langit siang #87CEEB: 54,9 · 44,5 · 37,8
+    // Semua di atas pulau itu sendiri terhadap langit (35,5), jadi pohon tidak
+    // larut.
+    const canopyColors = [0x8067B7, 0x9B83C8, 0xB39AD5];
     const canopyData   = [
       [x, y + 4.5, z, 2.8],
       [x - 0.8, y + 4, z + 0.8, 2.0],
@@ -360,12 +374,21 @@ export class World {
       this._addToIsland(mesh);
     });
 
-    // Halo ring (golden glow)
-    const haloGeo = new THREE.TorusGeometry(2.2, 0.12, 8, 32);
+    // Halo: BUSUR 225° yang DIAM, bukan cincin utuh yang berputar.
+    //
+    // Sintesis suasana menyebut cincin bercahaya yang berputar konstan sebagai
+    // bahasa lobby game fantasi — bentuk melingkar sempurna + gerak tanpa henti
+    // tanpa fungsi sosial. Busur yang terbuka dan diam masih memberi Oola
+    // penanda emasnya, dan sedikit digeser dari sumbu supaya tidak terbaca
+    // sebagai aset yang dipasang presisi. Segitiga turun (24 ruas, bukan 32).
+    const haloGeo = new THREE.TorusGeometry(2.2, 0.12, 8, 24, Math.PI * 1.25);
     const haloMat = new THREE.MeshBasicMaterial({ color: 0xFDE68A });
     this.halo = new THREE.Mesh(haloGeo, haloMat);
-    this.halo.position.set(x, y + 7.5, z);
+    this.halo.position.set(x + 0.25, y + 7.5, z - 0.2);
     this.halo.rotation.x = Math.PI / 2;
+    // Celah busur menghadap arah kamera awal (theta = π/4), supaya terbaca
+    // sebagai busur yang disengaja, bukan cincin yang terpotong di belakang.
+    this.halo.rotation.z = Math.PI * 0.625;
     this.halo.name = `${id}_halo`;
     this._addToIsland(this.halo);
   }
@@ -440,10 +463,13 @@ export class World {
 
   // ── DEVELOPER HUB ─────────────────────────────────
   _buildDevHub(x = 8, y = 0, z = -2.5) {
+    // Palet Oola, bukan kios teknologi. Kotak gelap #1E1040 dengan layar neon
+    // #00FF88 memutus gading-emas-lavender dan terbaca sebagai lobby game
+    // generik (brief suasana Oola, 15 Sep 2026). Badan gading, atap lavender.
     // Building base
     const base = new THREE.Mesh(
       new THREE.BoxGeometry(2.5, 1.8, 2),
-      MS(0x1E1040),
+      MS(0xF4EAD6),
     );
     base.position.set(x, y + 0.9, z);
     base.castShadow = true;
@@ -454,15 +480,22 @@ export class World {
     // Roof
     const roof = new THREE.Mesh(
       new THREE.BoxGeometry(2.8, 0.2, 2.3),
-      MS(0x7C3AED),
+      MS(0xC4B5FD),
     );
     roof.position.set(x, y + 1.9, z);
     this._addToIsland(roof);
 
-    // Screen glow
+    // Layar: kaca teal gelap yang sedikit bercahaya, bukan neon.
+    // MENYIMPANG dari usulan brief (#BFE3D0) karena diukur: dE*ab-nya terhadap
+    // badan gading hanya 17,4 — layarnya hilang. #5E8C7A memberi 43,7.
     const screen = new THREE.Mesh(
       new THREE.BoxGeometry(1.2, 0.8, 0.05),
-      new THREE.MeshBasicMaterial({ color: 0x00FF88 }),
+      new THREE.MeshStandardMaterial({
+        color: 0x5E8C7A,
+        emissive: new THREE.Color(0x5E8C7A),
+        emissiveIntensity: 0.18,
+        roughness: 0.35,
+      }),
     );
     screen.position.set(x, y + 0.9, z + 1.02);
     this._addToIsland(screen);
@@ -520,11 +553,9 @@ export class World {
     this._addToIsland(marker);
   }
 
-  // ── ANIMATE (halo spin, portal pulse) ─────────────
+  // ── ANIMATE (portal pulse) ─────────────────────────
+  // Halo tidak lagi berputar — lihat _buildPurpleTree.
   animate(t) {
-    if (this.halo) {
-      this.halo.rotation.z = t * 0.3;
-    }
     if (this.warpPortal) {
       this.warpPortal.rotation.y = t * 0.8;
       this.warpPortal.material.color.setHSL(0.75 + Math.sin(t) * 0.05, 0.8, 0.5);

@@ -35,6 +35,7 @@ bukan keputusan, cuma preferensi.
 | [0014](0014-versi-semantik-dan-satu-sumber-kebenaran-versi.md) | Versi semantik | Dua angka versi yang menyimpang diam-diam |
 | [0015](0015-fisika-rapier-dimuat-malas-langkah-tetap-dan-pengendali-kinematik.md) | Fisika Rapier, dimuat malas | Satu mesin dengan Rupa3D; 1,08 MB gzip dibayar setelah dunia tampil |
 | [0016](0016-collider-adalah-volume-permainan-dinyatakan-di-sebelah-mesh.md) | Collider = volume permainan | Kotak batas otomatis salah untuk pohon dan benda rendah |
+| [0017](0017-warna-diukur-di-piksel-yang-dirender-bukan-di-material.md) | Warna diukur di piksel | Pulau dirender putih sepanjang siang padahal materialnya hijau |
 
 ## Format
 

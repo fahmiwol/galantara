@@ -2,6 +2,31 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [Unreleased]
+
+### Fixed
+- **Pulau dirender PUTIH sepanjang siang.** Diukur dari piksel: tanah
+  `#a8d5a2` tampil `#ffffff` jam 12:00–13:30 dan `#ffffeb`/`#f8ffe7` jam 09:00 dan
+  15:30. Penyebabnya `AmbientLight` 0,6 di Renderer yang tidak pernah disentuh
+  siklus hari. ADR-0017.
+- **Langit tidak pernah berganti warna.** DayNight menerima kubah langit
+  sebelum World membangunnya; kubah macet di `#87ceeb`.
+
+### Changed
+- **Siklus cahaya jadi tabel keyframe yang dikalibrasi terhadap piksel**:
+  siang `#addca6`, jam emas `#b7ae57` dengan matahari hangat rendah, magrib
+  `#61555e`, malam biru tinta `#283b4c` dengan kolam cahaya lampu yang terbaca.
+  Ambient dan warna cahaya isi (mengikuti langit) ikut dikendalikan.
+- **Suasana Oola** (brief gpt-5.6-sol + sintesis, 0 segitiga baru): tiga bangku
+  lempeng tanpa kaki dihapus; lima petak bunga jadi tiga rumpun di dekat papan,
+  meja, dan bangku; kanopi pohon ungu diredam; Dev Hub bergaya palet Oola
+  (layar `#5E8C7A`, bukan usulan brief `#BFE3D0` yang hanya Delta-E 17,4);
+  halo jadi busur 225° yang diam.
+
+### Tests
+- `tests/dayNight.test.mjs`: model Lambert r128 dijangkarkan ke piksel terukur
+  (±6 %), lalu menjaga tidak ada jam dengan kanal ≥ 250, siang hijau, malam biru.
+
 ## [0.9.0] · 2026-09-15
 > **Dunia yang bisa ditabrak.** Pemain tidak lagi menembus pohon, rumah, dan
 > meja; mereka meluncur di sepanjang permukaannya, seperti di Godot, Unity, dan
