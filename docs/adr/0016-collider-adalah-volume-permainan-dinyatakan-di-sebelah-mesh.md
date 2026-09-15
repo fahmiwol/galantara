@@ -36,7 +36,12 @@ supaya proksi yang diukur di satu tempat berlaku di tempat lain.
    - batang, bukan kanopi;
    - penghalang dimulai dari tanah (kolong meja 0,68 m tidak bisa dilewati avatar
      1,30 m, jadi tidak dimodelkan);
-   - benda rendah yang tidak boleh dinaiki diberi volume ≥ 0,60 m;
+   - benda rendah yang tidak boleh dinaiki diberi volume ≥ 0,60 m. **Koreksi
+     15 Sep (agen Spot Bogor):** yang dinaiki bukan hanya benda < 0,35 m
+     (parameter `naikTangga`) — ujung kapsul bundar membuat benda **0,40 m**
+     masih dinaiki; tertahan mulai 0,45 (`tools/fisika/ukur-ambang-naik.mjs`).
+     Dingklik warung 0,40 dan alas portal Spot 0,45 ternyata bisa dinaiki;
+     keduanya dinaikkan ke 0,60. Undak yang MEMANG untuk didaki tetap ≤ 0,35;
    - benda rapat (rumpun bambu, pagar bilah) jadi satu volume;
    - benda berputar tidak padat, alasnya padat;
    - benda di atas kepala (atap, papan nama, kanopi) tidak diberi collider.
@@ -54,7 +59,7 @@ Fahmi. Galantara belum membaca collider dari GLB.
 
 ### Yang didapat
 
-- Pulau Oola: 62 collider, 0 peringatan, dijaga uji dengan THREE asli.
+- Pulau Oola: 59 collider (62 sebelum tiga bangku lempeng dihapus), 0 peringatan, dijaga uji dengan THREE asli.
 - Terasering bisa didaki undak demi undak; tangga rumah panggung bisa dinaiki
   dua anak tangga. Collider jadi alat desain level, bukan cuma penghalang.
 - Tidak ada skala kedua: angka collider sudah dikali `scale` di builder.

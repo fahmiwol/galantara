@@ -72,6 +72,12 @@ export const UKURAN_KAPSUL = Object.freeze([0.80, 1.30, 0.80]);
  * 0,16 m) harus diberi collider yang LEBIH TINGGI dari mesh-nya. Collider
  * adalah volume permainan, bukan salinan bentuk visual — sama dengan
  * "simple collision" Unreal.
+ *
+ * AMBANG NYATA ≠ naikTangga. Ujung kapsul bundar menyentuh tepi benda di atas
+ * titik terendahnya, jadi kotak dan silinder setinggi 0,40 m MASIH dinaiki;
+ * tertahan mulai 0,45 (tools/fisika/ukur-ambang-naik.mjs, lebar 0,3 dan 1,3).
+ * Ditemukan agen Spot Bogor, 15 Sep 2026. Aturan kerjanya: yang tidak boleh
+ * dinaiki ≥ 0,60 m; yang memang untuk didaki ≤ 0,35 m per undak.
  */
 export const PARAM = Object.freeze({
   offset: 0.02,
@@ -80,6 +86,19 @@ export const PARAM = Object.freeze({
   tempelTanah: 0.35,
   lerengMaks: 50,
   lerengGeser: 35,
+  /**
+   * Dorongan kecil menjauhi normal kontak. Bawaan Rapier 1e-4 membuat kapsul
+   * yang menyentuh tanah DAN dinding bersamaan menembus dinding sesaat —
+   * terukur sampai 7,03 cm, 1.090 dari 230.400 langkah lebih dari 2 cm
+   * (ditemukan agen Spot Malioboro). Diukur lima nilai di dua set titik awal
+   * (tools/fisika/ukur-tembus-dinding.mjs):
+   *   1e-4  7,03 cm · 1.090 langkah > 2 cm
+   *   3e-3  0,97 / 0,00 cm · 0 · tanpa tersendat, tanpa getar   ← dipakai
+   *   5e-3  2,41 cm · 2 · getar 0,38 mm di dinding
+   *   7e-3  6,30 cm · 7        1e-2  4,74 cm · 7
+   * Tidak monoton — karena itu diuji di dua set lintasan, bukan satu.
+   */
+  dorongNormal: 3e-3,
   /** Batas dt satu langkah — jaring pengaman kalau langkahKarakter dipanggil
    *  langsung dengan dt besar. */
   dtMaks: 1 / 20,
@@ -103,6 +122,7 @@ export function buatKarakter(fisika, kaki = { x: 0, y: 0, z: 0 }) {
   kendali.enableSnapToGround(PARAM.tempelTanah);
   kendali.setMaxSlopeClimbAngle((PARAM.lerengMaks * Math.PI) / 180);
   kendali.setMinSlopeSlideAngle((PARAM.lerengGeser * Math.PI) / 180);
+  kendali.setNormalNudgeFactor(PARAM.dorongNormal);
 
   // Pusat kapsul = telapak kaki + setengah tinggi (+ offset, supaya kapsul
   // tidak mulai BERSENTUHAN dengan tanah dan dianggap menembus).
@@ -238,6 +258,12 @@ export function teleportKarakter(k, kaki) {
   const pos = { x: kaki.x, y: (kaki.y ?? 0) + k.tinggi / 2 + PARAM.offset, z: kaki.z };
   k.badan.setTranslation(pos, true);
   k.badan.setNextKinematicTranslation(pos);
+  // Collider baru mengikuti badan saat step atau propagasi berikutnya. Agen
+  // Spot Bogor melaporkan kapsul yang diteleport keluar dari dalam warung
+  // terangkat 0,37 m karena pengendali membaca collider di posisi LAMA.
+  // Belum tereproduksi di tools/fisika/ukur-ambang-naik.mjs; dipasang karena
+  // murah dan membuat collider konsisten seketika.
+  k.fisika.w.propagateModifiedBodyPositionsToColliders();
   k.vY = 0;
   resetWaktuKarakter(k);
 }

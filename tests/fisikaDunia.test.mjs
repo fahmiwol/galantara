@@ -129,6 +129,26 @@ test('benda rendah (bangku 0,30 m, dulang 0,16 m) tidak bisa dinaiki walau di ba
   }
 });
 
+test('dingklik warung tidak bisa dinaiki — ambang nyata kapsul 0,40 m, bukan 0,35', async () => {
+  // Collider dingklik semula 0,40 m, setinggi dudukannya. Kapsul bundar masih
+  // menaiki benda 0,40 m (tools/fisika/ukur-ambang-naik.mjs), jadi pemain
+  // bisa berdiri di atas dingklik. Didekati tegak lurus dari luar meja.
+  const f = new Fisika({ muatRapier });
+  await f.muat();
+  f.daftarkan('lantai', [{ bentuk: 'kotak', ukuran: [40, 1, 40] }], { x: 0, y: -0.5, z: 0 });
+  const meja = new MejaNongkrong({ id: 'warung', x: 0, z: 0, gaya: 'warung', kursi: 4 });
+  meja.daftarkanFisika(f, 'meja');
+  for (const kursi of meja.kursi) {
+    // Mulai 2,5 m dari kursi, di arah menjauhi pusat meja, lalu jalan ke kursinya.
+    const ux = kursi.x / Math.hypot(kursi.x, kursi.z);
+    const uz = kursi.z / Math.hypot(kursi.x, kursi.z);
+    const k = buatKarakter(f, { x: kursi.x + ux * 2.5, y: 0, z: kursi.z + uz * 2.5 });
+    let yMaks = -1;
+    for (let i = 0; i < 90; i++) yMaks = Math.max(yMaks, langkahKarakter(k, { dt: 1 / 60, arah: [-ux, -uz] }).kaki.y);
+    assert.ok(yMaks < 0.05, `kursi ${kursi.i}: pemain naik ke atas dingklik, y maks ${yMaks.toFixed(3)}`);
+  }
+});
+
 // ── Duduk → berdiri ─────────────────────────────────────────────────
 const GAYA = [
   { gaya: 'warung', kursi: 4 },

@@ -453,7 +453,10 @@ export class MejaNongkrong {
     if (this.gaya === 'warung') {
       out.push({ bentuk: 'kotak', ukuran: [SPEK.panjangDaun, 0.70, SPEK.lebarDaun], letak: [0, 0.35, 0] });
       for (const k of this._kursi) {
-        out.push({ bentuk: 'kotak', ukuran: [0.30, 0.40, 0.30], letak: [k.lx, 0.20, k.lz] });
+        // 0,60, bukan 0,40 setinggi dudukan: kapsul masih menaiki benda 0,40 m
+        // (ambang nyata, lihat Karakter.js PARAM). Pemain yang duduk tidak
+        // terpengaruh — kapsulnya dimatikan saat duduk.
+        out.push({ bentuk: 'kotak', ukuran: [0.30, 0.60, 0.30], letak: [k.lx, 0.30, k.lz] });
       }
       const zTiang = -(SPEK.lebarDaun / 2 + 0.42);
       for (const x of [SPEK.bentangTiang / 2, -SPEK.bentangTiang / 2]) {
