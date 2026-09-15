@@ -14,6 +14,54 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-16 · "Belum punya server" salah selama enam hari, dan deploy yang benar pun tidak akan terlihat
+
+**Premis yang salah.** 10 Sep CI gagal `ssh ... port 22: Connection timed
+out`, dan ADR-0007 mematikan pemicunya dengan alasan "server belum ada". 15 Sep
+saya memeriksa header HTTP: galantara.io hidup dan melayani build 13 April. Tapi
+saya tetap menulis "tidak ada jalur deploy", karena runner tidak bisa mencapai
+port 22. **Tidak ada yang mencoba port lain.** Hari ini Fahmi menulis "galantara
+hidup ko di KVM 4 server 2". SSH VPS-2 memang di port 2222.
+
+Yang paling memalukan: **Omiga sudah punya jawabannya sejak 18 Agustus.** Entri
+`L70b496f32b` mencatat `ssh -p 2222 ... root@187.77.116.139` tembus, dan peta
+infra menyebut galantara.io di VPS-2. Satu `brain_search "galantara.io server"`
+pada 10 Sep sudah cukup. Aturan global Fahmi menyuruh mencari di Omiga sebelum
+menyatakan fakta tentang pekerjaannya; saya tidak melakukannya, lalu menulis
+kesimpulan itu ke ADR, BACKLOG, memori, dan Omiga.
+
+**Deploy** (`dfe86d2`, pertama sejak April): backup web root, staging, dry-run
+(64 baru, 37 berubah, **0 dihapus**), sinkron folder lalu `index.html`, dan
+`cmp` 102 dari 102 berkas. Diperiksa di browser live: Rapier siap, Oola 59
+collider, Losari 35 (GLB beserta berkas collider-nya), Kuta 27, 0 permintaan
+gagal, 0 galat konsol.
+
+**Deploy yang benar pun tidak akan terlihat.** Tidak ada `Cache-Control`, jadi
+browser memakai kesegaran heuristik: 10 % dari umur `Last-Modified`. Build 5
+bulan dianggap segar sekitar 15 hari. Tangkapan layar Fahmi yang masih
+menampilkan build April akan tetap begitu setelah deploy. Ditambah
+`Cache-Control: no-cache` di vhost. Salinan yang sudah dianggap segar tetap
+butuh Ctrl+Shift+R sekali. Header tidak bisa menjangkau masa lalu.
+
+**4,26 MB JS dikirim mentah.** `nginx.conf` Ubuntu hanya mengompres
+`text/html`. Dengan gzip: Rapier 2,86 → 1,08 MB, three 603 → 149 KB. Setelah
+`reload`, worker baru muncul 24 detik kemudian. Tanpa catatan Omiga
+`Lab83be99bc` saya akan membaca respons pertama yang belum di-gzip sebagai
+"konfigurasi salah".
+
+**Multiplayer tidak langsung ke `galantara-mp`.** `/mp/` menuju port 7999, yaitu
+**sakelar**, lalu diteruskan ke `galantara-mp` di 3005. Kode server multiplayer
+sengaja belum dideploy: produksi masih versi April dan protokol kliennya sama.
+
+Langkah-langkahnya sekarang ada di `tools/deploy-galantara.sh` dengan runbook
+`docs/DEPLOY.md` dan ADR-0018.
+
+**Yang dibayar:** deploy bergantung pada laptop yang memegang kunci. Setiap muat
+halaman merevalidasi sekitar 60 berkas. `nginx reload` menyentuh 19 aplikasi
+lain; empat situs tetangga diperiksa dan semuanya tetap 200.
+
+---
+
 ## 2026-09-16 · Batas yang dilanggar di hari ia ditulis, dan alat ukur yang menghitung lebih sedikit dari namanya
 
 **Koreksi entri 15 Sep.** Di sana tertulis dingklik "dinaikkan ke 0,60 dan

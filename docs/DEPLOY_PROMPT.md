@@ -1,5 +1,10 @@
 # Prompt deploy — Galantara (galantara.io)
 
+> **USANG sejak 16 Sep 2026 — jangan diikuti.** IP `72.62.125.6` di bawah adalah VPS-1
+> yang mati sejak 26 Jul 2026, dan daftar berkasnya tidak lengkap (tanpa `vendor/`,
+> `assets/`, `benteng.html`). galantara.io ada di VPS-2, SSH port 2222.
+> Pakai **`docs/DEPLOY.md`** dan `tools/deploy-galantara.sh`. Isi di bawah disimpan sebagai sejarah.
+
 Dokumen ini punya dua bagian: **(A) prompt siap salin** untuk Cursor/ag lain, dan **(B) ringkasan cepat** untuk manusia.
 
 ---

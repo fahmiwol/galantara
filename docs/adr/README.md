@@ -25,7 +25,7 @@ bukan keputusan, cuma preferensi.
 | [0004](0004-overlay-html-disembunyikan-berdasarkan-ukuran-di-layar-buk.md) | Overlay dinilai ukuran layar | Overlay HTML tidak mengecil dengan jarak |
 | [0005](0005-satu-pesan-satu-kanal-toast-hanya-cadangan.md) | Satu pesan, satu kanal | Satu pesan sempat tampil tiga kali |
 | [0006](0006-daily-challenge-tanpa-koin-sampai-ekonominya-nyata.md) | Daily challenge tanpa koin | Hadiah palsu mengajari bahwa mata uangnya tak berarti |
-| [0007](0007-pemicu-deploy-ci-dimatikan-sampai-ada-server.md) | Pemicu deploy dimatikan | CI yang selalu merah melatih orang mengabaikannya |
+| [0007](0007-pemicu-deploy-ci-dimatikan-sampai-ada-server.md) | Pemicu deploy dimatikan | CI yang selalu merah melatih orang mengabaikannya — *premisnya dikoreksi ADR-0018* |
 | [0008](0008-lampu-boleh-menyatakan-kuat-relatif.md) | Lampu punya kuat relatif | Hangat = satu pusat terang + tepi gelap |
 | [0009](0009-atap-sengkuap-menolak-arahan-pelana-dangkal.md) | Sengkuap, bukan pelana | **Menolak arahan seni sendiri**, dengan alasan |
 | [0010](0010-vendor-semua-pustaka-klien-supabase-tetap-pengecualian-yan.md) | Vendor semua pustaka klien | Klaim self-hosted harus benar |
@@ -36,6 +36,7 @@ bukan keputusan, cuma preferensi.
 | [0015](0015-fisika-rapier-dimuat-malas-langkah-tetap-dan-pengendali-kinematik.md) | Fisika Rapier, dimuat malas | Satu mesin dengan Rupa3D; 1,08 MB gzip dibayar setelah dunia tampil |
 | [0016](0016-collider-adalah-volume-permainan-dinyatakan-di-sebelah-mesh.md) | Collider = volume permainan | Kotak batas otomatis salah untuk pohon dan benda rendah |
 | [0017](0017-warna-diukur-di-piksel-yang-dirender-bukan-di-material.md) | Warna diukur di piksel | Pulau dirender putih sepanjang siang padahal materialnya hijau |
+| [0018](0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md) | Deploy manual terverifikasi, no-cache + gzip | "Server belum ada" ternyata SSH di port 2222; deploy yang tak terlihat karena cache heuristik |
 
 ## Format
 

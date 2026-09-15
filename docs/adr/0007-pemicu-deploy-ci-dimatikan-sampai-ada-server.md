@@ -1,6 +1,6 @@
 # ADR-0007 — Pemicu deploy CI dimatikan sampai ada server
 
-**Status:** Diterima
+**Status:** Diterima — **premisnya dikoreksi [ADR-0018](0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md)** (16 Sep 2026): server ada (VPS-2, SSH port 2222); CI gagal karena port 22. Pemicu tetap mati, dengan alasan yang baru.
 **Tanggal:** 2026-09-11
 **Konteks proyek:** Galantara — dunia 3D sosial Indonesia di browser
 

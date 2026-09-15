@@ -1,19 +1,20 @@
-# Deploy statis ke VPS secara manual; tanpa pemicu push sampai server tersedia.
+# Deploy statis ke VPS lewat GitHub Actions — HANYA manual (workflow_dispatch).
 # GitHub → Settings → Secrets and variables → Actions:
-#   SSH_HOST, SSH_USER, SSH_PRIVATE_KEY (PEM lengkap), REMOTE_PATH (mis. /www/wwwroot/galantara.io/)
+#   SSH_HOST, SSH_PORT (VPS-2: 2222), SSH_USER, SSH_PRIVATE_KEY (PEM lengkap),
+#   REMOTE_PATH (mis. /www/wwwroot/galantara.io/)
 name: Deploy VPS (static)
 
-# Pemicu otomatis SENGAJA DIMATIKAN sejak 10 Sep 2026.
+# Pemicu otomatis SENGAJA DIMATIKAN — lihat ADR-0007 dan ADR-0018.
 #
-# Belum ada server tujuan. Selama itu, setiap push menghasilkan CI merah yang
-# bukan menandakan apa-apa selain "server belum ada" — dan CI yang selalu merah
-# mengajari semua orang untuk berhenti membacanya. Itu kerugian yang nyata,
-# sementara manfaatnya nol.
+# Koreksi 16 Sep 2026: alasan awalnya ("belum ada server") SALAH. galantara.io
+# hidup di VPS-2 sejak April; SSH-nya di port 2222 dan workflow ini mencoba
+# port 22, jadi timeout. SSH_PORT sekarang didukung.
 #
-# Workflow-nya sendiri TIDAK dihapus: isinya sudah benar dan sudah diperbaiki
-# (benteng.html + assets/ dulu tidak pernah ikut ter-rsync). Begitu servernya
-# ada, kembalikan blok `push:` di bawah dan isi Secrets SSH_HOST, SSH_USER,
-# SSH_PRIVATE_KEY, REMOTE_PATH.
+# Jalur deploy yang berlaku: tools/deploy-galantara.sh (docs/DEPLOY.md) —
+# dengan backup, verifikasi bita, dan penolakan kalau HEAD belum di-push.
+# Workflow ini tidak punya keduanya. Menyalakan `push:` berarti menaruh kunci
+# server bersama (19 aplikasi) di GitHub Secrets: keputusan Fahmi; kalau
+# dinyalakan, pakai user deploy yang hanya bisa menulis web root, bukan root.
 #
 # on:
 #   push:
@@ -35,6 +36,7 @@ jobs:
         env:
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
           SSH_HOST: ${{ secrets.SSH_HOST }}
+          SSH_PORT: ${{ secrets.SSH_PORT }}
           SSH_USER: ${{ secrets.SSH_USER }}
           REMOTE_PATH: ${{ secrets.REMOTE_PATH }}
         run: |
@@ -46,10 +48,11 @@ jobs:
           chmod 600 ~/.ssh/deploy_key
           # Pastikan path remote diakhiri /
           REMOTE_PATH="${REMOTE_PATH%/}/"
-          ssh-keyscan -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          SSH_BASE="-i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o BatchMode=yes"
+          SSH_PORT="${SSH_PORT:-22}"
+          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
+          SSH_BASE="-p $SSH_PORT -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o BatchMode=yes"
           DEST="${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}"
-          echo "SSH target: ${SSH_USER}@${SSH_HOST} path=${REMOTE_PATH}"
+          echo "SSH target: ${SSH_USER}@${SSH_HOST}:${SSH_PORT} path=${REMOTE_PATH}"
           echo "Testing SSH (BatchMode, no password prompt)..."
           ssh $SSH_BASE "${SSH_USER}@${SSH_HOST}" "echo ssh_ok"
           echo "Running rsync..."

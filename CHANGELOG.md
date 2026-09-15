@@ -4,6 +4,21 @@
 
 ## [Unreleased]
 
+## [0.10.0] · 2026-09-16
+> **Live di galantara.io** — deploy pertama sejak 13 April 2026 (`dfe86d2`).
+> Semua kerja September (fisika, cahaya, enam Spot, chat, Meja Nongkrong,
+> vendor) sampai ke pemain hari ini, bukan cuma di GitHub.
+
+### Deploy
+- **galantara.io ternyata tidak pernah tanpa server.** Hidup di VPS-2 dengan SSH
+  di port 2222; CI gagal karena mencoba port 22. ADR-0018 mengoreksi ADR-0007.
+- `tools/deploy-galantara.sh` (`coba` / `jalankan` / `pulihkan`): paket dari HEAD
+  yang sudah di-push, backup, sinkron folder lalu HTML, verifikasi bita per bita.
+  Runbook: `docs/DEPLOY.md`.
+- Vhost: `Cache-Control: no-cache` (tanpa itu build lama dianggap segar ~15 hari)
+  dan gzip JS/CSS/JSON — Rapier 2,86 → 1,08 MB, three 603 → 149 KB di kabel.
+- Belum: server multiplayer masih kode April (protokol klien sama).
+
 ### Added
 - **Keenam Spot menyatakan tanah, batas, dan collider-nya sendiri** — Bogor
   38, Braga 39, Kuta 27, Losari 35, Malioboro 41, Monas 41 (termasuk collider
