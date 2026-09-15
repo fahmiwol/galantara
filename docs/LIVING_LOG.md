@@ -53,8 +53,19 @@ butuh Ctrl+Shift+R sekali. Header tidak bisa menjangkau masa lalu.
 **sakelar**, lalu diteruskan ke `galantara-mp` di 3005. Kode server multiplayer
 sengaja belum dideploy: produksi masih versi April dan protokol kliennya sama.
 
+**Verifikasi saya sendiri buta satu hal.** "SHA-256 `index.html` live = lokal"
+cocok. Tapi pembandingnya berkas working tree, dan di Windows berkas itu CRLF
+(33.982 bita, sedangkan blob 33.445). `git archive` menerapkan konversi checkout
+yang sama, sehingga seluruh HTML/JS di live ber-CRLF dan tidak sama bita dengan
+GitHub. Ketahuan saat menulis pemeriksaan untuk skrip, yang membandingkan dengan
+`git cat-file`. Dikirim ulang sebagai `4a9c6d2` dengan LF: 71 berkas teks
+berubah, vendor dan GLB tidak disentuh. Ini contoh kedelapan
+"periksa instrumen dulu": pembanding yang dipilih ikut tercemar hal yang sama
+dengan yang sedang diperiksa.
+
 Langkah-langkahnya sekarang ada di `tools/deploy-galantara.sh` dengan runbook
-`docs/DEPLOY.md` dan ADR-0018.
+`docs/DEPLOY.md` dan ADR-0018. Jalur `jalankan` sudah dipakai sungguhan sekali
+(`4a9c6d2`).
 
 **Yang dibayar:** deploy bergantung pada laptop yang memegang kunci. Setiap muat
 halaman merevalidasi sekitar 60 berkas. `nginx reload` menyentuh 19 aplikasi

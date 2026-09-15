@@ -5,7 +5,8 @@
 ## [Unreleased]
 
 ## [0.10.0] · 2026-09-16
-> **Live di galantara.io** — deploy pertama sejak 13 April 2026 (`dfe86d2`).
+> **Live di galantara.io** — deploy pertama sejak 13 April 2026 (`dfe86d2`, dikirim
+> ulang sebagai `4a9c6d2` karena paket pertama ber-CRLF).
 > Semua kerja September (fisika, cahaya, enam Spot, chat, Meja Nongkrong,
 > vendor) sampai ke pemain hari ini, bukan cuma di GitHub.
 
@@ -17,6 +18,8 @@
   Runbook: `docs/DEPLOY.md`.
 - Vhost: `Cache-Control: no-cache` (tanpa itu build lama dianggap segar ~15 hari)
   dan gzip JS/CSS/JSON — Rapier 2,86 → 1,08 MB, three 603 → 149 KB di kabel.
+- `git archive` di Windows mengubah HTML/JS jadi CRLF; skrip kini memaksa LF
+  dan membandingkan live dengan blob commit, bukan working tree.
 - Belum: server multiplayer masih kode April (protokol klien sama).
 
 ### Added

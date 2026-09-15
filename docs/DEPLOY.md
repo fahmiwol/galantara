@@ -36,7 +36,13 @@ yang sama, lalu:
 4. memakai `--checksum` tanpa `-t`, jadi berkas yang isinya sama tidak disentuh
    (ETag-nya tetap, pengunjung mendapat 304);
 5. membandingkan setiap berkas paket bita per bita dengan yang dilayani;
-6. mencocokkan `index.html` live dengan HEAD lewat HTTPS.
+6. mencocokkan tiga berkas live lewat HTTPS dengan **blob** commit
+   (`git cat-file`), bukan dengan working tree.
+
+**Jebakan Windows:** `git archive` menerapkan konversi checkout, jadi dengan
+`core.autocrlf=true` paketnya berisi CRLF. Deploy pertama (`dfe86d2`) begitu,
+dan lolos pemeriksaan karena pembandingnya working tree yang juga CRLF. Skrip
+memaksa `-c core.autocrlf=false -c core.eol=lf`.
 
 Yang dikirim: `index.html`, `about.html`, `admin.html`, `benteng.html`, `src/`,
 `data/`, `assets/`, `vendor/`. Berkas lain di web root (`404.html`, `502.html`,

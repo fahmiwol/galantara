@@ -73,11 +73,19 @@ berversi (`supabase-js.2.min.js` dan `GLTFLoader.js` tidak).
 - Header live sebelum: tanpa `Cache-Control`, `Last-Modified: Mon, 13 Apr 2026`,
   JS tanpa `Content-Encoding`. Sesudah: `Cache-Control: no-cache`,
   `Content-Encoding: gzip`, dan revalidasi `If-None-Match` → 304.
-- 102 berkas dibandingkan dengan `cmp`: 0 beda. SHA-256 `index.html` live =
-  HEAD `dfe86d2`.
+- **Koreksi pada hari yang sama:** deploy pertama (`dfe86d2`) mengirim HTML/JS
+  ber-**CRLF**. `git archive` di Windows menerapkan konversi checkout
+  (`core.autocrlf=true`). Pemeriksaan "SHA-256 `index.html` live = lokal"
+  lolos karena berkas lokal pembandingnya adalah working tree yang juga CRLF
+  (33.982 bita; blob 33.445). Dikirim ulang sebagai `4a9c6d2` dengan
+  `-c core.autocrlf=false -c core.eol=lf`: 71 berkas teks berubah, vendor dan GLB
+  tidak disentuh (`Last-Modified` tetap). `cmp` 102 berkas: 0 beda; SHA-256
+  `index.html`, `src/main.js`, dan `src/fisika/Karakter.js` di live = blob
+  `git cat-file`.
 - Browser di live: `G_Fisika.status()` siap, Oola 59 collider, Losari 35 (GLB
   beserta `rumah_panggung.collider.json`), Kuta 27, 0 permintaan ≥ 400, 0 galat
   konsol.
 - Backup: `/root/galantara-backup/galantara.io-20260916-010408.tgz`; vhost
   `/root/nginx-backup/galantara-gzip-cache-20260916-010645/`.
-- `tools/deploy-galantara.sh coba` terhadap live: 102 berkas, 0 berubah.
+- `tools/deploy-galantara.sh jalankan` (4a9c6d2): uji lulus, backup
+  `galantara.io-20260916-012323.tgz`, `DEPLOY.log` di server.
