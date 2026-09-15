@@ -65,6 +65,33 @@ test('Oola: setiap prop menyatakan collider-nya, tidak ada yang diam-diam tembus
   assert.equal(O.f.jumlahDiDunia(), 59);
 });
 
+test('Oola: paling banyak tiga PointLight, dan bohlam lain tetap ikut siklus hari', async () => {
+  // Hub tempat semua pemain muncul sempat membuat 8 PointLight (5 tiang + 3
+  // lampu meja). three r128 menghitung setiap PointLight di shader tiap
+  // material walau intensitasnya 0. Ditelusuri SEKALI di uji — kode produk
+  // tidak boleh menyapu scene (ADR-0002).
+  const cahaya = [];
+  const bohlam = [];
+  const tumpuk = [O.world.worldRoot];
+  while (tumpuk.length) {
+    const o = tumpuk.pop();
+    if (o.isPointLight) cahaya.push(o);
+    else if (o.isMesh && o.userData.isLampu) bohlam.push(o);
+    tumpuk.push(...o.children);
+  }
+  assert.ok(cahaya.length >= 1 && cahaya.length <= 3, `${cahaya.length} PointLight di Oola`);
+  assert.ok(bohlam.length >= 8, `hanya ${bohlam.length} bohlam — bohlam tanpa PointLight ikut hilang?`);
+  for (const l of [...cahaya, ...bohlam]) assert.ok(O.world.lampu.includes(l), `${l.type} di luar daftar lampu DayNight`);
+  const { DayNight } = await import('../src/world/DayNight.js');
+  const dn = new DayNight({});
+  dn.pakaiLampu(O.world.lampu);
+  dn._applyTime(12);
+  const siang = bohlam.map((b) => b.material.emissiveIntensity);
+  dn._applyTime(21);
+  bohlam.forEach((b, i) => assert.ok(b.material.emissiveIntensity > siang[i], `bohlam ${i} tidak menyala di malam hari`));
+  for (const c of cahaya) assert.ok(c.intensity > 0.4, `PointLight redup di malam hari: ${c.intensity}`);
+});
+
 test('Oola: titik muncul bebas dan berdiri di tanah', () => {
   const k = buatKarakter(O.f, { x: 0, y: 0, z: 2 });
   try {

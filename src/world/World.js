@@ -148,6 +148,8 @@ export class World {
           pal,
           prop.seed ?? 42,
           typeof prop.scale === 'number' ? prop.scale : 1,
+          // `cahaya: false` di peta → tiang lampu tanpa PointLight (anggaran ≤ 3).
+          { cahaya: prop.cahaya },
         );
         g.position.set(prop.pos.x, prop.pos.y, prop.pos.z);
         g.rotation.y = Number.isFinite(prop.rotationY) ? prop.rotationY : 0;

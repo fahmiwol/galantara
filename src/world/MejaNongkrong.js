@@ -1099,17 +1099,30 @@ export class MejaNongkrong {
       bohlam.userData.kuatRelatif = kuat;
       g.add(bohlam);
 
-      // decay 2 + jangkauan pendek: cahayanya habis sebelum tepi bidang.
-      const cahaya = new THREE.PointLight(PALET.bohlam, 0, jangkau, 2);
-      cahaya.position.copy(bohlam.position);
-      cahaya.userData.isLampu = true;
-      cahaya.userData.kuatRelatif = kuat;
-      g.add(cahaya);
+      this.lampu.push(bohlam);
 
-      this.lampu.push(bohlam, cahaya);
+      // Hanya bohlam UTAMA yang membawa PointLight. Pendamping (kuat 0,3) tetap
+      // terlihat lebih redup lewat emissive-nya, tapi kolam cahayanya yang
+      // kecil (jangkauan 1,55 m) tidak sebanding biayanya: three r128 memasukkan
+      // SETIAP PointLight ke shader tiap material yang menerima cahaya, walau
+      // intensitasnya 0. Anggaran ≤ 3 PointLight per Spot (sintesis suasana,
+      // 15 Sep 2026); Oola sempat 8.
+      if (kuat >= 1) {
+        // decay 2 + jangkauan pendek: cahayanya habis sebelum tepi bidang.
+        const cahaya = new THREE.PointLight(PALET.bohlam, 0, jangkau, 2);
+        cahaya.position.copy(bohlam.position);
+        cahaya.userData.isLampu = true;
+        cahaya.userData.kuatRelatif = kuat;
+        g.add(cahaya);
+        this.lampu.push(cahaya);
+      }
     };
 
-    buatBohlam(0, 0, SPEK.jariTudung, 1, 2.35);
+    // Jangkauan utama 3,2 m, bukan 2,35: sejak pendamping tidak lagi membawa
+    // PointLight (anggaran ≤ 3 per Spot), kolam 2,35 hanya jatuh di daun meja
+    // dan bidang tanahnya gelap. 3,2 membuat bidang terbaca sebagai pulau terang
+    // dengan tepi yang tetap gelap — dilihat di tangkapan jam 21, 16 Sep 2026.
+    buatBohlam(0, 0, SPEK.jariTudung, 1, 3.2);
     buatBohlam(SPEK.jarakPendamping, zTiang * 0.55, SPEK.jariTudung * 0.55, 0.3, 1.55);
     buatBohlam(-SPEK.jarakPendamping, zTiang * 0.55, SPEK.jariTudung * 0.55, 0.3, 1.55);
   }

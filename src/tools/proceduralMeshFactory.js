@@ -229,7 +229,12 @@ function buildBenchPark(palette, seed, scale) {
   return g;
 }
 
-function buildLampPost(palette, seed, scale) {
+/**
+ * @param {{ cahaya?: boolean }} [opsi] `cahaya: false` → bohlam emissive saja,
+ *   tanpa PointLight. Dipakai supaya satu Spot tetap ≤ 3 PointLight: three r128
+ *   menghitung setiap PointLight di shader walau intensitasnya 0.
+ */
+function buildLampPost(palette, seed, scale, opsi = {}) {
   const rand = rnd(seed);
   const g = new THREE.Group();
   const pole = new THREE.Mesh(
@@ -255,10 +260,12 @@ function buildLampPost(palette, seed, scale) {
   // Kolam cahaya di tanah. Emissive saja hanya membuat bohlamnya terang;
   // yang bikin malam terasa syahdu justru tanah di bawahnya ikut hangat.
   // Tanpa bayangan — sepuluh lampu bershadow akan menghabiskan HP kelas menengah.
-  const nyala = new THREE.PointLight(0xffb35c, 0, 6.5 * scale, 2);
-  nyala.position.y = 2.25 * scale;
-  nyala.userData.isLampu = true;
-  g.add(nyala);
+  if (opsi.cahaya !== false) {
+    const nyala = new THREE.PointLight(0xffb35c, 0, 6.5 * scale, 2);
+    nyala.position.y = 2.25 * scale;
+    nyala.userData.isLampu = true;
+    g.add(nyala);
+  }
   // Sedikit lebih gemuk dari tiangnya (0,16 → 0,20): tiang setipis mesh
   // membuat pemain tersangkut di tepinya.
   g.userData.fisika = [
@@ -705,7 +712,7 @@ function buildCloudShrub(palette, seed, scale) {
  * @param {number} scale — 0.6 .. 1.4
  * @returns {THREE.Group}
  */
-export function buildProceduralGroup(archetypeId, palette, seed, scale) {
+export function buildProceduralGroup(archetypeId, palette, seed, scale, opsi = {}) {
   const s = Math.max(0.5, Math.min(1.6, scale));
   switch (archetypeId) {
     case 'tree_round':
@@ -715,7 +722,7 @@ export function buildProceduralGroup(archetypeId, palette, seed, scale) {
     case 'bench_park':
       return buildBenchPark(palette, seed, s);
     case 'lamp_post':
-      return buildLampPost(palette, seed, s);
+      return buildLampPost(palette, seed, s, opsi);
     case 'gerobak_bakso':
       return buildGerobakBakso(palette, seed, s);
     case 'gazebo_bambu':
