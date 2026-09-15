@@ -14,6 +14,60 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-16 · Batas yang dilanggar di hari ia ditulis, dan alat ukur yang menghitung lebih sedikit dari namanya
+
+**Koreksi entri 15 Sep.** Di sana tertulis dingklik "dinaikkan ke 0,60 dan
+diberi uji". Itu salah: 0,40 diukur dari DEPAN saja. Agen Braga mendekat dari
+arah miring dan kapsul naik 0,50. Saya sapu 32 arah × 5 geseran dari deskriptor
+produksi: silinder sempit sekali naik 0,60. Aturannya jadi **benda rendah yang
+tidak boleh dinaiki ≥ 0,70 m**. Monas dan Malioboro sempat menyalin alas portal
+0,45 yang bisa dinaiki; alas portal sekarang satu deskriptor bersama
+(`FISIKA_ALAS_PORTAL`) dan `tests/panjat.test.mjs` menyapu dari deskriptor yang
+benar-benar dipakai.
+
+**KEPUTUSAN.md menulis "draw call ≤ 150" dan Oola 153 di hari yang sama.**
+Batas di dokumen tidak menghentikan apa pun. `flower_patch` membuat 8 mesh per
+petak kecil; sekarang 2 InstancedMesh (warna per instans). Oola 153 → 123.
+Dibuktikan tiga cara, bukan satu: posisi 20 bunga dibandingkan dengan versi
+lama dari `git show HEAD` (selisih maksimum 1,7e-8 m), menyembunyikan lima petak
+di browser menurunkan `renderer.info.render.calls` tepat 10, dan tangkapan
+layar. Batasnya sekarang dijaga `tests/anggaranSpot.test.mjs`, yang memanggil
+fungsi ukur yang SAMA dengan `tools/anggaran-spot.mjs`, supaya angka dokumen
+dan angka uji tidak bisa berbeda definisi.
+
+**Periksa instrumen: "draw call" alat itu hanya pass utama.** Satu bingkai
+Oola dari kamera ikhtisar = 139 pass utama + **70 pass bayangan = 209**.
+`renderer.info.render.calls` r128 juga tidak menghitung bayangan: `render()`
+memanggil `shadowMap.render()` sebelum `info.reset()`. Angka 209 didapat dengan
+mematikan `autoReset` selama satu bingkai. Ini ketiga kalinya minggu ini angka
+yang tampak resmi ternyata mengukur hal yang lebih sempit dari namanya: warna
+(pulau putih, ADR-0017), ambang panjat (satu arah), sekarang draw call. Pass
+bayangan belum dianggarkan karena belum ada satu pun angka dari ponsel. Kolom
+kaster ditampilkan: Braga 74 dan Kuta 63 paling besar.
+
+**Temuan sampingan:** rumah GLB dari manifest tidak memancarkan bayangan sama
+sekali (`AssetLibrary` tidak menyalakan `castShadow`).
+
+**GLB kini punya collider** lewat berkas pendamping `<nama>.collider.json`,
+dengan bentuk yang sama dengan usulan kontrak `extras.rupa3d.collider`. Angkanya
+dibaca dari batas accessor GLB, bukan dari generatornya. Tangga depan rumah
+panggung ternyata tidak bisa didaki (tapak 0,21 m, 55°); uji yang saya tulis
+mengharapkan bisa, jadi ujinya yang dikoreksi, bukan collider-nya.
+
+**Laporan "kapsul tenggelam saat snap" tidak tereproduksi.** Pengukuran pertama
+saya sendiri tercemar: kapsul berjalan keluar dari lantai uji 30 m lalu jatuh,
+dan itu terbaca sebagai tenggelam. Dengan lantai 80 m: 0 dari 10.800 langkah.
+
+**Dicatat, belum diperbaiki:** fasad Braga menghadap portal, bukan jalan. Di
+Kuta pasir menutupi laut, tangga gerbang terbalik dan melayang, kelapa condong
+sejajar pantai, dan kursinya tanpa kaki.
+
+**Yang dibayar:** uji anggaran membangun tujuh Spot setiap `npm test`
+(+0,5 detik). Instansi membuat petak bunga tidak bisa lagi diubah per mesh
+lewat inspektor; untuk benda sebesar telapak tangan itu harga yang wajar.
+
+---
+
 ## 2026-09-15 · Enam agen, enam Spot — dan dua temuan yang lebih besar dari Spot-nya
 
 Collider enam Spot dikerjakan paralel oleh enam agen, satu berkas runtime

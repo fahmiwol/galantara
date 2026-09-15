@@ -674,18 +674,53 @@ function buildTeraseringPadi(palette, seed, scale) {
   return g;
 }
 
+/**
+ * Petak bunga: DUA draw call, bukan delapan.
+ *
+ * Versi lama membuat 4 batang + 4 kepala bunga sebagai mesh terpisah — 8 draw
+ * call untuk benda sebesar telapak tangan, dan lima petak di Oola saja memakan
+ * 40 dari 153 draw call pulau itu (tools/anggaran-spot.mjs, 16 Sep 2026;
+ * anggaran ≤ 150 di docs/brief/suasana/KEPUTUSAN.md). Sekarang batang satu
+ * InstancedMesh (tinggi lewat skala Y per instans) dan kepala bunga satu
+ * InstancedMesh putih dengan warna PER INSTANS (r128 instanceColor).
+ * Urutan rand() tidak berubah, jadi letak dan warna setiap petak sama persis.
+ */
 function buildFlowerPatch(palette, seed, scale) {
   const rand = rnd(seed);
   const g = new THREE.Group();
   const stem = galantaraMat(paletteColor(palette, 'stem', 0x6f9b63), 0.92);
   const colors = [paletteColor(palette, 'accent', 0xe9c86a), ...(palette?.foliage || [0xc4b5fd])];
-  for (let i = 0; i < 4; i++) {
+  const JUMLAH = 4;
+  const batang = new THREE.InstancedMesh(
+    new THREE.CylinderGeometry(0.018 * scale, 0.024 * scale, 1, 5), stem, JUMLAH,
+  );
+  // Putih: warna per instans dikalikan ke warna bahan.
+  const kepala = new THREE.InstancedMesh(
+    new THREE.SphereGeometry(0.11 * scale, 6, 4), galantaraMat(0xffffff, 0.88), JUMLAH,
+  );
+  const m = new THREE.Matrix4();
+  const q = new THREE.Quaternion();
+  const p = new THREE.Vector3();
+  const sk = new THREE.Vector3();
+  const warna = new THREE.Color();
+  for (let i = 0; i < JUMLAH; i++) {
     const x = (rand() - 0.5) * 0.9 * scale;
     const z = (rand() - 0.5) * 0.7 * scale;
     const h = (0.18 + rand() * 0.18) * scale;
-    addMesh(g, new THREE.CylinderGeometry(0.018 * scale, 0.024 * scale, h, 5), stem, [x, h * 0.5, z], false);
-    addMesh(g, new THREE.SphereGeometry(0.11 * scale, 6, 4), galantaraMat(colors[i % colors.length], 0.88), [x, h, z], false);
+    batang.setMatrixAt(i, m.compose(p.set(x, h * 0.5, z), q, sk.set(1, h, 1)));
+    kepala.setMatrixAt(i, m.compose(p.set(x, h, z), q, sk.set(1, 1, 1)));
+    kepala.setColorAt(i, warna.setHex(colors[i % colors.length]));
   }
+  for (const im of [batang, kepala]) {
+    im.instanceMatrix.needsUpdate = true;
+    im.castShadow = false;
+    im.receiveShadow = true;
+    // Frustum r128 memakai bola batas geometri DASAR, bukan sebaran instans —
+    // tanpa ini bunga di tepi petak bisa hilang di tepi layar.
+    im.frustumCulled = false;
+    g.add(im);
+  }
+  kepala.instanceColor.needsUpdate = true;
   g.userData.fisika = []; // boleh ditembus
   g.userData.archetype = 'flower_patch';
   return g;

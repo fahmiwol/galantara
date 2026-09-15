@@ -4,13 +4,21 @@
 
 ## [Unreleased]
 
-### Fixed
-- **Pulau dirender PUTIH sepanjang siang.** Diukur dari piksel: tanah
-  `#a8d5a2` tampil `#ffffff` jam 12:00–13:30 dan `#ffffeb`/`#f8ffe7` jam 09:00 dan
-  15:30. Penyebabnya `AmbientLight` 0,6 di Renderer yang tidak pernah disentuh
-  siklus hari. ADR-0017.
-- **Langit tidak pernah berganti warna.** DayNight menerima kubah langit
-  sebelum World membangunnya; kubah macet di `#87ceeb`.
+### Added
+- **Keenam Spot menyatakan tanah, batas, dan collider-nya sendiri** — Bogor
+  38, Braga 39, Kuta 27, Losari 35, Malioboro 41, Monas 41 (termasuk collider
+  GLB). Bangunan tidak lagi bisa ditembus, dan pemain berhenti di tepi
+  alun-alun, plaza, pantai, dan jalan yang terlihat, bukan di cincin 17 m
+  bawaan.
+- **GLB dari manifest Spot mendapat collider**: berkas pendamping
+  `<nama>.collider.json` atau `asset.extras.rupa3d.collider` di GLB-nya.
+  Bentuknya sama dengan usulan kontrak Rupa3D — kontraknya **belum
+  diputuskan**.
+- **Anggaran isi Spot dijaga uji** (`tests/anggaranSpot.test.mjs`): segitiga
+  ≤ 20.000, draw call pass utama ≤ 150, PointLight ≤ 3. `tools/anggaran-spot.mjs`
+  menampilkan angkanya, termasuk kaster bayangan yang belum dianggarkan.
+- `docs/brief/suasana/KEPUTUSAN.md`: delapan bentrok antar-brief suasana
+  diputuskan dengan angka sebelum ada yang dibangun dari brief.
 
 ### Changed
 - **Siklus cahaya jadi tabel keyframe yang dikalibrasi terhadap piksel**:
@@ -22,28 +30,53 @@
   meja, dan bangku; kanopi pohon ungu diredam; Dev Hub bergaya palet Oola
   (layar `#5E8C7A`, bukan usulan brief `#BFE3D0` yang hanya Delta-E 17,4);
   halo jadi busur 225° yang diam.
-
-### Added
-- **Collider dan batas sendiri** untuk Bogor (38), Monas (41), dan Malioboro
-  (21) — bangunan tidak lagi bisa ditembus, dan pemain berhenti di tepi
-  alun-alun, plaza, dan jalan yang terlihat (bukan di cincin 17 m bawaan).
-  Braga, Kuta, dan Losari menyusul.
+- **PointLight per Spot paling banyak tiga**: Oola 8 → 3, Braga 10 → 3,
+  Malioboro 10 → 3, Losari 5 → 3. Bohlam sisanya tetap menyala sebagai
+  emissive. r128 menghitung setiap PointLight di shader tiap material walau
+  intensitasnya 0. Cahaya dipasang untuk tempat orang berhenti (warung, kios,
+  gerobak pisang epe), bukan untuk ritme hiasan.
+- **Aturan panjat diukur dari semua arah**: benda rendah yang tidak boleh
+  dinaiki kini ≥ 0,70 m. Dari depan kapsul menaiki 0,40 m, dari arah miring
+  0,50 m, dan sekali 0,60 m pada silinder sempit (32 arah × 5 geseran).
+  Dingklik, dulang lesehan, bangku, dan alas portal jadi 0,70.
+- **Petak bunga 8 → 2 draw call** (InstancedMesh dengan warna per instans);
+  Oola 153 → 123, letak dan warna tiap bunga tidak berubah.
 
 ### Fixed
-- **Dingklik warung bisa dinaiki.** Ambang naik nyata kapsul 0,40 m, bukan
-  parameter 0,35; collider dingklik dan alas portal dinaikkan ke 0,60 m.
+- **Pulau dirender PUTIH sepanjang siang.** Diukur dari piksel: tanah
+  `#a8d5a2` tampil `#ffffff` jam 12:00–13:30 dan `#ffffeb`/`#f8ffe7` jam 09:00 dan
+  15:30. Penyebabnya `AmbientLight` 0,6 di Renderer yang tidak pernah disentuh
+  siklus hari. ADR-0017.
+- **Langit tidak pernah berganti warna.** DayNight menerima kubah langit
+  sebelum World membangunnya; kubah macet di `#87ceeb`.
 - **Kapsul menembus dinding sesaat** sampai 7 cm saat menapak sambil menyentuh
   dinding. `normalNudgeFactor` 3e-3, dipilih dari dua set lintasan: 0 langkah
   > 2 cm, tanpa tersendat, tanpa getar.
 - **Monas:** atap miring rumah kebaya terpasang terbalik, tiang teras tidak
   menopang apa pun, tugu melayang 8 cm.
-- **Malioboro:** PointLight 10 → 3, dan kios tidak lagi gelap di malam hari.
+- **Losari:** rumah panggung menabrak portal dan tangganya menghadap tepi
+  darat.
+- **Malioboro:** kios tidak lagi gelap di malam hari.
+
+### Known issues
+- **Braga:** kedua deret ruko menghadap portal (+Z), bukan ke jalan; kanopi
+  menembus punggung tetangga 0,1–0,3 m di enam celah.
+- **Kuta:** pasir menutupi laut 2,2 m; tangga gerbang naik menjauhi gerbang
+  dan melayang; kelapa condong sejajar pantai; kursi tanpa kaki.
+- **Rumah GLB tidak memancarkan bayangan** — `AssetLibrary` tidak menyalakan
+  `castShadow`.
+- **Pass bayangan belum dianggarkan.** Satu bingkai Oola dari kamera ikhtisar
+  = 139 draw call pass utama + 70 pass bayangan. Belum ada angka dari ponsel.
 
 ### Tests
 - `tests/dayNight.test.mjs`: model Lambert r128 dijangkarkan ke piksel terukur
   (±6 %), lalu menjaga tidak ada jam dengan kanal ≥ 250, siang hijau, malam biru.
-- `tests/fisikaSpot-{bogor,monas,malioboro}.test.mjs`: titik muncul, 16 arah,
+- `tests/fisikaSpot-*.test.mjs` untuk keenam Spot: titik muncul, 16 arah,
   titik berdiri tiap kursi, pelepasan kelompok, lampu.
+- `tests/panjat.test.mjs`: ambang panjat disapu dari deskriptor produksi.
+- `tests/assetCollider.test.mjs`: kontrak collider GLB, skala, dan generasi
+  muat yang dibatalkan.
+- `tests/anggaranSpot.test.mjs`: anggaran tujuh Spot dan petak bunga.
 
 ## [0.9.0] · 2026-09-15
 > **Dunia yang bisa ditabrak.** Pemain tidak lagi menembus pohon, rumah, dan

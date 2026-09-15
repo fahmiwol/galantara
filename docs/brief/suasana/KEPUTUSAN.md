@@ -11,17 +11,19 @@
 ## Isi Spot sekarang (terukur)
 
 Diukur dengan `node --experimental-default-type=module tools/anggaran-spot.mjs`
-(geometri prosedural + GLB manifest; avatar dan NPC tidak dihitung):
+(geometri prosedural + GLB manifest; avatar dan NPC tidak dihitung). Sejak
+16 Sep batasnya dijaga `tests/anggaranSpot.test.mjs` dengan fungsi ukur yang
+sama:
 
-| Spot | Segitiga | Draw call | PointLight | Collider |
-| --- | ---: | ---: | ---: | ---: |
-| Oola | 11.057 | **153** | 3 | 59 |
-| Bogor | 852 | 15 | 0 | 38 |
-| Braga | 5.472 | 131 | 3 | 39 |
-| Kuta | 1.882 | 81 | 2 | 27 |
-| Losari | 2.116 | 86 | 3 | 35 |
-| Malioboro | 3.380 | 71 | 3 | 41 |
-| Monas | 2.290 | 61 | 0 | 41 |
+| Spot | Segitiga | Draw call | Kaster bayangan | PointLight | Collider |
+| --- | ---: | ---: | ---: | ---: | ---: |
+| Oola | 11.057 | 123 (153 sebelum 0a) | 56 | 3 | 59 |
+| Bogor | 852 | 15 | 7 | 0 | 38 |
+| Braga | 5.472 | 131 | 74 | 3 | 39 |
+| Kuta | 1.882 | 81 | 63 | 2 | 27 |
+| Losari | 2.116 | 86 | 6 | 3 | 35 |
+| Malioboro | 3.380 | 71 | 18 | 3 | 41 |
+| Monas | 2.290 | 61 | 11 | 0 | 41 |
 
 Losari 5 → 3 PointLight dan Oola 8 → 3 sudah dikerjakan 16 Sep; Braga dan
 Malioboro 10 → 3 pada 15 Sep. Semuanya dijaga uji.
@@ -40,9 +42,33 @@ Malioboro 10 → 3 pada 15 Sep. Semuanya dijaga uji.
 
 Aturan turunan: prop yang muncul ≥ 3 kali di satu Spot memakai InstancedMesh;
 kit betah bersama (SINTESIS §1) wajib menyatakan draw call-nya, bukan cuma
-segitiganya. Oola **melanggar** batas draw call hari ini — `flower_patch`
-membuat 8 mesh per petak (40 draw call untuk lima petak bunga); itu yang
-pertama diinstansi.
+segitiganya. Oola **melanggar** batas draw call hari keputusan ini ditulis —
+`flower_patch` membuat 8 mesh per petak (40 draw call untuk lima petak bunga).
+**Sudah diinstansi** (16 Sep): 2 InstancedMesh per petak, Oola 153 → 123.
+Letak dan warna 20 bunga dibandingkan dengan versi lama: selisih posisi
+maksimum 1,7e-8 m (Float32), warna sama semua. Di browser, menyembunyikan
+kelima petak menurunkan `renderer.info.render.calls` tepat 10.
+
+**Koreksi instrumen (16 Sep).** "Draw call" di tabel ini = pass utama isi Spot
+saja. Yang tidak terhitung, diperiksa di browser dari kamera ikhtisar Oola:
+
+- **Pass bayangan.** Tiap mesh `castShadow` digambar sekali lagi ke peta
+  bayangan. `renderer.info.render.calls` r128 juga tidak menghitungnya:
+  `render()` memanggil `shadowMap.render()` sebelum `info.reset()`. Satu
+  bingkai Oola nyata = **139 pass utama (dengan avatar/NPC) + 70 pass bayangan
+  = 209**, diukur dengan `autoReset` dimatikan selama satu bingkai (tanpa
+  bayangan: 139).
+- **Mesh di luar pohon Spot** — avatar, NPC, dan sisanya: 24 mesh di adegan
+  Oola hari ini (147 di adegan, 123 di pulau), bertambah per pemain.
+
+Keputusan: batas 150 tetap untuk pass utama isi Spot, karena itu yang bisa
+dijaga uji tanpa browser. **Pass bayangan belum dianggarkan** — belum ada
+satu pun angka dari ponsel, dan bayangan PCFSoft 1024² menyala di semua
+perangkat tanpa tingkat mutu. Kolom kaster ditampilkan supaya keputusan itu
+nanti tidak buta; Braga (74) dan Kuta (63) paling besar. Temuan sampingan:
+rumah GLB dari manifest **tidak memancarkan bayangan sama sekali**
+(`AssetLibrary` tidak menyalakan `castShadow`) — rumah panggung Losari dan
+toko Malioboro tampak tidak menapak.
 
 ### 2. Monas: kontrak `64×64 m` vs rumput luar Ø56 di brief
 
@@ -121,7 +147,7 @@ Dicatat agen Spot 15–16 Sep, diverifikasi dari kode:
 
 SINTESIS §4 tetap acuan, dengan dua sisipan di depannya:
 
-0a. Instansi `flower_patch` (Oola kembali di bawah 150 draw call).
+0a. ~~Instansi `flower_patch`~~ — selesai 16 Sep, Oola 123 draw call.
 0b. Perbaiki cacat Braga dan Kuta di atas.
 
 Lalu §4 langkah 1–10, masing-masing diukur dengan `tools/anggaran-spot.mjs`
