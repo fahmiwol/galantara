@@ -11,9 +11,10 @@
 // kafe klasik dan trotoar yang ditata ramah pejalan kaki.
 // ═══════════════════════════════════════════════════════
 
+import { dindingPersegi } from '../../fisika/Fisika.js';
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
 import { MejaNongkrong } from '../MejaNongkrong.js';
-import { animateSpotWarpPortal, createSpotWarpPortal } from '../spotWarpPortal.js';
+import { animateSpotWarpPortal, createSpotWarpPortal, FISIKA_ALAS_PORTAL } from '../spotWarpPortal.js';
 
 // THREE global — jangan `import 'three'`; klien memuatnya lewat tag script.
 const MS = (color, roughness = 0.8) =>
@@ -35,10 +36,20 @@ const PALET = {
 
 // Braga adalah JALAN, seperti Malioboro — tapi arsitekturnya kebalikan:
 // deret ruko masif dua-tiga lantai, bukan kios terbuka.
-const JALAN_PANJANG = 36;
-const JALAN_LEBAR = 8;          // badan jalan
-const TROTOAR_LEBAR = 4.2;      // sengaja LEBAR: sumber menyebut penataan
-                                // trotoar yang ramah pejalan kaki sebagai ciri.
+// Diekspor supaya uji menghitung batas permukaan dari angka yang sama dengan
+// yang membangunnya, bukan mengetik ulang.
+export const JALAN_PANJANG = 36;
+export const JALAN_LEBAR = 8;          // badan jalan
+export const TROTOAR_LEBAR = 4.2;      // sengaja LEBAR: sumber menyebut penataan
+                                       // trotoar yang ramah pejalan kaki sebagai ciri.
+/** Lebar alas yang bisa diinjak: jalan + dua trotoar. */
+export const TOTAL_LEBAR = JALAN_LEBAR + TROTOAR_LEBAR * 2;
+
+/**
+ * Kepala lampu jalan yang diberi PointLight: [indeks sepanjang jalan, sisi].
+ * Alasannya di bagian lampu dalam `mount`.
+ */
+const LAMPU_BERCAHAYA = Object.freeze([[1, -1], [2, 1], [3, -1]]);
 
 export class BragaSpotRuntime {
   constructor() {
@@ -65,6 +76,24 @@ export class BragaSpotRuntime {
      * @type {{alur: THREE.Matrix4[], kusen: THREE.Matrix4[], lengkung: THREE.Matrix4[]}}
      */
     this._ulang = { alur: [], kusen: [], lengkung: [] };
+    /**
+     * Spot ini menyatakan tanah dan batas fisikanya sendiri. Dibaca Game
+     * sesudah mount: kalau true, tanah datar + cincin 17 m bawaan tidak dipasang.
+     */
+    this.fisikaTanah = false;
+    /** @type {import('../../fisika/Fisika.js').Fisika | null} */
+    this._fisika = null;
+    /** @type {string | undefined} */
+    this._kelompokFisika = undefined;
+  }
+
+  /**
+   * Daftarkan collider ke kelompok fisika Spot. Aman tanpa fisika (no-op) dan
+   * sebelum fisika siap (masuk antrean Fisika). Dilepas Game sekelompok utuh
+   * saat warp — runtime tidak melepasnya sendiri.
+   */
+  _daftarFisika(deskriptor, induk, putarY = 0, pemilik = 'braga') {
+    this._fisika?.daftarkan(this._kelompokFisika, deskriptor, induk, putarY, pemilik);
   }
 
   /**
@@ -73,17 +102,27 @@ export class BragaSpotRuntime {
    * Bukan ornamen rumit — art deco justru bicara lewat garis dan susun.
    *
    * @param {number} lantai 2 atau 3 — sumber menyebut ruko dua sampai tiga lantai
+   * @param {string} nama nama grup dan pemilik collider, mis. `braga_ruko_barat_1`
    */
-  _ruko(g, x, z, lebar, lantai, warna, hadap) {
+  _ruko(g, x, z, lebar, lantai, warna, hadap, nama) {
     const r = new THREE.Group();
+    r.name = nama;
+    // Transform grup dipasang DULU: collider di bawah membaca posisi dan
+    // putaran yang sama persis dengan yang dipakai mesh-nya.
+    r.position.set(x, 0, z);
+    if (hadap < 0) r.rotation.y = Math.PI;
     const TINGGI_LANTAI = 2.5;
     const DALAM = 5.0;
+    /** Kaca etalase menempel di muka: pusatnya 6 cm di depan badan, tebal 10 cm. */
+    const ETALASE_MAJU = 0.06;
+    const ETALASE_TEBAL = 0.1;
     const tinggi = lantai * TINGGI_LANTAI;
 
     const badan = new THREE.Mesh(
       new THREE.BoxGeometry(lebar, tinggi, DALAM),
       MS(warna, 0.9),
     );
+    badan.name = `${nama}_badan`;
     badan.position.y = tinggi / 2;
     badan.castShadow = true;
     badan.receiveShadow = true;
@@ -142,11 +181,27 @@ export class BragaSpotRuntime {
     // Lantai dasar = ruang usaha. Sumber menyebut inilah yang dominan:
     // ruko yang lantai bawahnya toko, kafe, restoran, galeri.
     const etalase = new THREE.Mesh(
-      new THREE.BoxGeometry(lebar * 0.78, 1.5, 0.1),
+      new THREE.BoxGeometry(lebar * 0.78, 1.5, ETALASE_TEBAL),
       MS(0x3a4a52, 0.55),
     );
-    etalase.position.set(0, 1.05, hadap * (DALAM / 2 + 0.06));
+    etalase.name = `${nama}_etalase`;
+    etalase.position.set(0, 1.05, hadap * (DALAM / 2 + ETALASE_MAJU));
     r.add(etalase);
+
+    // FISIKA — badan + relief muka jadi SATU dinding padat dari tanah
+    // (ADR-0016: benda rapat satu volume). Setinggi badan pemain, yang paling
+    // menonjol dari badan adalah kaca etalase ini: muka luarnya DALAM/2 + 0,11;
+    // alur (0,10) dan kusen (0,105) ada di dalamnya. Tanpa tonjolan itu pemain
+    // yang menyusuri muka ruko berdiri 11 cm di dalam kaca. Lis (mulai 2,41 m),
+    // mahkota, dan kanopi di atas kepala — tidak ikut. Putaran diambil dari
+    // grup yang sama dengan mesh, jadi kalau arah muka ruko dibetulkan (brief
+    // suasana Braga §3 butir 1) volumenya ikut berputar.
+    const tonjol = ETALASE_MAJU + ETALASE_TEBAL / 2;
+    this._daftarFisika([{
+      bentuk: 'kotak',
+      ukuran: [lebar, tinggi, DALAM + tonjol],
+      letak: [0, tinggi / 2, hadap * (tonjol / 2)],
+    }], r.position, r.rotation.y, nama);
 
     const kanopi = new THREE.Mesh(
       new THREE.BoxGeometry(lebar * 0.9, 0.12, 1.1),
@@ -155,9 +210,8 @@ export class BragaSpotRuntime {
     kanopi.position.set(0, 2.05, hadap * (DALAM / 2 + 0.55));
     kanopi.castShadow = true;
     r.add(kanopi);
+    // Kanopi tanpa collider: bawahnya 1,99 m, di atas kapsul pemain (1,32 m).
 
-    r.position.set(x, 0, z);
-    if (hadap < 0) r.rotation.y = Math.PI;
     g.add(r);
     return r;
   }
@@ -206,11 +260,19 @@ export class BragaSpotRuntime {
 
   /**
    * @param {THREE.Scene} scene
-   * @param {{ toast: { show: (m: string, t?: string) => void }, openPanel?: (id: string) => void }} [ctx]
+   * @param {{ toast: { show: (m: string, t?: string) => void }, openPanel?: (id: string) => void,
+   *           fisika?: import('../../fisika/Fisika.js').Fisika, kelompokFisika?: string }} [ctx]
    */
   mount(scene, ctx = null) {
     const g = this.root;
-    const TOTAL_LEBAR = JALAN_LEBAR + TROTOAR_LEBAR * 2;
+
+    // Fisika: Spot ini menyatakan tanah, batas, dan benda padatnya sendiri, di
+    // sebelah mesh masing-masing (ADR-0016). Tanpa penanda ini Game memasang
+    // tanah datar 120 × 120 + cincin 17 m — jauh lebih lebar dari alas 16,4 m,
+    // jadi pemain bisa berjalan di udara melewati tepi alas, di sela ruko.
+    this.fisikaTanah = true;
+    this._fisika = ctx?.fisika ?? null;
+    this._kelompokFisika = ctx?.kelompokFisika;
 
     // Trotoar sebagai permukaan utama yang dijalani — bukan aspalnya.
     // Braga adalah jalan PEJALAN KAKI dalam ingatan orang, dan sumber
@@ -223,6 +285,19 @@ export class BragaSpotRuntime {
     alas.receiveShadow = true;
     g.add(alas);
     this.raycastMeshes.push(alas);
+    // TANAH trotoar: kotak yang sama dengan alas, puncaknya y = 0.
+    this._daftarFisika([
+      { bentuk: 'kotak', ukuran: [TOTAL_LEBAR, 0.9, JALAN_PANJANG], letak: [0, -0.45, 0] },
+    ], { x: 0, y: 0, z: 0 }, 0, 'braga_trotoar');
+    // BATAS: empat dinding tak terlihat (tinggi 3 m, tebal 0,6 m) dengan
+    // permukaan dalam TEPAT di tepi alas. Pusat pemain berhenti 0,42 m di
+    // dalam tepi (jari kapsul 0,40 + offset pengendali 0,02), jadi badan avatar
+    // tidak pernah menggantung di atas kekosongan. Di sisi X, di sela ruko,
+    // di balik tepi alas memang tidak ada tanah.
+    this._daftarFisika(
+      dindingPersegi(TOTAL_LEBAR, JALAN_PANJANG, { tinggi: 3, tebal: 0.6 }),
+      { x: 0, y: 0, z: 0 }, 0, 'braga_batas',
+    );
 
     // Badan jalan sedikit lebih rendah — bedanya kecil, tapi itu yang
     // membedakan trotoar dari jalan tanpa perlu pagar.
@@ -234,6 +309,13 @@ export class BragaSpotRuntime {
     aspal.receiveShadow = true;
     g.add(aspal);
     this.raycastMeshes.push(aspal);
+    // TANAH aspal: kotak yang sama dengan mesh-nya. Puncaknya y = 0,02 — dua
+    // senti LEBIH TINGGI dari trotoar, kebalikan dari komentar di atas (brief
+    // suasana Braga §3 butir 2). Collider mengikuti yang terlihat, bukan yang
+    // dimaksud; beda 2 cm jauh di bawah naik tangga otomatis 0,35 m.
+    this._daftarFisika([
+      { bentuk: 'kotak', ukuran: [JALAN_LEBAR, 0.12, JALAN_PANJANG], letak: [0, -0.04, 0] },
+    ], { x: 0, y: 0, z: 0 }, 0, 'braga_aspal');
 
     // Garis putus-putus di tengah jalan.
     for (let i = 0; i < 9; i += 1) {
@@ -243,6 +325,8 @@ export class BragaSpotRuntime {
       );
       garis.position.set(0, 0.03, -JALAN_PANJANG / 2 + 2.5 + i * 3.9);
       g.add(garis);
+      // Tanpa collider: cat jalan, menonjol 2,5 cm di atas aspal — hiasan
+      // yang boleh diinjak tembus.
     }
 
     // Deret ruko di kedua sisi. Lebar dan jumlah lantai divariasikan
@@ -257,9 +341,11 @@ export class BragaSpotRuntime {
     ];
     const xRuko = TOTAL_LEBAR / 2 + 2.0;
     rencana.forEach((r, i) => {
-      this._ruko(g, -xRuko, r.z, r.lebar, r.lantai, rukoWarna[i % 3], 1);
+      // Barat = x negatif, sisi kafe (sama dengan brief suasana Braga).
+      this._ruko(g, -xRuko, r.z, r.lebar, r.lantai, rukoWarna[i % 3], 1,
+        `braga_ruko_barat_${i + 1}`);
       this._ruko(g, xRuko, r.z + 2.4, r.lebar * 0.92,
-        r.lantai === 3 ? 2 : 3, rukoWarna[(i + 1) % 3], -1);
+        r.lantai === 3 ? 2 : 3, rukoWarna[(i + 1) % 3], -1, `braga_ruko_timur_${i + 1}`);
     });
 
     // Semua alur, kusen, dan lengkung dari 10 ruko digambar di sini —
@@ -301,22 +387,45 @@ export class BragaSpotRuntime {
       tenda.rotation.x = -0.16;
       tenda.castShadow = true;
       g.add(tenda);
+      // Tanpa collider: tepi bawah tenda yang miring ini 2,29 m, di atas kepala.
     }
 
     // Lampu jalan klasik — sumber menyebutnya bagian dari penataan Braga.
+    //
+    // ANGGARAN CAHAYA: sepuluh kepala lampu, hanya TIGA PointLight.
+    // Versi sebelumnya membuat PointLight di tiap kepala (10). three r128
+    // memasukkan SETIAP PointLight di scene ke shader tiap material yang
+    // diterangi dan menghitungnya per piksel — termasuk yang intensitasnya 0
+    // (WebGLLights tidak melewatkan lampu padam). Target kita HP kelas
+    // menengah. Sintesis suasana 15 Sep 2026 (docs/brief/suasana/SINTESIS.md,
+    // baris "Braga §3 butir 3"): hanya tiga lampu yang DIBUAT, tujuh sisanya
+    // cukup mesh emissive. Kepala tanpa PointLight tetap ikut siklus hari:
+    // DayNight menyalakannya lewat getLampu() di cabang `lampu.material`.
+    //
+    // Tiga yang dipilih (LAMPU_BERCAHAYA): indeks tengah z = −7,75 / 0 / 7,75,
+    // berselang barat–timur–barat. Ujung ±15,5 m adalah tepi Spot, bukan
+    // tempat orang berkumpul; dua di barat karena empat meja kafe ada di sana,
+    // satu di timur dekat galeri, supaya kedua trotoar punya kolam cahaya.
     const JUMLAH_LAMPU = 5;
     for (let i = 0; i < JUMLAH_LAMPU; i += 1) {
       const z = (i / (JUMLAH_LAMPU - 1) - 0.5) * (JALAN_PANJANG - 5);
       for (const sisi of [-1, 1]) {
         const x = sisi * (JALAN_LEBAR / 2 + 0.7);
+        const nama = `braga_lampu_${sisi < 0 ? 'barat' : 'timur'}_${i + 1}`;
 
         const tiang = new THREE.Mesh(
           new THREE.CylinderGeometry(0.07, 0.11, 3.6, 8),
           MS(0x2f3a42, 0.7),
         );
+        tiang.name = `${nama}_tiang`;
         tiang.position.set(x, 1.8, z);
         tiang.castShadow = true;
         g.add(tiang);
+        // Tiang padat dari tanah, selebar PANGKALNYA (jari-jari 0,11) — bagian
+        // yang mengenai badan pemain. Kepala lampu (3,85 m) di atas kepala.
+        this._daftarFisika([
+          { bentuk: 'silinder', ukuran: [0.22, 3.6, 0.22], letak: [0, 1.8, 0] },
+        ], { x, y: 0, z }, 0, nama);
 
         // Kepala lampu bersegi — bentuk klasik, bukan bola polos.
         const kepala = new THREE.Mesh(
@@ -330,6 +439,7 @@ export class BragaSpotRuntime {
         g.add(kepala);
         this._lampu.push(kepala);
 
+        if (!LAMPU_BERCAHAYA.some(([bi, bs]) => bi === i && bs === sisi)) continue;
         const nyala = new THREE.PointLight(0xffd9a0, 0, 7.5, 2);
         nyala.position.set(x, 3.7, z);
         nyala.userData.isLampu = true;
@@ -344,6 +454,10 @@ export class BragaSpotRuntime {
     const warpZ = JALAN_PANJANG / 2 - 3;
     const { warpRing } = createSpotWarpPortal(g, warpX, warpZ);
     this._warpRing = warpRing;
+    // Collider alas portal dinyatakan sekali di spotWarpPortal.js. Agen Spot
+    // Braga yang menemukan pendekatan SERONG memanjat alas setinggi mesh (0,45):
+    // batas naik tangga 0,35 bukan batas panjat untuk benda bundar.
+    this._daftarFisika(FISIKA_ALAS_PORTAL, { x: warpX, y: 0, z: warpZ }, 0, 'braga_portal');
 
     this.interactionVolumes = [];
     if (ctx?.toast) {
@@ -407,6 +521,9 @@ export class BragaSpotRuntime {
     this._lampu = [];
     this._ulang = { alur: [], kusen: [], lengkung: [] };
     this._warpRing = null;
+    // Collider-nya sudah dilepas Game (lepasKelompok) SEBELUM dispose — satu
+    // kelompok utuh, bukan per benda. Di sini cukup lepas rujukannya.
+    this._fisika = null;
   }
 
   /** @param {number} t */
