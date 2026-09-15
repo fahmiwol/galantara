@@ -1,69 +1,151 @@
-# Deploy statis ke VPS lewat GitHub Actions — HANYA manual (workflow_dispatch).
-# GitHub → Settings → Secrets and variables → Actions:
-#   SSH_HOST, SSH_PORT (VPS-2: 2222), SSH_USER, SSH_PRIVATE_KEY (PEM lengkap),
-#   REMOTE_PATH (mis. /www/wwwroot/galantara.io/)
-name: Deploy VPS (static)
+# Jalur ini memakai kunci ber-command paksa: hanya bisa memanggil penerima.
+# Dipasang dengan tools/deploy/pasang-kunci-ci.sh; lihat docs/DEPLOY.md.
+name: Deploy galantara.io
 
-# Pemicu otomatis SENGAJA DIMATIKAN — lihat ADR-0007 dan ADR-0018.
-#
-# Koreksi 16 Sep 2026: alasan awalnya ("belum ada server") SALAH. galantara.io
-# hidup di VPS-2 sejak April; SSH-nya di port 2222 dan workflow ini mencoba
-# port 22, jadi timeout. SSH_PORT sekarang didukung.
-#
-# Jalur deploy yang berlaku: tools/deploy-galantara.sh (docs/DEPLOY.md) —
-# dengan backup, verifikasi bita, dan penolakan kalau HEAD belum di-push.
-# Workflow ini tidak punya keduanya. Menyalakan `push:` berarti menaruh kunci
-# server bersama (19 aplikasi) di GitHub Secrets: keputusan Fahmi; kalau
-# dinyalakan, pakai user deploy yang hanya bisa menulis web root, bukan root.
-#
-# on:
-#   push:
-#     branches: [main]
 on:
+  push:
+    branches: [main]
+    paths:
+      - index.html
+      - about.html
+      - admin.html
+      - benteng.html
+      - 'src/**'
+      - 'data/**'
+      - 'assets/**'
+      - 'vendor/**'
+      - '.github/workflows/deploy-vps.yml'
+      - 'tools/deploy/**'
   workflow_dispatch:
+    inputs:
+      mode:
+        description: Mode deploy
+        type: choice
+        options: [coba, jalankan]
+        default: jalankan
+        required: true
 
 concurrency:
-  group: deploy-vps
-  cancel-in-progress: true
+  group: deploy-galantara
+  cancel-in-progress: false
+
+permissions:
+  contents: read
 
 jobs:
-  deploy:
+  uji:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+      - name: Uji lokal
+        run: npm test
 
-      - name: Rsync to server
+  deploy:
+    needs: uji
+    runs-on: ubuntu-latest
+    env:
+      MODE: ${{ github.event_name == 'workflow_dispatch' && inputs.mode || 'jalankan' }}
+    steps:
+      - name: Cek konfigurasi
+        id: konfigurasi
+        shell: bash
         env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
           SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
-          SSH_HOST: ${{ secrets.SSH_HOST }}
-          SSH_PORT: ${{ secrets.SSH_PORT }}
-          SSH_USER: ${{ secrets.SSH_USER }}
-          REMOTE_PATH: ${{ secrets.REMOTE_PATH }}
         run: |
           set -euo pipefail
-          mkdir -p ~/.ssh
-          chmod 700 ~/.ssh
-          # Hilangkan CRLF dari secret (sering kalau paste dari Notepad Windows)
-          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > ~/.ssh/deploy_key
-          chmod 600 ~/.ssh/deploy_key
-          # Pastikan path remote diakhiri /
-          REMOTE_PATH="${REMOTE_PATH%/}/"
-          SSH_PORT="${SSH_PORT:-22}"
-          ssh-keyscan -p "$SSH_PORT" -H "$SSH_HOST" >> ~/.ssh/known_hosts 2>/dev/null || true
-          SSH_BASE="-p $SSH_PORT -i ~/.ssh/deploy_key -o IdentitiesOnly=yes -o StrictHostKeyChecking=accept-new -o ConnectTimeout=30 -o BatchMode=yes"
-          DEST="${SSH_USER}@${SSH_HOST}:${REMOTE_PATH}"
-          echo "SSH target: ${SSH_USER}@${SSH_HOST}:${SSH_PORT} path=${REMOTE_PATH}"
-          echo "Testing SSH (BatchMode, no password prompt)..."
-          ssh $SSH_BASE "${SSH_USER}@${SSH_HOST}" "echo ssh_ok"
-          echo "Running rsync..."
-          rsync -avz -e "ssh $SSH_BASE" ./index.html ./about.html ./admin.html ./benteng.html "$DEST"
-          rsync -avz --delete -e "ssh $SSH_BASE" ./src/ "${DEST}src/"
-          rsync -avz --delete -e "ssh $SSH_BASE" ./data/ "${DEST}data/"
-          # assets/ berisi GLB rumah adat dan manifest tiap Spot. Tanpa baris ini
-          # keduanya 404 di live: rumah adat tidak muncul dan Spot gagal memuat
-          # manifestnya, padahal di lokal semuanya benar.
-          rsync -avz --delete -e "ssh $SSH_BASE" ./assets/ "${DEST}assets/"
-          # Pustaka dan font lokal harus ikut agar index tidak bergantung CDN
-          # atau gagal boot. Seluruh vendor/ termasuk fonts/ dan lisensinya.
-          rsync -avz --delete -e "ssh $SSH_BASE" ./vendor/ "${DEST}vendor/"
-          echo "Deploy finished."
+          set +x
+          if [ -n "$SSH_HOST" ] && [ -n "$SSH_PORT" ] && [ -n "$SSH_USER" ] && \
+             [ -n "$SSH_KNOWN_HOSTS" ] && [ -n "$SSH_PRIVATE_KEY" ]; then
+            echo 'siap=true' >> "$GITHUB_OUTPUT"
+          else
+            echo '::notice::Deploy dilewati: jalankan tools/deploy/pasang-kunci-ci.sh'
+            echo 'siap=false' >> "$GITHUB_OUTPUT"
+          fi
+
+      - uses: actions/checkout@v4
+        if: steps.konfigurasi.outputs.siap == 'true'
+
+      - name: Paket dari HEAD
+        if: steps.konfigurasi.outputs.siap == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          git archive --format=tar.gz -o paket.tgz HEAD index.html about.html admin.html benteng.html src data assets vendor
+
+      - name: Kirim ke penerima
+        if: steps.konfigurasi.outputs.siap == 'true'
+        shell: bash
+        env:
+          SSH_HOST: ${{ vars.SSH_HOST }}
+          SSH_PORT: ${{ vars.SSH_PORT }}
+          SSH_USER: ${{ vars.SSH_USER }}
+          SSH_KNOWN_HOSTS: ${{ vars.SSH_KNOWN_HOSTS }}
+          SSH_PRIVATE_KEY: ${{ secrets.SSH_PRIVATE_KEY }}
+        run: |
+          set -euo pipefail
+          set +x
+          umask 077
+          case "$MODE" in coba|jalankan) ;; *) echo '!! Mode tidak sah.' >&2; exit 2 ;; esac
+          printf '%s\n' "$SSH_PRIVATE_KEY" | tr -d '\r' > "$RUNNER_TEMP/kunci"
+          chmod 600 "$RUNNER_TEMP/kunci"
+          printf '%s\n' "$SSH_KNOWN_HOSTS" | tr -d '\r' > "$RUNNER_TEMP/known_hosts"
+          GITHUB_SHA_PENDEK=$(git rev-parse --short HEAD)
+          ssh -i "$RUNNER_TEMP/kunci" -p "$SSH_PORT" \
+            -o IdentitiesOnly=yes -o BatchMode=yes -o ConnectTimeout=20 \
+            -o StrictHostKeyChecking=yes -o UserKnownHostsFile="$RUNNER_TEMP/known_hosts" \
+            "$SSH_USER@$SSH_HOST" "$MODE $GITHUB_SHA_PENDEK" < paket.tgz | tee hasil.txt
+
+      - name: Verifikasi HTTPS terhadap blob HEAD
+        if: steps.konfigurasi.outputs.siap == 'true' && env.MODE == 'jalankan'
+        shell: bash
+        run: |
+          set -euo pipefail
+          : > hasil-verifikasi.txt
+          GAGAL=0
+          for f in index.html src/main.js src/fisika/Karakter.js; do
+            u="/$f"; [ "$f" = index.html ] && u=/
+            BLOB=$(git cat-file -p "HEAD:$f" | sha256sum | cut -c1-64)
+            if ! LIVE=$(curl -fsS --max-time 30 "https://galantara.io$u" | sha256sum | cut -c1-64); then
+              echo "!! $f gagal diambil lewat HTTPS." | tee -a hasil-verifikasi.txt >&2
+              GAGAL=1
+            elif [ "$BLOB" != "$LIVE" ]; then
+              echo "!! $f BERBEDA: blob=$BLOB live=$LIVE" | tee -a hasil-verifikasi.txt >&2
+              GAGAL=1
+            else
+              echo "== $f live = blob HEAD, SHA256 $BLOB" | tee -a hasil-verifikasi.txt
+            fi
+          done
+          exit "$GAGAL"
+
+      - name: Ringkasan hasil
+        if: always() && steps.konfigurasi.outputs.siap == 'true'
+        shell: bash
+        run: |
+          set -euo pipefail
+          {
+            printf '## Deploy galantara.io — %s\n\n' "$MODE"
+            echo '```text'
+            if [ -f hasil.txt ]; then cat hasil.txt; else echo '== Hasil penerima belum tersedia.'; fi
+            if [ -f hasil-verifikasi.txt ]; then
+              cat hasil-verifikasi.txt
+            elif [ "$MODE" = coba ]; then
+              echo '== Mode coba: verifikasi HTTPS dilewati.'
+            else
+              echo '!! Verifikasi HTTPS belum dijalankan.'
+            fi
+            echo '```'
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Hapus kunci sementara
+        if: always()
+        shell: bash
+        run: |
+          set -euo pipefail
+          rm -f -- "$RUNNER_TEMP/kunci" "$RUNNER_TEMP/known_hosts"

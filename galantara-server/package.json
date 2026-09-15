@@ -15,8 +15,10 @@
   },
   "dependencies": {
     "express": "4.22.2",
+    "socket.io": "4.8.3"
+  },
+  "devDependencies": {
     "galantara-repo": "file:..",
-    "socket.io": "4.8.3",
     "three": "0.128.0"
   }
 }
