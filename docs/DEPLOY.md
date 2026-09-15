@@ -1,21 +1,50 @@
 # Deploy galantara.io
 
 > Berlaku sejak **16 Sep 2026**. Menggantikan `docs/DEPLOY_PROMPT.md` dan
-> `apps/web/README-DEPLOY.md`: IP di sana, `72.62.125.6`, adalah VPS-1 yang mati
-> sejak 26 Jul 2026. Keputusan dan alasannya: [ADR-0018](adr/0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md).
+> `apps/web/README-DEPLOY.md` (IP di sana, `72.62.125.6`, adalah VPS-1 yang mati
+> sejak 26 Jul 2026). Keputusan: [ADR-0018](adr/0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md)
+> (verifikasi, cache, gzip) dan [ADR-0020](adr/0020-deploy-otomatis-lewat-kunci-berperintah-paksa.md)
+> (CI dengan kunci ber-perintah-paksa, multiplayer).
 
 ## Di mana
 
 | | |
 | --- | --- |
-| Server | VPS-2 "trx", `187.77.116.139`, Ubuntu, nginx 1.24 |
-| SSH | **port 2222**. Port 22 timeout, dan itulah penyebab workflow CI gagal sejak April, bukan "server belum ada". Alias `trx-alt` di `~/.ssh/config` laptop Fahmi. |
-| Web root | `/www/wwwroot/galantara.io` (pemilik `sidix:sidix`) |
+| Server | VPS-2 "trx" / "KVM 4", `187.77.116.139`, Ubuntu, nginx 1.24, 4 vCPU |
+| SSH | port **2222**, alias `trx-alt` di `~/.ssh/config` laptop Fahmi. Port 22 timeout. |
+| Web root | `/www/wwwroot/galantara.io` (pemilik `sidix:sidix`), **dipindah ke VPS-2 pada 7 Mei 2026** (`stat %w`) |
 | Vhost | `/etc/nginx/sites-enabled/galantara.io` |
-| Multiplayer | `/mp/` → `127.0.0.1:7999` = **sakelar** (`/opt/sakelar`, penyala aplikasi saat dibutuhkan) → PM2 `galantara-mp` (`/www/galantara-server`, port 3005). |
-| Backup | `/root/galantara-backup/galantara.io-<waktu>.tgz`, riwayat di `DEPLOY.log` |
+| Penerima deploy | `/usr/local/sbin/terima-deploy-galantara` (sumber `tools/deploy/terima-deploy-galantara.sh`) |
+| Multiplayer | `/mp/` → `127.0.0.1:7999` = **sakelar** (`/opt/sakelar`: menyalakan aplikasi saat ada permintaan dan menidurkannya setelah 30 menit tanpa akses) → PM2 `galantara-mp` (`/www/galantara-server`, port 3005) |
+| Backup | statis: `/root/galantara-backup/galantara.io-*.tgz` (10 terakhir); multiplayer: `/www/galantara-server.lama-*` (3 terakhir); riwayat: `/root/galantara-backup/DEPLOY.log` |
 
-## Cara
+**Kenapa CI lama gagal** (koreksi 16 Sep; versi pertama dokumen ini menyebut
+port 22): secret CI diisi 13 April untuk server sebelum migrasi, dan kunci deploy
+April tidak terdaftar di VPS-2.
+
+## Situs statis
+
+### Otomatis (setelah kunci CI dipasang)
+
+Push ke `main` yang mengubah `index.html`, `about.html`, `admin.html`,
+`benteng.html`, `src/`, `data/`, `assets/`, `vendor/`, workflow, atau
+`tools/deploy/` → `.github/workflows/deploy-vps.yml`: uji → paket → penerima →
+bandingkan hash live dengan blob. Deploy manual lewat GitHub: Actions → Deploy
+galantara.io → Run workflow (mode `coba` atau `jalankan`).
+
+**Belum aktif sampai Fahmi menjalankan sekali** (Git Bash di `C:\galantara`):
+
+```bash
+bash tools/deploy/pasang-kunci-ci.sh
+```
+
+Skrip itu membuat kunci khusus CI dan memasangnya di server dengan perintah paksa
+(kunci hanya bisa memanggil penerima). Ia juga mengisi `SSH_PRIVATE_KEY` (secret)
+dan `SSH_HOST`/`SSH_PORT`/`SSH_USER`/`SSH_KNOWN_HOSTS` (variabel), menghapus
+secret April yang basi, dan menghancurkan salinan kunci di laptop. Sebelum itu,
+setiap push tetap hijau dengan notice "Deploy dilewati".
+
+### Manual (dari laptop)
 
 ```bash
 npm test
@@ -24,85 +53,74 @@ bash tools/deploy-galantara.sh coba
 bash tools/deploy-galantara.sh jalankan
 ```
 
-`coba` membuat paket, menaruhnya di staging server, dan menampilkan jumlah berkas
-baru, berubah, dan terhapus, tanpa menyentuh web root. `jalankan` melakukan hal
-yang sama, lalu:
+`pasang-penerima` memasang atau memperbarui penerima di server; jalankan setiap
+kali `tools/deploy/terima-deploy-galantara.sh` berubah. Skrip lokal menolak deploy
+kalau ada perubahan yang belum di-commit, HEAD belum di-push, atau uji gagal.
+Penerima lalu:
 
-1. menolak kalau ada perubahan yang belum di-commit, kalau HEAD belum di-push,
-   atau kalau uji gagal;
+1. memvalidasi paket: hanya berkas biasa dan direktori di dalam daftar paket, maksimal 64 MiB;
 2. mem-backup web root;
-3. menyinkronkan folder dulu, `index.html` terakhir (index baru merujuk
-   `/vendor/*.js` yang harus sudah ada);
-4. memakai `--checksum` tanpa `-t`, jadi berkas yang isinya sama tidak disentuh
-   (ETag-nya tetap, pengunjung mendapat 304);
-5. membandingkan setiap berkas paket bita per bita dengan yang dilayani;
-6. mencocokkan tiga berkas live lewat HTTPS dengan **blob** commit
-   (`git cat-file`), bukan dengan working tree.
+3. menyinkronkan folder dulu, `index.html` terakhir;
+4. memakai `rsync --checksum` tanpa `-t` (ETag berkas yang isinya sama tidak berubah);
+5. membandingkan setiap berkas dengan `cmp` dan menulis `DEPLOY.log`.
 
-**Jebakan Windows:** `git archive` menerapkan konversi checkout, jadi dengan
-`core.autocrlf=true` paketnya berisi CRLF. Deploy pertama (`dfe86d2`) begitu,
-dan lolos pemeriksaan karena pembandingnya working tree yang juga CRLF. Skrip
-memaksa `-c core.autocrlf=false -c core.eol=lf`.
+Skrip lokal kemudian mencocokkan tiga berkas live dengan **blob** commit.
 
-Yang dikirim: `index.html`, `about.html`, `admin.html`, `benteng.html`, `src/`,
-`data/`, `assets/`, `vendor/`. Berkas lain di web root (`404.html`, `502.html`,
-`.user.ini`, `.well-known/`, `three.min.js` lama) dibiarkan.
+**Jebakan Windows:** `git archive` menerapkan konversi checkout. Tanpa
+`-c core.autocrlf=false -c core.eol=lf`, paketnya ber-CRLF, dan membandingkan
+dengan working tree (juga CRLF) akan tetap "cocok".
 
-## Kembali ke versi sebelumnya
+Kembali ke versi sebelumnya:
+`bash tools/deploy-galantara.sh pulihkan galantara.io-YYYYmmdd-HHMMSS.tgz`.
+
+## Server multiplayer
 
 ```bash
-bash tools/deploy-galantara.sh pulihkan /root/galantara-backup/galantara.io-YYYYmmdd-HHMMSS.tgz
+bash tools/deploy-mp-galantara.sh coba
+bash tools/deploy-mp-galantara.sh jalankan
+bash tools/deploy-mp-galantara.sh pulihkan [galantara-server.lama-YYYYmmdd-HHMMSS]
 ```
 
-Nama berkasnya ada di keluaran `jalankan` dan di `DEPLOY.log`.
+`coba` memasang dependensi di staging (`npm ci --omit=dev`) dan menguji handshake
+Socket.IO di port 39005. `jalankan` lalu `pm2 stop galantara-mp`, menukar
+direktori secara atomik, menjalankan `pm2 start` kalau aplikasinya masih stopped,
+dan menunggu handshake publik sampai 300 detik.
+
+- **Jangan `pm2 restart` aplikasi yang online** di belakang sakelar; statusnya
+  bisa terjebak (OMIGA `L2b0903ff93`).
+- **Sakelar bisa terjebak saat deploy:** permintaan yang tiba selama `pm2 stop`
+  membuatnya mencatat "SUDAH JALAN", lalu menunggu port 150 detik tanpa menyalakan
+  apa pun. Karena itu skrip menyalakan sendiri aplikasi yang stopped.
+- **VPS-2 bisa sangat sibuk:** 16 Sep load 62 di 4 vCPU (sakelar sedang
+  menyalakan suite SIDIX), dan proses baru butuh sekitar 160 detik untuk membuka
+  port. Pemain terputus selama itu; klien menyambung ulang sendiri.
+- `three` dan `galantara-repo` (`file:..`) adalah devDependencies, hanya untuk mode
+  `--local`. Di server, induk direktorinya bukan repo.
+- **API admin** (`/mp/api/admin/summary`) menjawab **503** sampai `ADMIN_API_TOKEN`
+  di-set di environment PM2 (opsional: `SUPABASE_URL`,
+  `SUPABASE_SERVICE_ROLE_KEY`). Itu rahasia, jadi Fahmi yang memasangnya.
 
 ## Memeriksa di live
 
-- `curl -sI https://galantara.io/src/main.js` → `Cache-Control: no-cache`.
-- `curl -s -o /dev/null --compressed -D - https://galantara.io/vendor/three.r128.min.js`
-  → `Content-Encoding: gzip`.
-- Di konsol browser: `G_Fisika.status()` → `siap: true`, `kelompok.oola: 59`.
-  Dengan `?spot=losari`: `kelompok.spot: 35`.
+- `curl -sI https://galantara.io/src/main.js` → `Cache-Control: no-cache`; JS
+  dengan `Accept-Encoding: gzip` → `Content-Encoding: gzip`.
+- `curl -s "https://galantara.io/mp/socket.io/?EIO=4&transport=polling"` →
+  `0{"sid":…}`.
+- Konsol browser: `G_Fisika.status()` → `siap: true`, `kelompok.oola: 59`; dengan
+  `?spot=losari` → `kelompok.spot: 35`. Bar atas menampilkan "N online".
 - Tidak ada permintaan gagal:
   `performance.getEntriesByType('resource').filter(e => e.responseStatus >= 400)`.
-- `window._game` **tidak ada** di live. `src/main.js` hanya memasangnya di
-  localhost.
+- `window._game` **tidak ada** di live; `src/main.js` hanya memasangnya di localhost.
 
-## Cache dan kompresi
+## Cache dan kompresi (vhost)
 
-Diubah di vhost pada 16 Sep (backup:
-`/root/nginx-backup/galantara-gzip-cache-20260916-010645/`):
+Diubah 16 Sep (backup `/root/nginx-backup/galantara-gzip-cache-20260916-010645/`):
 
-- **`Cache-Control: no-cache`.** Modul ES dan aset tidak ber-hash di namanya.
-  Tanpa header, browser memakai kesegaran heuristik, yaitu 10 % dari umur
-  `Last-Modified`. Build April yang berumur 5 bulan dianggap segar sekitar 15
-  hari, sehingga deploy baru tidak terlihat. Sekarang tiap muat merevalidasi
-  (304 kalau sama).
-- **gzip untuk JS/CSS/JSON.** `nginx.conf` server hanya mengompres `text/html`.
-  Terukur di live: Rapier 2.857.590 → 1.084.995 bita, three 603.445 → 149.202,
-  `Game.js` 39.375 → 11.648.
+- **`Cache-Control: no-cache`.** Modul ES tidak ber-hash di namanya. Tanpa header,
+  browser memakai kesegaran heuristik (10 % umur `Last-Modified`), sehingga build
+  lama bisa tampil sampai sekitar 15 hari.
+- **gzip JS/CSS/JSON.** `nginx.conf` hanya mengompres `text/html`. Rapier
+  2.857.590 → 1.084.995 bita, three 603.445 → 149.202.
 
-**Pengunjung yang pernah membuka galantara.io sebelum 16 Sep perlu Ctrl+Shift+R
-sekali.** Salinan April di browser mereka sudah dianggap segar sebelum header
-baru ada, jadi header baru tidak menjangkaunya.
-
-Sesudah `systemctl reload nginx`, worker baru terlihat 24 detik kemudian
-(reload 01:06:54, worker 01:07:18). Verifikasi setelah worker baru hidup, jangan
-dari satu respons pertama.
-
-## CI
-
-`.github/workflows/deploy-vps.yml` sekarang mendukung `SSH_PORT`, tetapi pemicu
-`push:` tetap mati. Menyalakannya berarti menaruh kunci server bersama (19
-aplikasi) di GitHub Secrets. Itu keputusan risiko untuk Fahmi; kalau dinyalakan,
-pakai user deploy yang hanya bisa menulis ke web root, bukan `root`. Workflow itu
-juga tidak punya backup dan tidak memverifikasi bita.
-
-## Belum dideploy
-
-- **Server multiplayer** (`galantara-server/`). Produksi masih menjalankan kode
-  April. Protokol klien tidak berubah (`/mp/socket.io` sama sejak April). Yang
-  tertinggal: `rooms = Object.create(null)` (ruang bernama `__proto__` tidak lagi
-  menyentuh prototipe) dan versi dependensi. Kalau dideploy: **jangan**
-  `pm2 restart galantara-mp` saat online. sakelar memperingatkan statusnya bisa
-  terjebak `errored`. Urutannya ada di Omiga `L2b0903ff93`.
+Pengunjung yang membuka galantara.io sebelum 16 Sep perlu **Ctrl+Shift+R sekali**.
+Setelah `systemctl reload nginx`, worker baru muncul 24–40 detik kemudian.

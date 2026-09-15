@@ -1,6 +1,6 @@
 # ADR-0018 — Deploy manual yang terverifikasi, revalidasi cache, dan gzip di vhost
 
-**Status:** Diterima — mengoreksi premis ADR-0007 ("belum ada server")
+**Status:** Diterima — mengoreksi premis ADR-0007 ("belum ada server"). Keputusan 2 (CI tetap mati) **digantikan [ADR-0020](0020-deploy-otomatis-lewat-kunci-berperintah-paksa.md)**; penyebab CI gagal dikoreksi di bawah.
 **Tanggal:** 2026-09-16
 **Konteks proyek:** Galantara — dunia 3D sosial Indonesia di browser
 
@@ -8,8 +8,11 @@
 
 ADR-0007 mematikan pemicu deploy CI karena "server belum ada". **Premis itu
 salah.** galantara.io tidak pernah mati: ia hidup di VPS-2 (`187.77.116.139`) dan
-melayani build 13 April 2026. SSH server itu ada di **port 2222**, sedangkan
-workflow mencoba port 22, sehingga `Connection timed out`. Fahmi, 16 Sep:
+melayani build 13 April 2026. *Koreksi (16 Sep, sore): versi pertama ADR ini
+menulis bahwa CI gagal karena mencoba port 22. Itu dugaan. Yang terbukti: web
+root lahir di VPS-2 pada 7 Mei 2026 (`stat %w`), secret CI diisi 13 April untuk
+server sebelumnya, dan kunci deploy April tidak terdaftar di VPS-2 (SSH-nya di
+port 2222).* Fahmi, 16 Sep:
 "galantara hidup ko di KVM 4 server 2." Diperiksa lewat SSH pada hari yang sama.
 
 Deploy pertama sejak April (16 Sep, `dfe86d2`): 64 berkas baru, 37 berubah,

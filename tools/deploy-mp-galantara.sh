@@ -147,8 +147,24 @@ pangkas_backup() {
   done < "$T/backup"
 }
 bangunkan() {
-  local akhir=$((SECONDS+90)) sisa batas jawaban
-  info 'Membangunkan lewat URL publik sakelar (maksimal 90 detik).'
+  # 300 detik, bukan 90: 16 Sep 2026 proses baru butuh ~160 detik sampai port
+  # 3005 terbuka karena load VPS-2 62 (4 vCPU) saat sakelar menyalakan suite SIDIX.
+  local akhir=$((SECONDS+${BATAS_BANGUN:-300})) sisa batas jawaban
+  info "Load server: $(cut -d' ' -f1-3 /proc/loadavg)"
+  # Sakelar bisa terjebak: permintaan yang tiba SAAT pm2 stop berjalan membuatnya
+  # mencatat "SUDAH JALAN (tak di-start ulang)" lalu menunggu port 150 detik tanpa
+  # menyalakan apa pun (16 Sep: 19:14:52 SUDAH JALAN → 19:17:22 GAGAL SIAP).
+  # Menyalakan aplikasi yang STOPPED sama dengan yang dilakukan sakelar sendiri;
+  # larangannya adalah pm2 restart pada aplikasi yang ONLINE.
+  if pm2 jlist > "$T/pm2.json" && python3 -c '
+import json, sys
+apps = [a for a in json.load(sys.stdin) if a.get("name") == "galantara-mp"]
+sys.exit(0 if len(apps) == 1 and apps[0].get("pm2_env", {}).get("status") == "stopped" else 1)
+' < "$T/pm2.json"; then
+    info 'galantara-mp masih stopped setelah penukaran: pm2 start (bukan restart).'
+    pm2 start galantara-mp >/dev/null
+  fi
+  info "Menunggu handshake publik lewat sakelar (maksimal ${BATAS_BANGUN:-300} detik)."
   while [ "$SECONDS" -lt "$akhir" ]; do
     sisa=$((akhir-SECONDS)); batas=$((sisa<5 ? sisa : 5))
     jawaban=$(curl -fsS --connect-timeout "$batas" --max-time "$batas" "$URL" 2>/dev/null) || jawaban=
@@ -251,7 +267,7 @@ fi
 
 if ! bangunkan; then
   catat gagal-bangun
-  gagal 'Sakelar tidak berhasil membangunkan multiplayer dalam 90 detik.'
+  gagal "Multiplayer tidak menjawab handshake dalam ${BATAS_BANGUN:-300} detik."
 fi
 catat online
 PERLU_PULIH=0

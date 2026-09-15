@@ -14,6 +14,55 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-16 (sore) · Koreksi kedua dalam sehari: bukan port — dan server multiplayer yang crash tiap pemain pergi
+
+**Klaim "CI gagal karena port 22" adalah dugaan yang saya tulis sebagai fakta**, di
+ADR-0018, DEPLOY.md, CHANGELOG, commit `4a9c6d2`, dan OMIGA, beberapa jam setelah
+menulis pelajaran tentang kesimpulan infrastruktur tanpa pemeriksaan. Diperiksa:
+`stat %w` menunjukkan web root galantara.io **lahir di VPS-2 pada 7 Mei 2026**
+(mtime 13 April ikut terbawa saat migrasi); secret CI diisi 13 April; sidik jari
+kunci deploy April tidak ada di `authorized_keys` VPS-2. CI lama tidak mungkin
+berhasil walau port diganti. Waktu lahir berkas adalah alat yang murah untuk
+membedakan "dideploy ke sini" dari "dipindah ke sini".
+
+**Server multiplayer produksi lebih tua dari commit awal repo.** `removePlayer`
+memanggil `_broadcastCount`, yang hanya didefinisikan di dalam handler koneksi:
+`ReferenceError` setiap tenggang putus 8 detik habis, 118 kali di log galat.
+Hitungan restart PM2 naik 18 → 22 hari ini saja. Tidak ada yang tahu karena PM2
+selalu menyalakannya lagi. Deploy HEAD (`6650744`); sejak itu log galat tidak
+bertambah walau tab verifikasi berpindah dan terputus.
+
+**Deploy multiplayer sempat "gagal" padahal berhasil.** Sakelar menerima
+permintaan tepat saat `pm2 stop` berjalan, mencatat "SUDAH JALAN", lalu menunggu
+port 150 detik tanpa menyalakan apa pun. Load VPS-2 sedang 62 di 4 vCPU karena
+suite SIDIX dibangunkan, sehingga proses baru butuh sekitar 160 detik untuk
+membuka port. Batas tunggu skrip 90 detik habis lebih dulu. Hasilnya: pemain
+terputus sekitar 7 menit, dan DEPLOY.log mencatat `gagal-bangun` lalu baris
+KOREKSI. Skrip kini menyalakan sendiri aplikasi yang stopped dan menunggu 300
+detik.
+
+**Codex menulis 5 berkas deploy dari spesifikasi saya** (962 detik, atas
+permintaan Fahmi supaya hemat token). Sandbox-nya tidak bisa menjalankan
+`bash -n` di Windows (`CreateFileMapping … error 5`), jadi sintaks, penerima root
+(dibaca baris per baris), dan perilaku (`coba` di server) saya periksa sendiri.
+Hasilnya baik; satu hal perlu saya ubah (batas tunggu bangun).
+
+**Uji lama melarang yang sekarang diputuskan.** `deployAssets.test.mjs` gagal
+karena ada pemicu push. Kontraknya ditulis ulang, bukan dilonggarkan: daftar paket
+di workflow, skrip manual, dan penerima wajib sama. Dibuktikan merah dengan
+mengurangi daftar penerima.
+
+**Keputusan yang dikembalikan ke pemiliknya:** rilis perbaikan tersendat
+diputuskan sesi Rupa3D (1.6.2, sudah terbit). Kontrak collider GLB diputuskan di
+sini (ADR-0019) dan diterima Rupa3D, yang langsung membuat penulis sertifikatnya
+mempertahankan `collider`.
+
+**Yang dibayar:** penerima berjalan sebagai root, jadi skripnya adalah permukaan
+serangan. Deploy CI sungguhan belum terbukti sampai Fahmi memasang kunci. API
+admin 503 sampai `ADMIN_API_TOKEN` dipasang.
+
+---
+
 ## 2026-09-16 · "Belum punya server" salah selama enam hari, dan deploy yang benar pun tidak akan terlihat
 
 **Premis yang salah.** 10 Sep CI gagal `ssh ... port 22: Connection timed

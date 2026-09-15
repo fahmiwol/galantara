@@ -36,7 +36,9 @@ bukan keputusan, cuma preferensi.
 | [0015](0015-fisika-rapier-dimuat-malas-langkah-tetap-dan-pengendali-kinematik.md) | Fisika Rapier, dimuat malas | Satu mesin dengan Rupa3D; 1,08 MB gzip dibayar setelah dunia tampil |
 | [0016](0016-collider-adalah-volume-permainan-dinyatakan-di-sebelah-mesh.md) | Collider = volume permainan | Kotak batas otomatis salah untuk pohon dan benda rendah |
 | [0017](0017-warna-diukur-di-piksel-yang-dirender-bukan-di-material.md) | Warna diukur di piksel | Pulau dirender putih sepanjang siang padahal materialnya hijau |
-| [0018](0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md) | Deploy manual terverifikasi, no-cache + gzip | "Server belum ada" ternyata SSH di port 2222; deploy yang tak terlihat karena cache heuristik |
+| [0018](0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md) | Deploy manual terverifikasi, no-cache + gzip | "Server belum ada" ternyata situs dipindah ke VPS-2 (7 Mei); deploy yang tak terlihat karena cache heuristik — *CI digantikan ADR-0020* |
+| [0019](0019-kontrak-collider-glb-lintas-produk.md) | Kontrak collider GLB `extras.rupa3d.collider` v1 | Proksi yang diukur Rupa3D harus jadi volume yang sama di Galantara |
+| [0020](0020-deploy-otomatis-lewat-kunci-berperintah-paksa.md) | Deploy otomatis lewat kunci ber-perintah-paksa | Push = live dengan backup dan verifikasi, tanpa kunci yang memberi shell |
 
 ## Format
 

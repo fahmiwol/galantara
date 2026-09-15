@@ -4,6 +4,37 @@
 
 ## [Unreleased]
 
+### Added
+- **Deploy otomatis galantara.io** (ADR-0020): push ke `main` → uji → paket →
+  penerima root di server → hash live dibandingkan dengan blob. Kunci CI hanya bisa
+  memanggil penerima (`command=…,restrict`). **Aktif setelah Fahmi menjalankan
+  `bash tools/deploy/pasang-kunci-ci.sh` sekali**; sampai itu, deploy dilewati
+  dengan notice dan job tetap hijau (run `35011915971`).
+- `tools/deploy-mp-galantara.sh`: deploy server multiplayer dengan staging,
+  uji asap handshake, tukar direktori atomik, dan pemulihan.
+- **ADR-0019: kontrak collider GLB lintas produk** `asset.extras.rupa3d.collider`
+  v1, diterima Rupa3D; penulis sertifikat Rupa3D kini mempertahankan `collider`.
+
+### Fixed
+- **Server multiplayer produksi crash setiap pemain putus.** Kodenya lebih tua dari
+  commit awal repo: `removePlayer` memanggil `_broadcastCount` yang hanya ada di
+  dalam handler koneksi, sehingga `ReferenceError` terjadi setiap tenggang 8 detik
+  habis (118 kali di log galat) dan PM2 me-restart berulang. Kini HEAD, yang juga
+  berhenti menghitung pemain ganda saat pindah Spot.
+
+### Changed
+- `galantara-server`: `three` dan `galantara-repo` (`file:..`) jadi
+  devDependencies, karena hanya dipakai mode `--local`.
+- `tests/deployAssets.test.mjs`: kontrak lama ("tanpa pemicu otomatis") diganti
+  kontrak baru. Workflow, skrip manual, dan penerima wajib mengirim daftar yang
+  sama; terbukti merah saat daftar penerima dikurangi.
+
+### Koreksi
+- **CI lama gagal bukan karena port 22.** Web root dipindah ke VPS-2 pada 7 Mei
+  2026 (waktu lahir berkas), dan kunci deploy April tidak terdaftar di VPS-2.
+  Klaim "port 22" di [0.10.0], ADR-0018, dan commit `4a9c6d2` adalah dugaan yang
+  tidak diperiksa.
+
 ## [0.10.0] · 2026-09-16
 > **Live di galantara.io** — deploy pertama sejak 13 April 2026 (`dfe86d2`, dikirim
 > ulang sebagai `4a9c6d2` karena paket pertama ber-CRLF).

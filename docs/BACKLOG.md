@@ -258,7 +258,7 @@ Diambil dari `docs/GALANATARA_CURRENT_STATE.md` §"Yang masih kosong":
 | --- | --- |
 | `sulah_nyanda.glb` belum ditempatkan | Menunggu Spot Banten atau konteks naratif yang jujur. Menaruhnya di Spot lain berarti berbohong soal asalnya. |
 | Kunci Gemini di korpus omiga tidak dirotasi | Keputusan Fahmi 10 Sep: korpusnya tidak pernah meninggalkan laptopnya. Ditinjau ulang **hanya** kalau korpus dipindah ke VPS/dibagi, atau kuncinya diganti yang bernilai lebih tinggi. |
-| Deploy CI dimatikan | Server ADA (VPS-2, SSH port 2222) — alasan "belum ada server" dikoreksi ADR-0018. Tetap mati: jalur yang berlaku `tools/deploy-galantara.sh`; menyalakan CI = kunci server bersama di GitHub Secrets, keputusan Fahmi. |
+| Deploy CI | **Dinyalakan (ADR-0020), menunggu kunci.** Fahmi menjalankan `bash tools/deploy/pasang-kunci-ci.sh` sekali; sampai itu deploy dilewati dengan notice (hijau). |
 | sRGB + ACES tone mapping | Pernah dicoba dan dibalik: materi dan lampu disetel tanpa itu, jadi menyalakannya memucatkan seluruh dunia. Satu paket perubahan, bukan satu baris. |
 | Koin di daily challenge | Sengaja tanpa koin sampai P2.1 nyata. |
 
@@ -268,7 +268,8 @@ Diambil dari `docs/GALANATARA_CURRENT_STATE.md` §"Yang masih kosong":
 
 | Hal | Status |
 | --- | --- |
-| Server deploy | **Live sejak 16 Sep 2026** (`dfe86d2`, pertama sejak 13 April). VPS-2 `187.77.116.139`, SSH port 2222, web root `/www/wwwroot/galantara.io`. Deploy: `bash tools/deploy-galantara.sh jalankan` — runbook `docs/DEPLOY.md`. Vhost kini `Cache-Control: no-cache` + gzip JS. **Server multiplayer belum dideploy** (produksi masih kode April; protokol klien sama). |
+| Server deploy | **Live sejak 16 Sep 2026** — statis `4a9c6d2`, multiplayer `6650744`. VPS-2 `187.77.116.139:2222`. Runbook `docs/DEPLOY.md` (manual, CI, multiplayer, pemulihan). Belum: `ADMIN_API_TOKEN` di PM2 (API admin 503) — rahasia, dipasang Fahmi. |
+| UI chat di layar sempit | Panel chat menutupi sebagian besar dunia pada lebar ~700 px (terlihat saat verifikasi live 16 Sep). Belum diukur di ponsel. |
 | Codex CLI | **Jalan lagi di 0.154.0** (15 Sep, dipakai untuk tinjauan fisika, mode read-only). `tools/tanya-gpt.mjs` tetap jalur untuk pendapat kedua lewat API; sejak 15 Sep memakai `node:https` dengan batas 20 menit. |
 | Rapier | `vendor/rapier3d-compat.0.20.0.js`, dimuat malas. Ukur ulang di ponsel sebelum membuat klaim performa apa pun. |
 | Ollama laptop | **Sengaja mati.** Inferensi pindah ke Bmax `192.168.1.78`. Cek dengan `curl .../api/tags`, **bukan `ping`** (ICMP diblokir firewall Bmax). |
