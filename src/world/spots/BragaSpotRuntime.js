@@ -286,6 +286,7 @@ export class BragaSpotRuntime {
         rotasi: Math.PI / 2,
       });
       meja.bangun(g);
+      meja.daftarkanFisika(ctx?.fisika, ctx?.kelompokFisika);
       this.meja.push(meja);
     }
 

@@ -3,8 +3,12 @@
 // Build mesh, handle movement input, clamp ke island
 // ═══════════════════════════════════════════════════════
 
-import { AV_PRESETS, SPEED, ISLAND_R } from '../data/config.js';
+import { AV_PRESETS, ISLAND_R } from '../data/config.js';
 import { getSavedAvatarColorIndex, setSavedAvatarColorIndex } from '../data/avatarPreferences.js';
+import {
+  KECEPATAN, BATAS_JATUH, majukanKarakter, teleportKarakter, resetWaktuKarakter,
+  nonaktifkanKarakter, aktifkanKarakter, cariTempatBerdiri, ruangBebas, calonMelingkar,
+} from '../fisika/Karakter.js';
 
 /** Turunnya badan saat duduk: dudukan dingklik 0,38 m dikurangi tenggelamnya
  *  badan chibi ke dalam dudukan. */
@@ -33,6 +37,68 @@ export class Avatar {
     /** Benar satu frame saat pemain berdiri sendiri; dibaca Game untuk
      *  memberi tahu mejanya. */
     this.baruBerdiri = false;
+    /** Benar satu frame saat ingin berdiri tapi tidak ada titik yang muat. */
+    this.gagalBerdiri = false;
+    /** Benar satu frame saat pemain jatuh dari dunia dan dikembalikan. */
+    this.jatuhDariDunia = false;
+
+    /** Karakter fisika (src/fisika/Karakter.js), atau null selama Rapier belum
+     *  siap / gagal dimuat. Selama null, gerak lama yang dipakai. */
+    this._karakter = null;
+    /** Tinggi telapak kaki dari fisika — naik saat di anak tangga/terasering. */
+    this._kakiY = 0;
+    /**
+     * Penolak titik berdiri karena alasan PERMAINAN, disetel Game: titik di
+     * radius kursi mana pun ditolak, karena keterisian diturunkan dari posisi.
+     * @type {((p:{x:number,z:number}) => boolean) | null}
+     */
+    this.bolehBerdiri = null;
+  }
+
+  /**
+   * Sambungkan karakter fisika. Pemain mungkin sudah berjalan dengan gerak lama
+   * — dan gerak lama menembus apa saja — jadi posisinya diperiksa dulu dan
+   * dipindah ke titik bebas terdekat kalau sedang berdiri di dalam sesuatu.
+   *
+   * @param {object} k hasil buatKarakter() dari src/fisika/Karakter.js
+   */
+  pakaiKarakter(k) {
+    this._karakter = k;
+    if (this._kursi) {
+      nonaktifkanKarakter(k);
+      return;
+    }
+    this.pastikanBebas();
+  }
+
+  get pakaiFisika() { return this._karakter !== null; }
+
+  /**
+   * Kalau kapsul sedang beririsan dengan collider (baru menyambung, baru warp),
+   * pindahkan ke titik bebas terdekat. Pengendali Rapier tidak mendepenetrasi
+   * sendiri — kapsul yang mulai di dalam batang pohon akan tetap di sana.
+   * @returns {boolean} apakah posisinya dipindah
+   */
+  pastikanBebas() {
+    const k = this._karakter;
+    if (!k || this._kursi) return false;
+    const di = ruangBebas(k, this.pos);
+    if (di.bebas) {
+      // Badan fisika disamakan dengan posisi gambar — selama gerak lama
+      // berjalan, keduanya berpisah.
+      teleportKarakter(k, { x: this.pos.x, y: di.tanahY, z: this.pos.z });
+      this._kakiY = di.tanahY;
+      return false;
+    }
+    const boleh = this.bolehBerdiri ?? undefined;
+    const titik = cariTempatBerdiri(k, calonMelingkar(this.pos), { boleh })
+      ?? cariTempatBerdiri(k, calonMelingkar({ x: 0, z: 2 }), { boleh });
+    if (!titik) return false;
+    teleportKarakter(k, titik);
+    this.pos.x = titik.x;
+    this.pos.z = titik.z;
+    this._kakiY = titik.y;
+    return true;
   }
 
   // ── BUILD CHIBI MESH ──────────────────────────────────
@@ -108,6 +174,13 @@ export class Avatar {
       const k = MAP[e.code];
       if (k) this.keys[k] = false;
     });
+    // Tombol yang DITAHAN saat jendela kehilangan fokus (alt-tab, klik di luar
+    // halaman, dialog) tidak pernah mengirim keyup — pemain berjalan sendiri
+    // sampai menabrak tepi pulau. Terlihat saat verifikasi fisika 15 Sep 2026;
+    // pola perbaikannya dari Mighan-3D-Studio (reset saat blur).
+    const lepasSemua = () => { this.keys = {}; this.dpad = {}; };
+    window.addEventListener('blur', lepasSemua);
+    document.addEventListener('visibilitychange', () => { if (document.hidden) lepasSemua(); });
 
     // D-pad buttons
     const bindDpad = (id, dir) => {
@@ -130,17 +203,25 @@ export class Avatar {
     const active = dirs.filter(d => this.keys[d] || this.dpad[d]);
 
     this.baruBerdiri = false;
+    this.gagalBerdiri = false;
+    this.jatuhDariDunia = false;
     if (this._kursi) {
       // Menekan arah = ingin pergi. Berdiri dulu; gerakannya frame berikutnya,
       // supaya tidak melompat keluar kursi dalam satu langkah penuh.
-      if (active.length) { this.berdiri(); this.baruBerdiri = true; }
+      if (active.length && !this._tahanBerdiri) {
+        if (this.berdiri()) this.baruBerdiri = true;
+        else { this.gagalBerdiri = true; this._tahanBerdiri = true; }
+      }
+      // Tombol harus DILEPAS dulu sebelum mencoba lagi — kalau tidak, gagal
+      // berdiri diulang 60 kali per detik selama tombolnya ditahan.
+      if (!active.length) this._tahanBerdiri = false;
       this.isMoving = false;
     } else {
       this.isMoving = active.length > 0;
     }
 
+    let dx = 0, dz = 0;
     if (this.isMoving) {
-      let dx = 0, dz = 0;
       active.forEach(dir => {
         const delta = camera.getMoveDelta(dir);
         if (delta) { dx += delta.dx; dz += delta.dz; }
@@ -153,10 +234,28 @@ export class Avatar {
         dz /= len;
         this._facing = Math.atan2(dx, dz);
       }
+    }
 
-      // Move
-      this.pos.x += dx * SPEED;
-      this.pos.z += dz * SPEED;
+    if (this._karakter && !this._kursi) {
+      // Fisika: langkah tetap 1/60, posisi gambar diinterpolasi. Tetap
+      // dipanggil saat diam — gravitasi dan menempel-tanah juga butuh langkah.
+      const h = majukanKarakter(this._karakter, dt, [dx, dz], KECEPATAN);
+      this.pos.x = h.kaki.x;
+      this.pos.z = h.kaki.z;
+      this._kakiY = h.kaki.y;
+      // Jatuh dari dunia (lubang di collider, tepi Spot yang lupa diberi
+      // dinding): kembalikan ke titik muncul, jangan biarkan jatuh selamanya.
+      if (h.kaki.y < BATAS_JATUH) {
+        this.teleport(0, 2, this._facing);
+        this.pastikanBebas();
+        this.jatuhDariDunia = true;
+      }
+    } else if (this.isMoving) {
+      // Gerak lama, dipakai selama fisika belum siap atau gagal dimuat.
+      // Kecepatannya sekarang m/s × dt: SPEED lama 0.09 PER BINGKAI membuat
+      // pemain di ponsel 30 fps berjalan setengah kecepatan.
+      this.pos.x += dx * KECEPATAN * dt;
+      this.pos.z += dz * KECEPATAN * dt;
 
       // Clamp ke island
       const dist = Math.sqrt(this.pos.x ** 2 + this.pos.z ** 2);
@@ -184,7 +283,8 @@ export class Avatar {
       bobY = turun + Math.sin(this._bobTimer * 0.9) * 0.012;
     }
 
-    this.mesh.position.set(this.pos.x, bobY, this.pos.z);
+    const kakiY = this._kursi ? 0 : this._kakiY;
+    this.mesh.position.set(this.pos.x, kakiY + bobY, this.pos.z);
 
     // Rotate mesh to face direction
     this.mesh.rotation.y = this._facing;
@@ -226,20 +326,67 @@ export class Avatar {
     this.pos.z = kursi.z;
     this._facing = kursi.facing;
     this.isMoving = false;
+    // Kapsul dimatikan, bukan cuma berhenti membaca tombol: kapsul yang
+    // tertinggal di tempat lama adalah penghalang tak terlihat.
+    if (this._karakter) nonaktifkanKarakter(this._karakter);
     return true;
   }
 
+  /**
+   * Berdiri ke titik keluar kursi yang MUAT.
+   *
+   * Berdiri memindahkan posisi. Dulu tidak, dan akibatnya nyata: keterisian
+   * kursi diturunkan dari posisi (ADR-0003), jadi pemain yang berdiri tapi
+   * belum melangkah tetap terlihat DUDUK di layar orang lain.
+   *
+   * Dengan fisika: calon diuji ruang kapsulnya dan yang pertama muat dipakai;
+   * kalau tidak ada yang muat, pemain TETAP DUDUK — lebih baik daripada
+   * dilempar ke dalam tembok atau ke atas meja.
+   * Tanpa fisika: calon pertama yang lolos aturan kursi, tanpa uji ruang.
+   *
+   * @returns {boolean} apakah berhasil berdiri
+   */
   berdiri() {
     if (!this._kursi) return false;
+    const calon = this._kursi.keluar ?? [];
+    const boleh = this.bolehBerdiri ?? undefined;
+    let titik = null;
+    if (this._karakter) {
+      titik = cariTempatBerdiri(this._karakter, calon, { boleh });
+      if (!titik) return false;
+      aktifkanKarakter(this._karakter, titik);
+      this._kakiY = titik.y;
+    } else {
+      titik = calon.find((c) => !boleh || boleh(c)) ?? null;
+    }
+    if (titik) {
+      this.pos.x = titik.x;
+      this.pos.z = titik.z;
+    }
     this._kursi = null;
     return true;
   }
 
+  /** Lupakan waktu fisika yang terkumpul (tab kembali dari latar belakang). */
+  resetWaktuFisika() {
+    if (this._karakter) resetWaktuKarakter(this._karakter);
+  }
+
   /** Teleport (warp antar Spot / hub) — reset posisi & mesh. */
   teleport(x, z, facing = 0) {
+    // Warp sambil duduk: kursinya tertinggal di Spot lama.
+    if (this._kursi) {
+      this._kursi = null;
+      if (this._karakter) {
+        this._karakter.collider.setEnabled(true);
+        this._karakter.aktif = true;
+      }
+    }
     this.pos.x = x;
     this.pos.z = z;
     this._facing = facing;
+    this._kakiY = 0;
+    if (this._karakter) teleportKarakter(this._karakter, { x, y: 0, z });
     if (this.mesh) {
       this.mesh.position.set(x, 0, z);
       this.mesh.rotation.y = facing;

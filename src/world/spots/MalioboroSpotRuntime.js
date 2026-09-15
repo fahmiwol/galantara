@@ -139,6 +139,7 @@ export class MalioboroSpotRuntime {
         rotasi: (i - 1) * 0.09,
       });
       meja.bangun(g);
+      meja.daftarkanFisika(ctx?.fisika, ctx?.kelompokFisika);
       this.meja.push(meja);
       this._lampu.push(...meja.getLampu());
     }

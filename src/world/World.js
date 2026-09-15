@@ -7,6 +7,12 @@ import { buildProceduralGroup } from '../tools/proceduralMeshFactory.js';
 import { PALETTE_SLOTS } from '../data/styleTokens.js';
 import { MejaNongkrong } from './MejaNongkrong.js';
 import { InteractionVolume } from '../interaction/InteractionVolume.js';
+import { cincinTepi } from '../fisika/Fisika.js';
+import { ISLAND_R } from '../data/config.js';
+import { UKURAN_KAPSUL } from '../fisika/Karakter.js';
+
+/** Kelompok collider Oola di dunia fisika — dilepas utuh saat pindah Spot. */
+export const KELOMPOK_OOLA = 'oola';
 
 const M = (color) => new THREE.MeshLambertMaterial({ color });
 const MS = (color, r = 0.7) => new THREE.MeshStandardMaterial({ color, roughness: r, metalness: 0.05 });
@@ -18,8 +24,14 @@ export class World {
    */
   lampu = [];
 
-  constructor(scene) {
+  /**
+   * @param {THREE.Scene} scene
+   * @param {{ fisika?: import('../fisika/Fisika.js').Fisika }} [opsi]
+   */
+  constructor(scene, { fisika = null } = {}) {
     this.scene     = scene;
+    /** Dunia fisika. Boleh belum siap — pendaftaran masuk antrean. */
+    this.fisika    = fisika;
     /** Social node Oola. Sampai sekarang Oola tidak punya InteractionVolume
      *  sama sekali — hanya ZONES statis dari config — jadi daftarnya lahir
      *  bersama meja pertama ini. @type {MejaNongkrong[]} */
@@ -66,6 +78,8 @@ export class World {
     this.warpPortal = null;
     this.objects    = [];
     this.lampu      = [];
+    // Collider ikut dilepas, dengan kelompoknya — bukan disapu dari dunia fisika.
+    this.fisika?.lepasKelompok(KELOMPOK_OOLA);
     // Mesh-nya ikut terlepas bersama worldRoot di atas; yang perlu dibersihkan
     // di sini adalah daftarnya, supaya Spot berikutnya tidak mewarisi meja Oola.
     this.meja       = [];
@@ -91,6 +105,14 @@ export class World {
     this.worldRoot.add(mesh);
     this.objects.push(mesh);
     return mesh;
+  }
+
+  /**
+   * Daftarkan collider satu prop ke kelompok Oola. Aman tanpa fisika (no-op)
+   * dan sebelum fisika siap (antrean).
+   */
+  _daftarFisika(deskriptor, induk, putarY = 0, pemilik = 'oola') {
+    this.fisika?.daftarkan(KELOMPOK_OOLA, deskriptor, induk, putarY, pemilik);
   }
 
   _mountIslandGeometry() {
@@ -161,6 +183,7 @@ export class World {
       rotasi: Math.PI * 0.25,
     });
     meja.bangun(this.worldRoot);
+    meja.daftarkanFisika(this.fisika, KELOMPOK_OOLA);
     this.meja.push(meja);
     this.lampu.push(...meja.getLampu());
     this.objects.push(...meja.objek);
@@ -181,7 +204,27 @@ export class World {
     group.name = id;
     this.worldRoot.add(group);
     this.objects.push(group);
+    // Prop dari peta maupun dari Game Builder didaftarkan di SATU tempat ini.
+    // MapBuilder hanya MENARUH (tidak memindah), jadi posisi saat ini adalah
+    // posisinya.
+    this._daftarFisikaProp(group, id);
     return group;
+  }
+
+  /**
+   * Collider prop prosedural dari `userData.fisika` yang dinyatakan builder-nya.
+   * Prop tanpa pernyataan sama sekali diperingatkan: diam-diam tembus adalah
+   * persis jenis bug yang tidak dilaporkan siapa pun.
+   */
+  _daftarFisikaProp(g, id) {
+    if (g.userData.fisikaTerdaftar) return;
+    g.userData.fisikaTerdaftar = true;
+    const deskriptor = g.userData.fisika;
+    if (deskriptor === undefined) {
+      console.warn(`[fisika] prop "${id}" tidak menyatakan collider (userData.fisika) — bisa ditembus`);
+      return;
+    }
+    this._daftarFisika(deskriptor, g.position, g.rotation.y, id);
   }
 
   // ── GROUND PLANE ──────────────────────────────────
@@ -210,6 +253,13 @@ export class World {
     top.receiveShadow = true;
     top.name = 'diorama_top';
     this._addToIsland(top);
+
+    // Tanah fisika = permukaan atas diorama, dan dinding cincin tak terlihat.
+    // Permukaan DALAM cincin ditaruh di ISLAND_R − 1 + jari kapsul, supaya
+    // pusat pemain berhenti tepat di 17 m — sama dengan clamp radial lama,
+    // bedanya sekarang pemain MELUNCUR menyusuri tepi, bukan tertahan lengket.
+    this._daftarFisika([{ bentuk: 'silinder', ukuran: [40, 0.72, 40] }], { x: 0, y: -0.36, z: 0 }, 0, 'tanah_oola');
+    this._daftarFisika(cincinTepi(ISLAND_R - 1 + UKURAN_KAPSUL[0] / 2), { x: 0, y: 0, z: 0 }, 0, 'tepi_oola');
 
     const edge = new THREE.Mesh(
       new THREE.CylinderGeometry(20.55, 21.45, 0.72, 48),
@@ -288,6 +338,9 @@ export class World {
     trunk.castShadow = true;
     trunk.name = `${id}_trunk`;
     this._addToIsland(trunk);
+    // Batang meruncing 0,5 → 0,3; setinggi badan pemain rata-ratanya ±0,47.
+    // Kanopi dan halo tidak menghalangi.
+    this._daftarFisika([{ bentuk: 'silinder', ukuran: [0.95, 4, 0.95], letak: [0, 2, 0] }], { x, y, z }, 0, id);
 
     // Canopy layers (3 spheres)
     const canopyColors = [0x7C3AED, 0x8B5CF6, 0x6D28D9];
@@ -343,6 +396,10 @@ export class World {
     );
     ped.position.set(x, y + 0.25, z);
     this._addToIsland(ped);
+    // Hanya pedestal yang padat. Cincinnya BERPUTAR di sumbu Y (animate), jadi
+    // collider tetap yang mana pun salah separuh waktu — dan ini portal:
+    // melangkah ke dalam cincinnya memang yang diharapkan orang.
+    this._daftarFisika([{ bentuk: 'silinder', ukuran: [1.4, 0.5, 1.4], letak: [0, 0.25, 0] }], { x, y, z }, 0, 'warp_portal');
 
     // Label sign
     this._buildSign(x, y + 2.8, z, '🌀 Warp Portal', 0x4F46E5);
@@ -358,6 +415,8 @@ export class World {
     );
     post.position.set(x, y + 1, z);
     this._addToIsland(post);
+    // Papannya mulai 1,80 m — di atas kepala. Tiangnya saja.
+    this._daftarFisika([{ bentuk: 'silinder', ukuran: [0.2, 2, 0.2], letak: [0, 1, 0] }], { x, y, z }, 0, 'papan_info');
 
     const board = new THREE.Mesh(
       new THREE.BoxGeometry(1.4, 1, 0.08),
@@ -376,6 +435,7 @@ export class World {
     box.position.set(x, y + 0.35, z);
     box.castShadow = true;
     this._addToIsland(box);
+    this._daftarFisika([{ bentuk: 'kotak', ukuran: [0.7, 0.7, 0.5], letak: [0, 0.35, 0] }], { x, y, z }, 0, 'kotak_saran');
   }
 
   // ── DEVELOPER HUB ─────────────────────────────────
@@ -388,6 +448,8 @@ export class World {
     base.position.set(x, y + 0.9, z);
     base.castShadow = true;
     this._addToIsland(base);
+    // Badan bangunan; atap 2,8 × 2,3 mulai 1,80 m, di atas kepala.
+    this._daftarFisika([{ bentuk: 'kotak', ukuran: [2.5, 1.8, 2], letak: [0, 0.9, 0] }], { x, y, z }, 0, 'dev_hub');
 
     // Roof
     const roof = new THREE.Mesh(
@@ -417,6 +479,9 @@ export class World {
     bench.position.set(x, y, z);
     bench.name = id;
     this._addToIsland(bench);
+    // Papan 0,10–0,30 m ada di BAWAH batas naik tangga (0,35): tanpa volume
+    // yang lebih tinggi dari mesh-nya, pemain berjalan di atas bangku.
+    this._daftarFisika([{ bentuk: 'kotak', ukuran: [1.2, 0.6, 0.4], letak: [0, 0.3, 0] }], { x, y: 0, z }, 0, id);
   }
 
   _buildDecorations() {

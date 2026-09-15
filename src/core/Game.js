@@ -18,6 +18,7 @@ import { Panels    } from '../ui/Panels.js';
 import { G_Auth    } from '../auth/auth.js';
 import { getOrCreateGuestId, getOrCreateGuestName } from '../data/guestIdentity.js';
 import {
+  ISLAND_R,
   OOLA_SOCKET_ROOM,
   parseInitialSocketRoomFromUrl,
   socketRoomForSpot,
@@ -34,6 +35,12 @@ import { ChatBubbleLayer   } from '../ui/ChatBubble.js';
 import { VoiceChat         } from '../multiplayer/VoiceChat.js';
 import { Generator3DPanel  } from '../tools/Generator3DPanel.js';
 import { MapBuilder        } from '../tools/MapBuilder.js';
+import { Fisika, cincinTepi } from '../fisika/Fisika.js';
+import { buatKarakter, UKURAN_KAPSUL } from '../fisika/Karakter.js';
+import { LihatCollider     } from '../fisika/LihatCollider.js';
+
+/** Kelompok collider Spot yang sedang dipasang — dilepas utuh saat warp. */
+const KELOMPOK_SPOT = 'spot';
 
 export class Game {
   constructor() {
@@ -44,6 +51,11 @@ export class Game {
     this.zones    = null;
     this.avatar   = null;
     this.npcs     = null;
+    /** Dunia fisika Rapier. Dibuat sekarang (murah), DIMUAT setelah dunia
+     *  tampil — lihat _muatFisika. Prop yang dibangun sebelumnya masuk antrean. */
+    this.fisika   = new Fisika();
+    /** @type {LihatCollider|null} */
+    this.lihatCollider = null;
 
     // UI
     this.toast      = new Toast();
@@ -91,7 +103,7 @@ export class Game {
     const scene = this.renderer.scene;
 
     // World
-    this.world = new World(scene);
+    this.world = new World(scene, { fisika: this.fisika });
     this.world.init().then(() => {
       this.world.build();
       // build() mengisi world.lampu; DayNight dibuat setelah blok ini, jadi
@@ -122,6 +134,9 @@ export class Game {
     // Avatar
     this.avatar = new Avatar(scene);
     this.avatar.build();
+    // Titik berdiri di radius kursi mana pun ditolak: keterisian diturunkan
+    // dari posisi, jadi berdiri di sana = tetap terlihat duduk di layar lain.
+    this.avatar.bolehBerdiri = (p) => this._bolehBerdiriDi(p);
 
     // NPCs
     this.npcs = new NPCManager(scene);
@@ -181,7 +196,61 @@ export class Game {
 
     // Start loop
     this._loop();
+    this._muatFisika();
     return this;
+  }
+
+  /**
+   * Muat Rapier SETELAH dunia tampil dan bisa dijalani.
+   *
+   * 2,86 MB tidak boleh jadi layar kosong. Selama memuat, gerak lama berjalan;
+   * begitu siap, karakter fisika mengambil alih dari posisi pemain saat itu
+   * (dan memindahkannya kalau ia sedang berdiri di dalam sesuatu).
+   * Kalau gagal — jaringan putus, WASM diblokir — gerak lama tetap dipakai
+   * dan tidak ada yang rusak.
+   */
+  _muatFisika() {
+    setTimeout(() => {
+      this.fisika.muat().then(() => {
+        const pos = this.avatar.getPosition();
+        this.avatar.pakaiKarakter(buatKarakter(this.fisika, { x: pos.x, y: 0, z: pos.z }));
+        const { muat_ms, init_ms } = this.fisika.waktu;
+        console.info(`[fisika] siap — muat ${muat_ms} ms, init WASM ${init_ms} ms, `
+          + `${this.fisika.jumlahDiDunia()} collider`);
+        if (new URLSearchParams(window.location.search).has('kolisi')) this._setelLihatCollider(true);
+      }).catch((e) => {
+        console.warn('[fisika] gagal dimuat — gerak lama tetap dipakai', e);
+      });
+    }, 0);
+
+    // Tab kembali dari latar belakang: rAF sempat berhenti, jangan jadikan
+    // jeda itu langkah fisika.
+    document.addEventListener('visibilitychange', () => {
+      if (!document.hidden) this.avatar?.resetWaktuFisika();
+    });
+  }
+
+  /** @param {boolean} [nyala] */
+  _setelLihatCollider(nyala) {
+    if (!this.fisika.siap) return false;
+    this.lihatCollider ??= new LihatCollider(this.renderer.scene, this.fisika);
+    return this.lihatCollider.setel(nyala);
+  }
+
+  /**
+   * Titik berdiri sah secara PERMAINAN: di luar radius kursi mana pun.
+   * Ruang fisiknya diuji terpisah oleh Karakter.js.
+   * @param {{x:number,z:number}} p
+   */
+  _bolehBerdiriDi(p) {
+    const daftar = this._spotRuntime?.meja ?? this.world?.meja ?? [];
+    for (const m of daftar) {
+      const batas = m.toleransiKursi + 0.08;
+      for (const k of m.kursi) {
+        if (Math.hypot(p.x - k.x, p.z - k.z) <= batas) return false;
+      }
+    }
+    return true;
   }
 
   // ── TANTANGAN HARIAN ──────────────────────────────────
@@ -229,6 +298,9 @@ export class Game {
 
     // Avatar move
     this.avatar.update(dt, this.camera);
+    if (this.avatar.gagalBerdiri) this.toast.show('Tidak ada ruang untuk berdiri di sini 🙏', 'a');
+    if (this.avatar.jatuhDariDunia) this.toast.show('Ups, jatuh dari dunia — dikembalikan ke titik muncul', 'a');
+    this.lihatCollider?.perbarui();
 
     // Camera follow avatar
     this.camera.update(this.avatar.getPosition(), this.avatar.isMoving);
@@ -431,7 +503,10 @@ export class Game {
   /** @param {import('../world/MejaNongkrong.js').MejaNongkrong} meja */
   _toggleDuduk(meja) {
     if (this.avatar.sedangDuduk) {
-      this.avatar.berdiri();
+      if (!this.avatar.berdiri()) {
+        this.toast.show('Tidak ada ruang untuk berdiri di sini 🙏', 'a');
+        return;
+      }
       this._emitSekali = true;
       this.toast.show('Berdiri dari meja 🚶', 'g');
       return;
@@ -674,6 +749,7 @@ export class Game {
 
     if (this._spotRuntime) {
       this.assetLibrary.detachBatch(this._spotRuntime.root);
+      this.fisika.lepasKelompok(KELOMPOK_SPOT);
       this._spotRuntime.dispose(scene);
       this._spotRuntime = null;
       this._lastInteractionVolumeId = null;
@@ -688,7 +764,11 @@ export class Game {
       this._spotRuntime.mount(scene, {
         toast: this.toast,
         openPanel: (id) => this.panels.openPanel(id),
+        fisika: this.fisika,
+        kelompokFisika: KELOMPOK_SPOT,
       });
+      this._pasangFisikaBawaanSpot(this._spotRuntime, spotVisualId);
+      this.avatar.pastikanBebas();
       this.npcs?.setHubVisible(false);
       // Lampu milik Spot ikut siklus hari, sama seperti prop Oola. Daftarnya
       // diminta ke runtime-nya (dikumpulkan saat mount), bukan disapu dari
@@ -707,6 +787,24 @@ export class Game {
       this.dayNight?.pakaiLampu(this.world.lampu);
     }
     this.npcs?.setHubVisible(true);
+    this.avatar.pastikanBebas();
+  }
+
+  /**
+   * Tanah dan batas BAWAAN untuk Spot yang belum menyatakannya sendiri.
+   *
+   * Semantiknya sengaja sama dengan gerak lama: lantai datar di y = 0 dan
+   * batas melingkar 17 m. Tanpa ini, Spot yang belum ditinjau akan membuat
+   * pemain jatuh menembus dunia begitu fisika menyala — lebih buruk daripada
+   * sebelum ada fisika. Spot yang sudah meninjau tanahnya menyetel
+   * `runtime.fisikaTanah = true` dan mendaftarkan sendiri saat mount.
+   */
+  _pasangFisikaBawaanSpot(runtime, spotId) {
+    if (runtime.fisikaTanah) return;
+    this.fisika.daftarkan(KELOMPOK_SPOT, [
+      { bentuk: 'kotak', ukuran: [120, 1, 120], letak: [0, -0.5, 0] },
+      ...cincinTepi(ISLAND_R - 1 + UKURAN_KAPSUL[0] / 2),
+    ], { x: 0, y: 0, z: 0 }, 0, `bawaan:${spotId}`);
   }
 
   /** Fade singkat + callback (warp room). */
@@ -812,6 +910,20 @@ export class Game {
 
   // ── GLOBAL API (window.G_UI) ──────────────────────────
   _exposeGlobals() {
+    // Diagnosa fisika dari konsol — bagian dari alat, bukan cuma untuk uji.
+    window.G_Fisika = {
+      lihat:  (nyala) => this._setelLihatCollider(nyala),
+      status: () => ({
+        siap: this.fisika.siap,
+        gagal: this.fisika.gagal ? String(this.fisika.gagal) : null,
+        waktu: this.fisika.waktu,
+        kelompok: this.fisika.hitung(),
+        diDunia: this.fisika.jumlahDiDunia(),
+        pakaiFisika: this.avatar?.pakaiFisika ?? false,
+        kaki: this.avatar?.pakaiFisika ? { ...this.avatar.getPosition(), y: this.avatar._kakiY } : null,
+      }),
+    };
+
     window.G_UI = {
       toast:          (msg, type = 'g') => this.toast.show(msg, type),
       openLM:         (_reason)         => this.loginModal.open(),

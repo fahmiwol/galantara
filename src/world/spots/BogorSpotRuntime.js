@@ -98,6 +98,7 @@ export class BogorSpotRuntime {
         rotasi: rot,
       });
       bangku.bangun(g);
+      bangku.daftarkanFisika(ctx?.fisika, ctx?.kelompokFisika);
       this.meja.push(bangku);
     }
 

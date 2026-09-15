@@ -5,6 +5,18 @@
 
 import { galantaraMat } from '../data/styleTokens.js';
 
+// ── Collider: `g.userData.fisika` ──────────────────────────────────────
+// Tiap builder menyatakan collider-nya SENDIRI, di sebelah mesh yang
+// diwakilinya, dengan angka yang sama — bukan kotak batas yang dihitung dari
+// mesh setelahnya. Kotak batas pohon selebar kanopinya (±2 m); pemain akan
+// tertahan jauh sebelum batangnya. Kosakata dan ukuran PENUH mengikuti Rupa3D
+// (src/fisika/bentuk.js). Semua angka SUDAH dikali `scale`, jadi pendaftarnya
+// cukup memakai posisi dan rotation.y grup.
+//
+// Larik kosong itu keputusan, bukan lupa: bunga dan semak awan boleh ditembus.
+// Prop yang tidak menyetel `userData.fisika` sama sekali dianggap belum
+// ditinjau — World memperingatkannya di konsol.
+
 /** Deterministik sederhana dari integer seed */
 function rnd(seed) {
   let s = seed % 2147483647;
@@ -126,6 +138,12 @@ function buildTreeRound(palette, seed, scale) {
     mesh.castShadow = true;
     g.add(mesh);
   }
+  // Batang saja. Kanopi terendah turun sampai ±1,1 m dan akan menembus kepala
+  // avatar yang lewat di bawahnya — itu dipilih, karena kanopi yang padat
+  // mendorong pemain 1 m dari batangnya dan membuat pohon terasa seperti tembok.
+  g.userData.fisika = [
+    { bentuk: 'silinder', ukuran: [0.6 * scale, trunkH, 0.6 * scale], letak: [0, trunkH / 2, 0] },
+  ];
   return g;
 }
 
@@ -168,6 +186,11 @@ function buildWarungBlock(palette, seed, scale) {
     win.position.set(0, h * 0.45, d * 0.51);
     g.add(win);
   }
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [w, h, d], letak: [0, h / 2, 0] },
+    // Tritisan setinggi dada, menjulur 0,44 m di depan dinding.
+    { bentuk: 'kotak', ukuran: [w * 1.05, 0.08 * scale, d * 0.45], letak: [0, h * 0.55, d * 0.52] },
+  ];
   return g;
 }
 
@@ -198,6 +221,11 @@ function buildBenchPark(palette, seed, scale) {
     back.castShadow = true;
     g.add(back);
   }
+  // Dudukan 0,51 m sudah di atas batas naik tangga (0,35), tapi volumenya
+  // tetap dimulai dari tanah supaya kolong antarkaki tidak jadi celah aneh.
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [1.8 * scale, 0.9 * scale, 0.5 * scale], letak: [0, 0.45 * scale, -0.025 * scale] },
+  ];
   return g;
 }
 
@@ -231,6 +259,11 @@ function buildLampPost(palette, seed, scale) {
   nyala.position.y = 2.25 * scale;
   nyala.userData.isLampu = true;
   g.add(nyala);
+  // Sedikit lebih gemuk dari tiangnya (0,16 → 0,20): tiang setipis mesh
+  // membuat pemain tersangkut di tepinya.
+  g.userData.fisika = [
+    { bentuk: 'silinder', ukuran: [0.2 * scale, 2.2 * scale, 0.2 * scale], letak: [0, 1.1 * scale, 0] },
+  ];
   return g;
 }
 
@@ -258,6 +291,9 @@ function buildGerobakBakso(palette, seed, scale) {
     w.position.set(x * scale, y * scale, 0);
     g.add(w);
   });
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [1.4 * scale, 1.1 * scale, 0.7 * scale], letak: [0, 0.55 * scale, 0] },
+  ];
   return g;
 }
 
@@ -286,6 +322,13 @@ function buildGazeboBambu(palette, seed, scale) {
   roof.position.y = 2.2 * scale;
   roof.rotation.y = Math.PI / 4;
   g.add(roof);
+  // Lantai 0,175 m bisa dinaiki; celah antartiang 1,44 m cukup untuk masuk.
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [2 * scale, 0.175 * scale, 2 * scale], letak: [0, 0.0875 * scale, 0] },
+    ...[[-0.8, -0.8], [0.8, -0.8], [0.8, 0.8], [-0.8, 0.8]].map(([x, z]) => (
+      { bentuk: 'silinder', ukuran: [0.16 * scale, 1.8 * scale, 0.16 * scale], letak: [x * scale, 0.9 * scale, z * scale] }
+    )),
+  ];
   return g;
 }
 
@@ -306,6 +349,11 @@ function buildPagarKayu(palette, seed, scale) {
     s.position.set(i * scale, 0.5 * scale, 0);
     g.add(s);
   }
+  // Satu papan utuh, lebih tebal dari bilahnya — pagar bilah tidak boleh
+  // bisa diselipi.
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [2 * scale, 1 * scale, 0.12 * scale], letak: [0, 0.5 * scale, 0] },
+  ];
   return g;
 }
 
@@ -338,6 +386,10 @@ function buildPohonKelapa(palette, seed, scale) {
     leaf.rotation.z = 0.4;
     g.add(leaf);
   }
+  // Batang bersegmen bergoyang ±0,1 m; satu silinder 0,34 menutupnya.
+  g.userData.fisika = [
+    { bentuk: 'silinder', ukuran: [0.34 * scale, currY, 0.34 * scale], letak: [0, currY / 2, 0] },
+  ];
   return g;
 }
 
@@ -384,6 +436,15 @@ function buildJoglo(palette, seed, scale) {
   );
   brunjung.name = 'joglo_roof_brunjung';
 
+  // Umpak batu 0,22 m bisa dinaiki; dalem tertutup; saka di keempat sudut.
+  // Atap mulai 1,70 m — di atas kepala, tanpa collider.
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [4.15 * scale, 0.22 * scale, 3.75 * scale], letak: [0, 0.11 * scale, 0] },
+    { bentuk: 'kotak', ukuran: [2.25 * scale, 1.1 * scale, 1.85 * scale], letak: [0, 0.85 * scale, -0.15 * scale] },
+    ...[[-0.95, -0.8], [0.95, -0.8], [-0.95, 0.8], [0.95, 0.8]].map(([x, z]) => (
+      { bentuk: 'kotak', ukuran: [0.16 * scale, 1.6 * scale, 0.16 * scale], letak: [x * scale, 1.05 * scale, z * scale] }
+    )),
+  ];
   g.userData.archetype = 'joglo';
   g.userData.region = 'jawa';
   return g;
@@ -431,6 +492,12 @@ function buildSulahNyanda(palette, seed, scale) {
   sorondoy.rotation.x = 0.24;
   sorondoy.name = 'sulah_nyanda_sorondoy';
 
+  // Rumah panggung tanpa tangga: kolong 0,61 m tidak bisa dilewati avatar
+  // 1,30 m, jadi kolong dan dinding satu volume dari tanah.
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [3.25 * scale, 0.75 * scale, 2.18 * scale], letak: [0, 0.375 * scale, 0] },
+    { bentuk: 'kotak', ukuran: [2.95 * scale, 1.28 * scale, 1.92 * scale], letak: [0, 1.38 * scale, -0.05 * scale] },
+  ];
   g.userData.archetype = 'sulah_nyanda';
   g.userData.region = 'baduy_banten';
   return g;
@@ -477,6 +544,15 @@ function buildRumahPanggungPesisir(palette, seed, scale) {
   timpalaja.name = 'timpalaja_neutral';
   addMesh(g, new THREE.BoxGeometry(2.25 * scale, 0.08 * scale, 0.04 * scale), wood, [0, 2.55 * scale, 1.515 * scale], false);
 
+  // Dua anak tangga pertama bisa dinaiki (0,20 lalu +0,17). Anak tangga ketiga
+  // ada di bawah lantai rumah, dan lantai 0,99 m tidak terjangkau — tangga ke
+  // pintu yang tertutup, persis seperti yang digambar.
+  g.userData.fisika = [
+    { bentuk: 'kotak', ukuran: [3.35 * scale, 0.99 * scale, 2.45 * scale], letak: [0, 0.495 * scale, 0] },
+    { bentuk: 'kotak', ukuran: [3.05 * scale, 1.18 * scale, 2.15 * scale], letak: [0, 1.55 * scale, 0] },
+    { bentuk: 'kotak', ukuran: [0.85 * scale, 0.2 * scale, 0.48 * scale], letak: [0, 0.1 * scale, 1.55 * scale] },
+    { bentuk: 'kotak', ukuran: [0.85 * scale, 0.37 * scale, 0.48 * scale], letak: [0, 0.185 * scale, 1.19 * scale] },
+  ];
   g.userData.archetype = 'rumah_panggung_pesisir';
   g.userData.region = 'bugis_makassar';
   return g;
@@ -489,12 +565,14 @@ function buildPohonPisang(palette, seed, scale) {
   const leafMat = galantaraMat(paletteColor(palette, 'leaf', palette?.foliage?.[0] ?? 0x4f9b53), 0.88);
   leafMat.side = THREE.DoubleSide;
   const count = 2 + Math.floor(rand() * 2);
+  const fisika = [];
 
   for (let p = 0; p < count; p++) {
     const h = (1.85 + rand() * 0.75) * scale;
     const px = (rand() - 0.5) * 0.75 * scale;
     const pz = (rand() - 0.5) * 0.6 * scale;
     addMesh(g, new THREE.CylinderGeometry(0.11 * scale, 0.17 * scale, h, 7), stemMat, [px, h * 0.5, pz]);
+    fisika.push({ bentuk: 'silinder', ukuran: [0.34 * scale, h, 0.34 * scale], letak: [px, h / 2, pz] });
     const leaves = 5 + Math.floor(rand() * 3);
     for (let i = 0; i < leaves; i++) {
       const length = (0.85 + rand() * 0.35) * scale;
@@ -509,6 +587,7 @@ function buildPohonPisang(palette, seed, scale) {
     }
   }
 
+  g.userData.fisika = fisika;
   g.userData.archetype = 'pohon_pisang';
   return g;
 }
@@ -542,6 +621,11 @@ function buildRumpunBambu(palette, seed, scale) {
     crown.scale.set(0.7, 1.25, 0.7);
     crown.rotation.y = i * 0.7;
   });
+  // Satu rumpun, bukan per batang: celah antarbatang tidak muat dilewati, dan
+  // 7–11 silinder tipis hanya membuat pemain bergetar di sela-selanya.
+  g.userData.fisika = [
+    { bentuk: 'silinder', ukuran: [1.4 * scale, 2.8 * scale, 1.4 * scale], letak: [0, 1.4 * scale, 0] },
+  ];
   g.userData.archetype = 'rumpun_bambu';
   return g;
 }
@@ -572,6 +656,13 @@ function buildTeraseringPadi(palette, seed, scale) {
     }
     if (li === 0) g.children[g.children.length - 1].name = 'rice_tuft';
   });
+  // Tiap undak naik ±0,27 m — di bawah batas 0,35, jadi terasering bisa
+  // didaki undak demi undak. Rumpun padi dekoratif tidak menghalangi.
+  g.userData.fisika = levels.map((level) => ({
+    bentuk: 'kotak',
+    ukuran: [level.w * scale, (level.h + 0.07) * scale, 1.45 * scale],
+    letak: [0, ((level.h + 0.07) / 2) * scale, level.z * scale],
+  }));
   g.userData.archetype = 'terasering_padi';
   return g;
 }
@@ -588,6 +679,7 @@ function buildFlowerPatch(palette, seed, scale) {
     addMesh(g, new THREE.CylinderGeometry(0.018 * scale, 0.024 * scale, h, 5), stem, [x, h * 0.5, z], false);
     addMesh(g, new THREE.SphereGeometry(0.11 * scale, 6, 4), galantaraMat(colors[i % colors.length], 0.88), [x, h, z], false);
   }
+  g.userData.fisika = []; // boleh ditembus
   g.userData.archetype = 'flower_patch';
   return g;
 }
@@ -601,6 +693,7 @@ function buildCloudShrub(palette, seed, scale) {
     const puff = addMesh(g, new THREE.SphereGeometry(r, 7, 5), cloud, [(i - 1) * 0.36 * scale, r * 0.72, (rand() - 0.5) * 0.22 * scale], false);
     puff.scale.y = 0.72 + rand() * 0.18;
   }
+  g.userData.fisika = []; // boleh ditembus
   g.userData.archetype = 'cloud_shrub';
   return g;
 }

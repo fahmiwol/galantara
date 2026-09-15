@@ -138,6 +138,17 @@ const SPEK = Object.freeze({
   kafeTinggiMeja: 0.74,
   kafeTinggiDudukan: 0.46,
 
+  /**
+   * Jarak titik BERDIRI dari pusat kursi, per gaya.
+   *
+   * = setengah lebar penghalang kursi + jari-jari kapsul pemain (0,40) + 7 cm.
+   * Titik yang lebih dekat akan berada di dalam collider dingklik/kursi dan
+   * ditolak uji ruang; titik yang lebih jauh terasa seperti dilempar.
+   * Semuanya juga lebih besar dari jariKursi + 0,08 — kalau tidak, orang yang
+   * sudah berdiri tetap dihitung duduk oleh klien lain.
+   */
+  jarakKeluar: { warung: 0.62, lesehan: 0.50, kafe: 0.78, bangku: 0.68 },
+
   /** Sejauh mana pemain boleh berdiri dari sebuah kursi untuk dihitung
    *  menempatinya. Harus lebih kecil dari SETENGAH jarak kursi terdekat,
    *  kalau tidak satu posisi bisa masuk jangkauan dua kursi. Dijaga oleh
@@ -368,9 +379,111 @@ export class MejaNongkrong {
           : Math.atan2(this.x - x, this.z - z),
         // Tinggi duduk ikut kursinya, bukan konstanta global.
         tinggiDuduk: this.spekGaya.tinggiDuduk,
+        keluar: this._calonKeluar(lx, lz).map(([ex, ez]) => ({
+          x: this.x + ex * cos + ez * sin,
+          z: this.z - ex * sin + ez * cos,
+        })),
       });
     }
     return out;
+  }
+
+  /**
+   * Calon titik BERDIRI untuk satu kursi, lokal dan belum diputar, BERURUTAN
+   * dari yang paling wajar.
+   *
+   * Orang berdiri dari dingklik dengan MUNDUR menjauhi meja, bukan melompat ke
+   * atas meja atau menembus dingklik tetangga. Jadi calon pertama selalu lurus
+   * ke belakang dari sisi meja terdekat; baru kalau itu terhalang (tembok,
+   * pohon, pemain tidak dihitung) dicoba serong, lalu samping.
+   *
+   * Titik ini ALASAN BERDIRI memindahkan posisi: keterisian kursi diturunkan
+   * dari posisi (ADR-0003), jadi berdiri di tempat berarti klien lain tetap
+   * melihat kita duduk. Uji ruang kapsulnya dilakukan pemanggil (Karakter.js),
+   * karena hanya dunia fisika yang tahu apa yang ada di sekitar meja.
+   *
+   * @returns {[number, number][]}
+   */
+  _calonKeluar(lx, lz) {
+    let ux;
+    let uz;
+    if (this.gaya === 'bangku') {
+      // Bangku menghadap +z lokal; berdiri ke depan, ke arah pandangannya.
+      ux = 0; uz = 1;
+    } else if (this.gaya === 'warung') {
+      // Normal sisi daun terdekat — mundur tegak lurus dari tepi meja.
+      const { setengahP, setengahL } = this._jejak();
+      if (Math.abs(lz) / setengahL >= Math.abs(lx) / setengahP) { ux = 0; uz = Math.sign(lz) || 1; } else { ux = Math.sign(lx) || 1; uz = 0; }
+    } else {
+      const r = Math.hypot(lx, lz) || 1;
+      ux = lx / r; uz = lz / r;
+    }
+    const d = SPEK.jarakKeluar[this.gaya];
+    const sudut = [0, Math.PI / 4, -Math.PI / 4, Math.PI / 2, -Math.PI / 2];
+    if (this.gaya === 'bangku') sudut.push(Math.PI); // ke belakang bangku, paling akhir
+    const out = [];
+    for (const jarak of [d, d + 0.3]) {
+      for (const a of sudut) {
+        const c = Math.cos(a);
+        const s = Math.sin(a);
+        out.push([lx + (ux * c + uz * s) * jarak, lz + (-ux * s + uz * c) * jarak]);
+      }
+    }
+    return out;
+  }
+
+  /**
+   * Collider meja ini, dalam koordinat LOKAL grupnya (sebelum diputar).
+   * Didaftarkan dengan induk (x, 0, z) dan putarY = rotasi.
+   *
+   * Volume PERMAINAN, bukan salinan mesh. Dua keputusan yang disengaja:
+   *   - Penghalang dimulai dari tanah. Daun meja 0,68 m di atas kaki-kaki
+   *     tipis tetap tidak bisa dilewati avatar setinggi 1,30 m, jadi kolong
+   *     meja tidak perlu dimodelkan.
+   *   - Benda pendek yang tidak boleh DINAIKI diberi volume lebih tinggi dari
+   *     mesh-nya: bangku (0,30 m) dan dulang (0,16 m) ada di bawah batas naik
+   *     tangga pengendali (0,35 m), jadi tanpa ini pemain berjalan di atasnya.
+   * Tikar, bidang tanah, batu pijak, dan atap tidak diberi collider: yang
+   * pertama rata dengan tanah, yang terakhir di atas kepala.
+   *
+   * @returns {object[]} deskriptor kosakata Rupa3D (lihat src/fisika/bentuk.js)
+   */
+  deskriptorFisika() {
+    const out = [];
+    if (this.gaya === 'warung') {
+      out.push({ bentuk: 'kotak', ukuran: [SPEK.panjangDaun, 0.70, SPEK.lebarDaun], letak: [0, 0.35, 0] });
+      for (const k of this._kursi) {
+        out.push({ bentuk: 'kotak', ukuran: [0.30, 0.40, 0.30], letak: [k.lx, 0.20, k.lz] });
+      }
+      const zTiang = -(SPEK.lebarDaun / 2 + 0.42);
+      for (const x of [SPEK.bentangTiang / 2, -SPEK.bentangTiang / 2]) {
+        out.push({ bentuk: 'silinder', ukuran: [0.10, SPEK.tinggiTiang, 0.10], letak: [x, SPEK.tinggiTiang / 2, zTiang] });
+      }
+    } else if (this.gaya === 'lesehan') {
+      out.push({ bentuk: 'silinder', ukuran: [SPEK.dulangJari * 2 + 0.02, 0.60, SPEK.dulangJari * 2 + 0.02], letak: [0, 0.30, 0] });
+    } else if (this.gaya === 'kafe') {
+      out.push({ bentuk: 'silinder', ukuran: [SPEK.kafeJariDaun * 2, 0.78, SPEK.kafeJariDaun * 2], letak: [0, 0.39, 0] });
+      for (const k of this._kursi) {
+        // Dudukan jari-jari 0,24 + sandaran di 0,20 m ke luar: satu silinder
+        // 0,62 m menutup keduanya.
+        out.push({ bentuk: 'silinder', ukuran: [0.62, 0.97, 0.62], letak: [k.lx, 0.485, k.lz] });
+      }
+    } else if (this.gaya === 'bangku') {
+      out.push({ bentuk: 'kotak', ukuran: [SPEK.bangkuPanjang, 0.60, SPEK.bangkuDalam], letak: [0, 0.30, 0] });
+    }
+    return out;
+  }
+
+  /**
+   * Daftarkan collider meja ke dunia fisika. Aman sebelum fisika siap
+   * (masuk antrean). Pelepasan ikut kelompok pemiliknya (Oola / Spot).
+   *
+   * @param {import('../fisika/Fisika.js').Fisika | null} fisika
+   * @param {string} kelompok
+   */
+  daftarkanFisika(fisika, kelompok) {
+    if (!fisika) return 0;
+    return fisika.daftarkan(kelompok, this.deskriptorFisika(), { x: this.x, y: 0, z: this.z }, this.rotasi, this.id);
   }
 
   /** @returns {{i:number,x:number,z:number,facing:number}[]} */
