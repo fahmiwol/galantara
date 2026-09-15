@@ -1,0 +1,17 @@
+{
+  "versi": 1,
+  "jenis": "statis",
+  "catatan": "Collider joglo.glb, satuan GLB (meter, Y ke atas), sebelum skala entri manifest. Angka dibaca dari batas accessor tiap node GLB (16 Sep 2026). Joglo ini pendopo TERBUKA: alas 0,26 m lalu lantai +0,143 m sama-sama di bawah batas naik tangga, jadi pemain bisa naik dan berjalan di antara saka. Atap mulai 2,02 m, di atas kepala avatar yang berdiri di lantai (0,403 + 1,32 = 1,72): tanpa collider. Bentuk berkas ini sama dengan usulan kontrak extras.rupa3d.collider — belum diputuskan.",
+  "bagian": [
+    { "bentuk": "kotak", "ukuran": [5.48, 0.26, 4.88], "letak": [0, 0.13, 0] },
+    { "bentuk": "kotak", "ukuran": [4.8, 0.403, 4.2], "letak": [0, 0.2015, 0] },
+    { "bentuk": "kotak", "ukuran": [0.24, 1.62, 0.24], "letak": [-0.95, 1.213, 0.85] },
+    { "bentuk": "kotak", "ukuran": [0.24, 1.62, 0.24], "letak": [0.95, 1.213, 0.85] },
+    { "bentuk": "kotak", "ukuran": [0.24, 1.62, 0.24], "letak": [-0.95, 1.213, -0.85] },
+    { "bentuk": "kotak", "ukuran": [0.24, 1.62, 0.24], "letak": [0.95, 1.213, -0.85] },
+    { "bentuk": "kotak", "ukuran": [0.14, 1.507, 0.14], "letak": [-2.26, 1.1565, 1.96] },
+    { "bentuk": "kotak", "ukuran": [0.14, 1.507, 0.14], "letak": [2.26, 1.1565, 1.96] },
+    { "bentuk": "kotak", "ukuran": [0.14, 1.507, 0.14], "letak": [-2.26, 1.1565, -1.96] },
+    { "bentuk": "kotak", "ukuran": [0.14, 1.507, 0.14], "letak": [2.26, 1.1565, -1.96] }
+  ]
+}

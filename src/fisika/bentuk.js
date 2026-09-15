@@ -194,6 +194,45 @@ export function kuaternionDunia(putarYInduk, d) {
 }
 
 /**
+ * Salinan deskriptor yang diskala SERAGAM — untuk aset yang ditaruh manifest
+ * dengan `scale`. Hanya skala seragam: bola, kapsul, dan silinder tidak punya
+ * bentuk yang benar di bawah skala tak seragam.
+ * @param {object} d
+ * @param {number} s
+ */
+export function skalaDeskriptor(d, s = 1) {
+  if (!Number.isFinite(s) || s <= 0) throw new Error(`skala tidak sah: ${s}`);
+  if (s === 1) return { ...d };
+  const kali = (v) => (Array.isArray(v) ? v.map((x) => x * s) : (v == null ? v : v * s));
+  return {
+    ...d,
+    ...(d.ukuran != null ? { ukuran: kali(d.ukuran) } : {}),
+    ...(d.letak != null ? { letak: kali(d.letak) } : {}),
+    ...(d.titik != null ? { titik: kali(d.titik) } : {}),
+  };
+}
+
+/**
+ * Baca dokumen collider aset: `{ versi: 1, jenis: 'statis', bagian: [...] }`.
+ *
+ * Bentuknya SAMA dengan usulan kontrak `extras.rupa3d.collider` (Codex,
+ * 15 Sep 2026; belum diputuskan Fahmi), supaya berkas pendamping
+ * `<aset>.collider.json` hari ini dan extras di dalam GLB nanti dibaca oleh
+ * pembaca yang sama.
+ *
+ * @param {unknown} dok
+ * @param {string} pemilik untuk pesan galat
+ * @returns {object[]} bagian yang sudah diperiksa
+ */
+export function bacaKontrakCollider(dok, pemilik = '(aset)') {
+  if (!dok || typeof dok !== 'object') throw new Error(`${pemilik}: dokumen collider bukan objek`);
+  if (dok.versi !== 1) throw new Error(`${pemilik}: versi collider ${dok.versi} tidak dikenal (hanya 1)`);
+  if ((dok.jenis ?? 'statis') !== 'statis') throw new Error(`${pemilik}: jenis "${dok.jenis}" belum didukung (hanya statis)`);
+  if (!Array.isArray(dok.bagian) || !dok.bagian.length) throw new Error(`${pemilik}: collider tanpa bagian`);
+  return periksaDaftar(dok.bagian, pemilik);
+}
+
+/**
  * Periksa satu daftar deskriptor sebelum didaftarkan. Deskriptor yang salah
  * ditolak di sini dengan pesan yang menyebut prop-nya, bukan di dalam Rapier
  * dengan pesan WASM yang tidak menunjuk apa pun.

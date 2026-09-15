@@ -73,11 +73,12 @@ export const UKURAN_KAPSUL = Object.freeze([0.80, 1.30, 0.80]);
  * adalah volume permainan, bukan salinan bentuk visual — sama dengan
  * "simple collision" Unreal.
  *
- * AMBANG NYATA ≠ naikTangga. Ujung kapsul bundar menyentuh tepi benda di atas
- * titik terendahnya, jadi kotak dan silinder setinggi 0,40 m MASIH dinaiki;
- * tertahan mulai 0,45 (tools/fisika/ukur-ambang-naik.mjs, lebar 0,3 dan 1,3).
- * Ditemukan agen Spot Bogor, 15 Sep 2026. Aturan kerjanya: yang tidak boleh
- * dinaiki ≥ 0,60 m; yang memang untuk didaki ≤ 0,35 m per undak.
+ * AMBANG NYATA ≠ naikTangga, dan harus disapu dari SEMUA arah. Pendekatan
+ * lurus memanjat sampai 0,40 m (agen Spot Bogor); pendekatan serong 32 arah ×
+ * 5 geser memanjat sampai 0,50 m, dan silinder sempit sekali di 0,60 (agen
+ * Spot Braga; tools/fisika/sapu-panjat.mjs). Aturan kerjanya: yang tidak boleh
+ * dinaiki ≥ 0,70 m; yang memang untuk didaki ≤ 0,35 m per undak, dengan tapak
+ * yang cukup lebar — tangga 0,21 m per tapak tidak bisa didaki kapsul 0,80.
  */
 export const PARAM = Object.freeze({
   offset: 0.02,

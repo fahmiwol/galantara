@@ -1,0 +1,85 @@
+{
+  "versi": 1,
+  "jenis": "statis",
+  "catatan": "Collider rumah_panggung.glb, satuan GLB (meter, Y ke atas), sebelum skala entri manifest. Angka dibaca dari batas accessor tiap node GLB (16 Sep 2026), bukan dari generatornya. Kolong 1,35 m DITUTUP dari tanah walau secara teknis muat avatar 1,32 m: avatar di kolong hilang dari pandangan kamera orbit, dan rumah berskala 0,82-0,92 kolongnya sudah lebih rendah dari avatar. Lima anak tangga depan (+Z) naik 0,298 m per undak dengan tapak hanya 0,21 m — lebih sempit dari jari kapsul (0,40) dan secara keseluruhan 55°, di atas lereng maksimum pengendali (50°). Terukur: pemain hanya menginjak undak pertama; tangga ini untuk dilihat, bukan didaki. Anak tangga tetap dimodelkan per undak supaya undak pertama bisa diinjak. Bentuk berkas ini sama dengan usulan kontrak extras.rupa3d.collider — belum diputuskan.",
+  "bagian": [
+    {
+      "bentuk": "kotak",
+      "ukuran": [
+        4.2,
+        2.79,
+        3.0
+      ],
+      "letak": [
+        0,
+        1.395,
+        0
+      ]
+    },
+    {
+      "bentuk": "kotak",
+      "ukuran": [
+        0.95,
+        0.298,
+        0.21
+      ],
+      "letak": [
+        0,
+        0.149,
+        2.445
+      ]
+    },
+    {
+      "bentuk": "kotak",
+      "ukuran": [
+        0.95,
+        0.596,
+        0.21
+      ],
+      "letak": [
+        0,
+        0.298,
+        2.235
+      ]
+    },
+    {
+      "bentuk": "kotak",
+      "ukuran": [
+        0.95,
+        0.894,
+        0.21
+      ],
+      "letak": [
+        0,
+        0.447,
+        2.025
+      ]
+    },
+    {
+      "bentuk": "kotak",
+      "ukuran": [
+        0.95,
+        1.192,
+        0.21
+      ],
+      "letak": [
+        0,
+        0.596,
+        1.815
+      ]
+    },
+    {
+      "bentuk": "kotak",
+      "ukuran": [
+        0.95,
+        1.49,
+        0.21
+      ],
+      "letak": [
+        0,
+        0.745,
+        1.605
+      ]
+    }
+  ]
+}

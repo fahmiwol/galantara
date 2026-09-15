@@ -1,10 +1,37 @@
 {
   "version": 1,
   "spotId": "losari",
-  "catatan": "Rumah panggung Bugis-Makassar dari tools/rupa3d/rumah_panggung.py. Dasar: docs/RISET_3D_NUSANTARA.md §5 (BPNB Sulawesi Selatan). Timpalaja sengaja DUA lis saja — jumlah susunan dapat menandai status sosial, dan model generik tidak boleh memberi pangkat palsu. Posisi menjauhi titik spawn (0,0,0) supaya pemain tidak lahir di dalam dinding; sisi darat = +Z, laut = -Z.",
+  "catatan": "Rumah panggung Bugis-Makassar dari tools/rupa3d/rumah_panggung.py. Dasar: docs/RISET_3D_NUSANTARA.md §5 (BPNB Sulawesi Selatan). Timpalaja sengaja DUA lis saja — jumlah susunan dapat menandai status sosial, dan model generik tidak boleh memberi pangkat palsu. Posisi menjauhi titik spawn (0,0,0) supaya pemain tidak lahir di dalam dinding; sisi darat = +Z, laut = -Z. Revisi 16 Sep 2026 (ditemukan agen Spot Losari saat memasang collider): rumah (-2; 4,6) dipindah ke (-3,8; 4,6) karena tiangnya masuk 6,8 cm ke alas portal dan cincin portal menembus badannya; dua rumah lain diputar pi supaya TANGGA (+Z lokal) menghadap anjungan, bukan tepi darat — tangga rumah (-10; 3,5) sebelumnya berujung 0,41 m dari dinding batas, tanpa tempat berdiri.",
   "glbs": [
-    { "url": "assets/models/rumah_panggung.glb", "position": [-10, 0, 3.5], "rotationY": 0.25, "scale": 1 },
-    { "url": "assets/models/rumah_panggung.glb", "position": [11, 0, 3.0], "rotationY": -0.3, "scale": 0.92 },
-    { "url": "assets/models/rumah_panggung.glb", "position": [-2, 0, 4.6], "rotationY": 3.14, "scale": 0.82 }
+    {
+      "url": "assets/models/rumah_panggung.glb",
+      "position": [
+        -10,
+        0,
+        3.5
+      ],
+      "rotationY": 3.39,
+      "scale": 1
+    },
+    {
+      "url": "assets/models/rumah_panggung.glb",
+      "position": [
+        11,
+        0,
+        3.0
+      ],
+      "rotationY": 2.84,
+      "scale": 0.92
+    },
+    {
+      "url": "assets/models/rumah_panggung.glb",
+      "position": [
+        -3.8,
+        0,
+        4.6
+      ],
+      "rotationY": 3.14,
+      "scale": 0.82
+    }
   ]
 }

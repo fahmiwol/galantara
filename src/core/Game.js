@@ -779,7 +779,11 @@ export class Game {
       // scene — PRD BAB 2.4 melarang scene.traverse.
       this.dayNight?.pakaiLampu(this._spotRuntime.getLampu?.() || []);
       const manifestPath = `assets/spots/${spotVisualId}/manifest.json`;
-      void this.assetLibrary.applyManifest(this._spotRuntime.root, manifestPath);
+      // Collider GLB manifest masuk kelompok Spot, jadi ikut lepas saat warp.
+      void this.assetLibrary.applyManifest(this._spotRuntime.root, manifestPath, {
+        fisika: this.fisika,
+        kelompok: KELOMPOK_SPOT,
+      });
       this.harian.catat('jelajah_spot', 1, `spot:${spotVisualId}`);
       this._lastInteractionVolumeId = null;
       this._activeInteractionVolume = null;
