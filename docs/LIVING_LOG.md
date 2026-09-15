@@ -14,6 +14,55 @@ Aturan berkas ini:
 
 ---
 
+## 2026-09-15 · Kolisi — empat rancangan saya yang salah, dan satu dari Rupa3D
+
+Tujuan hari ini: pemain tidak lagi menembus dunia, dengan mesin yang sama
+dengan Rupa3D. Hasilnya bekerja di browser. Yang lebih berguna dicatat adalah
+berapa kali rancangan pertama saya keliru sebelum sampai ke sana.
+
+**1. Dua uji saya salah, mesinnya benar.** Uji pohon mengharapkan pemain
+BERHENTI di depan batang; ia meluncur memutarinya — itu perilaku yang benar.
+Uji tangga membaca tinggi setelah pemain berjalan 8 m melewati anak tangga 4 m.
+Dilacak per langkah sebelum diubah, bukan dilonggarkan.
+
+**2. Batas hull 8.000 titik.** Tepat di ambang convexHull Rapier rusak diam-diam.
+Rupa3D memakai 4.096. Ditemukan Codex, bukan saya.
+
+**3. Collider baru tak terlihat sampai `world.step()`.** Rancangan saya
+mendaftarkan collider lalu langsung memakai pengendali. Codex menemukannya;
+diukur ulang: gerak 2 m menembus dinding baru (2,000 m), setelah satu step
+0,580 m. `tools/fisika/langkah-pertama.mjs`.
+
+**4. Pemain didirikan DI ATAS dingklik.** Raycast "cari tanah" mengenai
+permukaan dudukan 0,40 m, dan kapsul di atasnya memang bebas. Ditangkap uji;
+diperbaiki dengan jendela tinggi terhadap lantai acuan.
+
+**Yang dari Rupa3D: gravitasi saat menapak.** Uji jam gagal dengan cara yang
+aneh — jarak IDENTIK di 30, 60, dan 120 fps, tapi 0,18 m kurang dari harapan.
+Jamnya benar; ada langkah fisika yang bergerak nol. Dorongan gravitasi 5 mm per
+langkah masuk ke kulit offset, lalu tanah terbaca toi = 0 dan seluruh gerak
+dibuang. 12 dari 596 langkah. Enam varian diukur (`tools/fisika/ukur-tersendat.mjs`);
+tanpa gravitasi saat menapak = 0. Rupa3D kemungkinan besar punya hitch yang
+sama; dicatat ke Omiga untuk Rupa3D dan Studio.
+
+**Bug lama yang terbuka oleh pekerjaan ini:** berdiri tidak memindahkan posisi,
+jadi klien lain tetap melihat pemain duduk. Dan tombol arah tersangkut saat
+jendela kehilangan fokus — terlihat karena pemain berjalan sendiri sampai
+menabrak cincin tepi saat verifikasi.
+
+**Keputusan yang saya ambil melawan Codex**, dan alasannya di ADR-0015: gerak
+lama tetap jalan selama Rapier dimuat. Codex benar bahwa itu dua jalur gerak;
+saya menilai dunia yang tidak bisa dijalani ±9 detik di koneksi lambat lebih
+buruk.
+
+**Yang biasa saja:** 62 collider untuk pulau datar tidak butuh mesin fisika 3D.
+Rapier dibenarkan oleh Rupa3D dan katalog prop bertangga, bukan oleh Oola.
+
+**Belum:** ponsel, collider bangunan di enam Spot, collider dari GLB, sinkron
+tinggi kaki. `npm test` 115/115.
+
+---
+
 ## 2026-09-11 · UNIT 5 SELESAI — titik aman untuk Claude
 
 HANDOFF root baru ditautkan dari README; handoff/riset/ADR lama dipertahankan.

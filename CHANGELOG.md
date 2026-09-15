@@ -2,6 +2,65 @@
 > Semua perubahan signifikan dicatat di sini.
 > Format: `[versi] YYYY-MM-DD — Deskripsi`
 
+## [0.9.0] · 2026-09-15
+> **Dunia yang bisa ditabrak.** Pemain tidak lagi menembus pohon, rumah, dan
+> meja; mereka meluncur di sepanjang permukaannya, seperti di Godot, Unity, dan
+> Unreal. Mesinnya sama dengan Rupa3D.
+
+### Added
+- **Fisika Rapier 0.20** (`src/fisika/`), dimuat SETELAH dunia tampil. Selama
+  memuat atau kalau gagal, gerak lama tetap jalan. ADR-0015.
+- **Pengendali karakter kinematik**: sapu-lalu-meluncur, naik anak tangga
+  ≤ 0,35 m, menempel tanah, langkah tetap 1/60 dengan interpolasi.
+- **Collider untuk semua prop Oola** — 62 buah: tanah, cincin tepi, 8 prop
+  native, 14 prop prosedural, meja warung. Tiap builder prosedural menyatakan
+  collider-nya sendiri (`userData.fisika`). ADR-0016.
+- **Titik berdiri dari kursi** per gaya meja (warung, lesehan, kafe, bangku),
+  diuji ruang kapsulnya sebelum dipakai.
+- **Tampilan collider**: `?kolisi` di URL atau `G_Fisika.lihat()`; status di
+  `G_Fisika.status()`.
+- **Tanah dan batas bawaan** untuk Spot yang belum menyatakan miliknya — sama
+  dengan perilaku lama, supaya fisika tidak membuat Spot mana pun lebih buruk.
+- `tools/fisika/` — tiga alat ukur yang menjadi bukti ADR-0015.
+- `tools/brief-suasana.sh` + `docs/brief/suasana/` — brief suasana tujuh Spot
+  dari gpt-5.6-sol, dengan prompt yang disimpan supaya bisa diulang.
+
+### Fixed
+- **Berdiri tetap terlihat duduk di layar orang lain.** `berdiri()` dulu tidak
+  memindahkan posisi, padahal keterisian kursi diturunkan dari posisi.
+- **Kecepatan bergantung laju bingkai**: `SPEED = 0.09` per bingkai membuat
+  pemain ponsel 30 fps berjalan setengah kecepatan. Sekarang 5,4 m/s.
+- **Tombol arah tersangkut** saat jendela kehilangan fokus — pemain berjalan
+  sendiri. Input di-reset saat `blur`/tab tersembunyi.
+- **Warp sambil duduk** membawa status duduk ke Spot baru.
+- `tools/tanya-gpt.mjs` memakai `node:https` dengan batas 20 menit; `fetch`
+  Node memutus permintaan bernalar panjang setelah 5 menit tanpa pesan jelas.
+
+### Temuan yang mengubah rancangan (angka di ADR-0015)
+- Pola gravitasi Rupa3D membuat **12 dari 596 langkah bergerak nol** di lantai
+  datar; tanpa gravitasi saat menapak: 0.
+- Collider **baru** tidak terlihat pengendali Rapier sebelum `world.step()`;
+  gerak 2 m menembus dinding baru.
+- Batas hull 8.000 titik di rancangan pertama salah — Rupa3D memakai 4.096.
+- Raycast tanah mengenai dudukan dingklik: rancangan pertama mendirikan pemain
+  DI ATAS dingklik. Ditangkap uji.
+
+### Tests
+- `tests/fisika.test.mjs` (25) dan `tests/fisikaDunia.test.mjs` (24) memakai
+  Rapier dan THREE r128 asli. **115/115 lulus.**
+- Browser (Chrome, localhost): muat Rapier 235 ms pertama / 23 ms cache, init
+  WASM 17–24 ms; jalan ke pohon ungu berhenti 0,895 m dari sumbu batang; duduk
+  lalu berdiri memindahkan 0,62 m dan hint meja kembali 0/4; Oola → Malioboro →
+  Oola mengembalikan jumlah collider ke 62.
+
+### Batas verifikasi
+- **Ponsel belum diukur.** 1,08 MB gzip = ±8,6 detik di 1 Mbps.
+- Spot selain Oola baru memakai tanah dan batas bawaan; bangunannya belum
+  punya collider, dan Spot jalanan masih bisa dijalani di luar jalannya.
+- Tinggi kaki (anak tangga, terasering) belum disinkronkan ke pemain lain.
+- Collider dari GLB belum dibaca; konvensinya menunggu keputusan.
+- Tidak di-deploy. galantara.io masih melayani build April.
+
 ## [0.8.1] · 2026-09-11
 
 Hasilnya kecil: menutup celah penyajian aset lokal, bukan fitur pemain baru.

@@ -33,6 +33,8 @@ bukan keputusan, cuma preferensi.
 | [0012](0012-stub-uji-harus-memodelkan-perilaku-nyata-bukan-nilai-yang-.md) | Stub uji memodelkan perilaku | Stub longgar = uji hijau yang tak menguji apa pun |
 | [0013](0013-pendapat-kedua-lewat-api-openai-langsung-bukan-codex-cli.md) | Pendapat kedua lewat API | Codex CLI buntu; batasan komersial disebut jujur |
 | [0014](0014-versi-semantik-dan-satu-sumber-kebenaran-versi.md) | Versi semantik | Dua angka versi yang menyimpang diam-diam |
+| [0015](0015-fisika-rapier-dimuat-malas-langkah-tetap-dan-pengendali-kinematik.md) | Fisika Rapier, dimuat malas | Satu mesin dengan Rupa3D; 1,08 MB gzip dibayar setelah dunia tampil |
+| [0016](0016-collider-adalah-volume-permainan-dinyatakan-di-sebelah-mesh.md) | Collider = volume permainan | Kotak batas otomatis salah untuk pohon dan benda rendah |
 
 ## Format
 

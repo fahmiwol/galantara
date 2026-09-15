@@ -127,6 +127,36 @@ alami ke ekonomi koin (P2) tanpa harus membangun toko penuh dulu.
 
 ---
 
+### P1.5 · Kolisi di enam Spot — STUB bawaan
+Oola lengkap sejak 15 Sep (62 collider, ADR-0015/0016). Enam Spot lain baru
+memakai **tanah dan batas BAWAAN** dari `Game._pasangFisikaBawaanSpot`: lantai
+datar dan cincin 17 m, sama dengan perilaku lama. Artinya bangunan, kios, dan
+monumen masih bisa ditembus, dan Spot jalanan (Malioboro, Braga, Kuta, Losari)
+masih bisa dijalani di luar jalannya.
+
+Tiap Spot perlu: `runtime.fisikaTanah = true`, tanah sesuai bentuknya
+(`dindingPersegi` untuk jalan/pantai/anjungan, `cincinTepi` untuk alun-alun),
+dan collider tiap bangunan di sebelah mesh-nya. Meja nongkrong Bogor, Braga,
+dan Malioboro sudah punya collider. Uji yang harus ditambah: titik muncul tiap
+Spot bebas, dan tidak ada arah keluar area jalan.
+
+### P1.6 · Suasana betah per Spot — brief ADA, belum dibangun
+`docs/brief/suasana/*.md` (gpt-5.6-sol, 15 Sep): cerita tempat, suasana, dan
+tabel elemen 3D berangka untuk ketujuh Spot. Temuan yang bisa langsung
+dikerjakan tanpa geometri baru:
+- **Malioboro membuat 10 PointLight** — di atas batas sehat ponsel (≤ 3).
+  Pertahankan 3, sisanya emissive saja.
+- **Dev Hub Oola** memakai neon `#00FF88` di kotak gelap — memutus palet
+  gading-emas-lavender.
+- Prop Oola disebar hampir merata di tepi pulau — terbaca sebagai katalog aset.
+Sintesis lintas Spot (kit prop bersama + urutan bangun) di
+`docs/brief/suasana/SINTESIS.md` kalau sudah jadi.
+
+### P1.7 · Sinkron tinggi kaki — KOSONG
+Fisika membuat pemain naik anak tangga dan terasering, tapi `player_move` hanya
+membawa x/z. Pemain lain melihat semua orang di y = 0. Kecil sekarang (Oola
+hampir datar), nyata begitu rumah panggung dan terasering dipakai.
+
 ## P2 — Ekonomi (PRD BAB 6)
 
 ### P2.1 · Mighan Coin end-to-end — KOSONG
@@ -221,8 +251,9 @@ Diambil dari `docs/GALANATARA_CURRENT_STATE.md` §"Yang masih kosong":
 
 | Hal | Status |
 | --- | --- |
-| Server deploy | **Belum ada.** Build dan periksa di lokal: `npx serve -p 4000 .` |
-| Codex CLI | **Buntu.** Akun ChatGPT hanya punya `gpt-5.6-sol`, dan model itu menuntut CLI lebih baru daripada rilis npm terakhir (0.153.4). **Pakai `tools/tanya-gpt.mjs`** — API langsung tidak kena batasan itu. |
+| Server deploy | **Server ada, jalur deploy tidak.** Diperiksa 15 Sep: galantara.io hidup di nginx 1.24 (Ubuntu) tetapi melayani build **13 April 2026** — tidak satu pun kerja September ada di sana (`ChatBubble.js`, `MejaNongkrong.js`, `vendor/` → 404). Workflow deploy tidak bisa mencapai SSH port 22 dari runner GitHub. Build dan periksa di lokal: `npx serve -p 4000 .` |
+| Codex CLI | **Jalan lagi di 0.154.0** (15 Sep, dipakai untuk tinjauan fisika, mode read-only). `tools/tanya-gpt.mjs` tetap jalur untuk pendapat kedua lewat API; sejak 15 Sep memakai `node:https` dengan batas 20 menit. |
+| Rapier | `vendor/rapier3d-compat.0.20.0.js`, dimuat malas. Ukur ulang di ponsel sebelum membuat klaim performa apa pun. |
 | Ollama laptop | **Sengaja mati.** Inferensi pindah ke Bmax `192.168.1.78`. Cek dengan `curl .../api/tags`, **bukan `ping`** (ICMP diblokir firewall Bmax). |
 | Root repo | Tidak punya lockfile, jadi `npm audit` menolak jalan (`ENOLOCK`). Hanya `galantara-server/` yang bisa diaudit. Layak diperbaiki kalau dependency klien pernah ditambah. |
 
