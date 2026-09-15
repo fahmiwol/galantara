@@ -1,3 +1,5 @@
+> **Start here:** `HANDOFF.md` (short, current). Everything else only when it points you there.
+
 ## Learned User Preferences
 
 - Prefers agents read project documentation thoroughly and only continue implementation when the model clearly understands the product and codebase.
@@ -20,5 +22,5 @@
 - Primary game shell is `index.html` loading the ES-module client; static `about.html` is the public-facing "Tentang" page wired from the in-game menu and related world zones.
 - Production static site and multiplayer deploy are discussed in relation to the `galantara.io` hostname (coordinate `index.html`, `about.html`, `src/`, and `galantara-server/` when releasing).
 - Visual consistency for worlds, props, generators, and tools is anchored in `docs/GALANTARA_STYLE_CONTRACT_v0.md` with shared numeric tokens in `src/data/styleTokens.js` (procedural 3D MVP and future builders should follow that contract).
-- Static deploy to `galantara.io` uses GitHub Actions (`.github/workflows/deploy-vps.yml`) with repo Secrets `SSH_*` / `REMOTE_PATH`; spot POC modules must use **global `THREE`** (no bare `import 'three'`) because the client loads `three.min.js` from a script tag.
+- Deploy (16 Sep 2026): static `bash tools/deploy-galantara.sh` or CI `.github/workflows/deploy-vps.yml` via forced-command key to a root receiver on VPS-2; multiplayer `bash tools/deploy-mp-galantara.sh`. See `docs/DEPLOY.md`. Client loads `vendor/three.r128.min.js` via script tag, so modules must use **global `THREE`** (no bare `import 'three'`).
 - `Game._applySpotChrome()` keeps HUD spot text, chat sidebar tab wording (`OOLA CHAT` in hub vs `CHAT · {spot name}` on spots), and `#bb-spot-pill` on the bottom bar in sync when the Socket room / URL spot changes.

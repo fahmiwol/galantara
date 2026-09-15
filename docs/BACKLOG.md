@@ -1,5 +1,7 @@
 # BACKLOG — Galantara
 
+> **Sisa aktif dan urutan kerja ada di `HANDOFF.md` (root).** Berkas ini arsip lengkap.
+
 > Disusun 10 Sep 2026. Diturunkan dari PRD, dari kode yang benar-benar ada, dan
 > dari audit `docs/GALANATARA_CURRENT_STATE.md` — bukan dari daftar keinginan.
 >

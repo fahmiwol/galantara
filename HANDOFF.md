@@ -1,129 +1,58 @@
-# HANDOFF — Galantara 0.8.1 · 11 September 2026
+# HANDOFF — Galantara · 16 Sep 2026
 
-Untuk Claude/sesi berikutnya. **Hasilnya kecil:** dua celah aset diperbaiki;
-tidak ada fitur pemain baru atau perubahan aturan game. Lima unit sesi ini
-ditutup terpisah, masing-masing dengan tes, LIVING_LOG, commit dan push.
-Handoff lama tetap disimpan di [catatan 10 September](docs/HANDOFF-2026-09-10.md).
+> Sesi berikutnya cukup membaca berkas ini. Buka dokumen lain hanya kalau
+> ditunjuk di sini. Handoff lama: `docs/HANDOFF-2026-09-11.md`.
 
-## Titik masuk dan arah
+## Keadaan
 
-- Repo kerja: `C:\galantara`, branch `main`, origin `fahmiwol/galantara`.
-  Jangan bekerja pada salinan backup lama sebagai sumber kebenaran.
-- North Star README: **“Pasar malam digital Indonesia di browser.”**
-  PRD §1.1: **“Pasar Malam Digital Indonesia -- Tempat Nongkrong, Jualan,
-  dan Main Bareng.”** Bukan mandat mengganti stack.
-- Baca [LIVING_LOG](docs/LIVING_LOG.md) untuk STATE SEKARANG dan alasan pilihan;
-  [ADR](docs/adr/) untuk 14 keputusan terkunci; [BACKLOG](docs/BACKLOG.md)
-  untuk janji interaksi yang belum ditutup.
-- Oola adalah kota kedatangan, bukan Spot ketujuh. Enam Spot, meja Oola,
-  bubble chat, daily challenge dan Benteng bot sudah ada sebelum sesi ini.
-- Tetap vanilla ES modules/global THREE r128, tanpa bundler/traverse per frame.
-  Kursi diturunkan dari posisi; tidak membuat seat server baru. Tidak ada
-  hadiah koin palsu. Benteng tetap harness web dan kontrak CSV tidak berubah.
-- **Belum ada server deploy.** Workflow tetap manual-only sesuai ADR-0007.
-  Jangan menghidupkan trigger otomatis atau menyimpulkan VPS rusak.
+- Repo `C:\galantara`, branch `main` = `origin` (`999fefd`). Uji: `npm test` → 198 lulus.
+- **Live di galantara.io:** statis `4a9c6d2`, multiplayer `6650744` (VPS-2 `trx-alt`, SSH 2222).
+- Versi rilis terakhir 0.10.0; `CHANGELOG [Unreleased]` berisi deploy CI, ADR-0019/0020, dan perbaikan crash multiplayer.
+- Deploy: `docs/DEPLOY.md`. Anggaran Spot: `node --experimental-default-type=module tools/anggaran-spot.mjs`.
 
-## Apa yang dikerjakan dan kenapa
+## Tugas Fahmi
 
-Orientasi membaca README, arah/PRD/spec, CHANGELOG, LIVING_LOG, TODO/BACKLOG,
-14 ADR dan handoff terkini; 20 commit terakhir diperiksa, issue terbuka **0**.
-Baseline `8e133d0`: 60 tes lulus, tetapi server `--local` mengembalikan 404
-untuk empat vendor yang dirujuk index. Bug boot nyata mengalahkan prioritas
-fitur meja Braga/Malioboro. Tidak memilih pivot dari dokumen lama yang berbeda.
+1. **Pasang kunci CI** (Git Bash di `C:\galantara`): `bash tools/deploy/pasang-kunci-ci.sh`.
+   Sebelum ini, push tidak men-deploy (job deploy dilewati, tetap hijau).
+2. **Opsional, API admin** (sekarang 503): di server, jalankan
+   `read -rs ADMIN_API_TOKEN; export ADMIN_API_TOKEN; pm2 stop galantara-mp; pm2 start galantara-mp --update-env; pm2 save`.
+   Pakai `stop` lalu `start`, **bukan** `restart`.
+3. **Ctrl+Shift+R sekali** di galantara.io, supaya build April yang tersimpan di browser hilang.
 
-| Unit | Perubahan | Commit sebelum handoff ini |
-| --- | --- | --- |
-| 1 | Allowlist vendor Express, port uji ephemeral, tes HTTP aset/internal path | `6ba93f0` |
-| 2 | Vendor/font/lisensi ikut rsync, tes kontrak paket manual | `dcd4f84` |
-| 3 | Root package + metadata paket induk lockfile menjadi 0.8.1 | `cb2025c` |
-| 4 | CHANGELOG dan README menjelaskan hasil serta batas uji | `1e70af5` |
-| 5 | Handoff ini, tautan README dan log akhir; tanpa kode baru | commit yang memuat dokumen ini |
+## Sisa kerja agen (urut)
 
-Semua commit unit 1–4 telah di-push sebelum unit berikutnya dimulai. Unit 5
-ditutup dengan pemeriksaan akhir dan push; cocokkan `git status -sb` dengan
-remote saat melanjutkan karena dokumen tidak dapat memuat hash commit dirinya.
+**P0 — cacat yang terlihat di live** (rincian: `docs/brief/suasana/KEPUTUSAN.md`, bagian "Cacat")
+1. **Kuta** `src/world/spots/KutaSpotRuntime.js`: pasir menutupi laut 2,2 m; tangga gerbang naik menjauhi gerbang dan melayang; kelapa condong sejajar pantai; kursi tanpa kaki.
+2. **Braga** `src/world/spots/BragaSpotRuntime.js`: kedua deret ruko menghadap +Z (harus menghadap jalan); kanopi menembus punggung tetangga 0,1–0,3 m di 6 celah; Spot perlu bisa menyatakan sudut kamera awalnya sendiri.
 
-## Kondisi verifikasi
+**P1**
+3. Setelah kunci CI dipasang: jalankan workflow mode `coba`, lalu `jalankan`. Deploy CI sungguhan **belum pernah terbukti**.
+4. Rumah GLB tanpa bayangan (`src/world/AssetLibrary.js`, `castShadow`). Putuskan dulu anggaran pass bayangan (sekarang kaster: Braga 74, Kuta 63, Oola 56).
+5. Ukur di ponsel: belum ada angka apa pun (FPS, draw call nyata, waktu muat Rapier 4,7 detik di laptop).
+6. Panel chat menutupi layar sempit (~700 px).
+7. `docs/brief/suasana/SINTESIS.md` §4 langkah 1–10. Ukur anggaran sebelum dan sesudah tiap langkah (batas ≤20.000 segitiga, ≤150 draw call, ≤3 PointLight).
+8. Oola: panel label diegetik (KEPUTUSAN §8); P1.7 sinkron tinggi kaki (`docs/BACKLOG.md`).
 
-- **Hijau: `npm test` 62/62 pass, 0 skip** di lingkungan ini. Pemeriksa
-  tautan Markdown juga lolos. Tidak ada build step di repo ini.
-- Tes baru `tests/localServer.test.mjs` menjalankan subprocess server asli,
-  memeriksa byte vendor dan font, halaman/aset dasar, serta memastikan
-  `.git`, source server, package dan dokumen internal tidak disajikan.
-- Tes `tests/deployAssets.test.mjs` terbukti merah tanpa baris vendor lalu
-  hijau setelah fix. Ini **kontrak struktur**, bukan uji deploy sungguhan.
-- Smoke browser 1280×720: Oola dirender → pintu Benteng → masuk arena → kembali
-  Oola; tidak ada console error/warning. Tidak menyimpulkan timing/rAF benar
-  dari browser pane tersembunyi. Tab dan server uji sudah ditutup.
-- Tidak diuji sesi ini: instalasi bersih dependency, auth/voice, multiplayer
-  dua pemain, uji ponsel/performa, match manusia penuh, SSH/rsync/deploy nyata.
-  Tidak memanggil API model berbayar dan tidak menyentuh kredensial.
+**P2**
+9. `pulihkan` statis dan multiplayer belum pernah diuji sungguhan.
+10. Multiplayer belum masuk CI (masih `bash tools/deploy-mp-galantara.sh`).
+11. Rupa3D menulis collider saat ekspor (sisi Rupa3D, rilis 1.6.3). Galantara sudah membaca (ADR-0019).
 
-## Menjalankan lokal
+## Aturan yang sering dilanggar
 
-```powershell
-cd C:\galantara
-npm run install:server  # jika dependency server belum terpasang
-npm run dev
+- Klaim penyebab = dugaan sampai diperiksa. Tulis perintah dan hasilnya (dua koreksi 16 Sep: "tidak ada server", "port 22").
+- Verifikasi di **galantara.io**: `G_Fisika.status()`, "N online". `window._game` hanya ada di localhost.
+- Benda rendah yang tidak boleh dinaiki: collider ≥ 0,70 m. Warna diukur dari piksel (ADR-0017).
+- Multiplayer di belakang sakelar: jangan `pm2 restart` aplikasi yang online.
+- Delegasi ke Codex: sandbox Windows-nya tidak bisa menjalankan bash, jadi uji sendiri.
+- Catat: CHANGELOG + `docs/LIVING_LOG.md` + OMIGA (`brain_learn`), lalu commit dan push.
+
+## Prompt sesi berikutnya
+
 ```
-
-Buka `http://127.0.0.1:4000`. Proses lama di port 4000 **tidak dimatikan**
-oleh sesi ini; hentikan dari terminal pemiliknya lalu jalankan kembali untuk
-memakai patch. Jangan membunuh semua proses Node. Tes otomatis memakai
-`GALANTARA_LOCAL_PORT=0` sehingga tidak mengambil port sesi pengguna; health
-melaporkan port aktual. Default normal tetap 4000, hanya loopback.
-
-`npm test` memberi skip eksplisit untuk tes HTTP bila dependency server tidak
-ada. Untuk menyatakan seluruh pemeriksaan lengkap, pastikan **0 skip**.
-
-## Tiga kandidat berikutnya, berurutan
-
-1. **BACKLOG P0.1 — duduk di Braga, lalu lesehan Malioboro.** Pakai ulang
-   MejaNongkrong, pecah per Spot/varian menjadi unit sendiri. Ini menutup janji
-   tombol yang sekarang masih toast. Periksa mount/dispose, lampu, radius
-   interaksi dan okupansi dua klien. Jangan mengklaim chat radius sudah jadi:
-   chat sekarang seluruh room, bukan per meja.
-2. **P0.2 — sambungkan bangku Bogor ke jalur duduk.** Interaksi sudah ada;
-   menutup stub lebih defensible daripada menambah Spot atau sistem baru.
-   Pertahankan aturan resource dan kursi deterministik.
-3. **P0.3 — gate 20 match manusia Benteng (10 A, 10 B).** Perkakas siap,
-   memerlukan pemain sungguhan. Bantu Fahmi mengumpulkan CSV dan mengevaluasi;
-   jangan mengganti bukti manusia dengan bot. Metrik tawanan menganggur masih
-   belum tervalidasi; tidak ada klaim “sudah seimbang”.
-
-## Pertanyaan terbuka, tidak memblokir patch ini
-
-Sebelum fase ekonomi/publikasi: istilah dan milestone mana yang hendak
-dipublikasikan? [Roadmap publik Tiranyx](https://tiranyx.co.id/galantara#roadmap)
-masih menyebut V0 coming soon, V1 satu Spot dan GLC/GLP, berbeda dari snapshot
-lokal dan dokumen Mighan Coin. Tidak menebak arah ekonomi baru atau mengubah
-situs publik sesi ini. Tidak ada jawaban yang diperlukan untuk menjalankan
-hasil 0.8.1 ini.
-
-## Jebakan yang jangan diulang
-
-- Tes modul hijau tidak menjamin static allowlist benar. Uji **jalur server
-  yang didokumentasikan**, jangan hanya `npx serve` dari root.
-- Three dimuat lewat `muat('/vendor/...')`, bukan atribut src biasa. Ekstraktor
-  awal tes melewatkannya; guard jumlah path menangkap kesalahan instrumen.
-- Tes workflow sengaja mendukung rsync satu baris saat ini. Jika formatnya
-  berubah, perbarui parser/kontrak; jangan melonggarkan assertion supaya hijau.
-- Bridge session baru tidak memiliki claim lama. Heartbeat gagal berarti
-  berhenti menulis. Jangan batch heartbeat + patch tanpa membaca hasil.
-  Satu edit sempat terlanjur pada kasus ini; setelahnya menunggu expiry dan
-  claim ulang resmi. Gunakan lease 600 detik dengan pembaruan berkala.
-- rAF di Browser pane bisa berhenti. Smoke render bukan bukti durasi gameplay.
-  Hindari menulis ulang file dengan metode yang bisa mengosongkan berkas saat
-  encoding gagal; gunakan patch kecil dan periksa diff.
-- Root `package.json` sumber versi; lockfile server punya metadata paket
-  induk `packages[".."]` yang perlu ikut diselaraskan, bukan versi servernya.
-
-## Persistensi dan koordinasi
-
-Pakai Omiga Brain global serta bridge root **`C:\galantara`**, bukan folder
-induk. Temuan tersimpan: `Lc142aa5037` (HTTP/vendor), `L927abfa07d` (lease dan
-batch edit), `L046eea8afa` (dua perbaikan sudah push), `L42645c3e5f` (roadmap
-publik berbeda snapshot lokal). Tidak menyimpan kredensial. Pesan handoff ke
-mailbox Claude dikirim setelah commit/push akhir; pesan tidak membangunkan agen.
-
-**Berhenti di sini. Tidak ada unit fitur yang sengaja ditinggalkan setengah jadi.**
+Lanjut Galantara. Baca C:\galantara\HANDOFF.md saja. Kerjakan "Sisa kerja agen"
+mulai P0 no.1. Tiap perbaikan: ukur (tools/anggaran-spot.mjs + npm test),
+verifikasi di galantara.io, catat CHANGELOG/LIVING_LOG/OMIGA, commit + push,
+deploy (CI kalau kunci sudah dipasang; kalau belum: bash tools/deploy-galantara.sh jalankan).
+Perbarui HANDOFF.md sebelum berhenti. Hemat token: delegasi tugas penulisan besar ke Codex.
+```
