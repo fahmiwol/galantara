@@ -34,6 +34,17 @@ export const MUTASI = [
   { id: 'api-header', pengaman: 'tulisan membawa x-galantara-world', berkas: 'src/party/apiRuntime.js', cari: "headers['x-galantara-world'] = '1';", ganti: '', tes: TES('apiRuntime.test.mjs') },
   { id: 'api-cookie', pengaman: "credentials:'include'", berkas: 'src/party/apiRuntime.js', cari: "credentials: 'include',", ganti: "credentials: 'omit',", tes: TES('apiRuntime.test.mjs') },
   { id: 'api-segmen', pengaman: 'id di jalur URL divalidasi', berkas: 'src/party/apiRuntime.js', cari: "if (typeof id !== 'string' || !POLA_ID[jenis]?.test(id)) {", ganti: 'if (false) {', tes: TES('apiRuntime.test.mjs') },
+  // MisiKlien.
+  { id: 'misi-kunci', pengaman: 'findSecrets di input misi', berkas: 'src/party/MisiKlien.js', cari: "if (adaKunci(tanya, ...alamat)) throw", ganti: 'if (false) throw', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-kunci-token', pengaman: 'kunci di tengah kalimat/URL tertangkap', berkas: 'src/party/MisiKlien.js', cari: "bagian.push(t, ...t.split(/\\r?\\n/), ...t.split(/[\\s\"'`<>()[\\]{},;|?&=#/]+/));", ganti: 'bagian.push(t);', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-kunci-catatan', pengaman: 'findSecrets di catatan putusan', berkas: 'src/party/MisiKlien.js', cari: 'if (adaKunci(catatan))', ganti: 'if (false)', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-https', pengaman: 'sumber wajib https', berkas: 'src/party/MisiKlien.js', cari: "if (!u || u.protocol !== 'https:') {", ganti: 'if (!u) {', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-maks-sumber', pengaman: 'maksimal 3 sumber', berkas: 'src/party/MisiKlien.js', cari: 'if (alamat.length > MAKS_SUMBER)', ganti: 'if (false)', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-tersembunyi', pengaman: 'tanpa timer saat tab tersembunyi', berkas: 'src/party/MisiKlien.js', cari: '// Hidden tab: set no timer at all. The visibilitychange handler resumes.\n    if (this._tersembunyi()) return;', ganti: '', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-tersembunyi-tanya', pengaman: 'tanpa permintaan saat tab tersembunyi', berkas: 'src/party/MisiKlien.js', cari: 'if (p.berhenti || p.sedangTanya) return;\n    if (this._tersembunyi()) return;', ganti: 'if (p.berhenti || p.sedangTanya) return;', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-akhir', pengaman: 'berhenti di status akhir', berkas: 'src/party/MisiKlien.js', cari: 'if (STATUS_AKHIR.has(misi?.status)) {', ganti: 'if (false) {', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-batas', pengaman: 'batas waktu pantau', berkas: 'src/party/MisiKlien.js', cari: 'this.jam.sekarang() - p.mulai >= this.batasMs', ganti: 'false', tes: TES('misiKlien.test.mjs') },
+  { id: 'misi-mundur', pengaman: 'mundur saat galat', berkas: 'src/party/MisiKlien.js', cari: 'Math.min(this.mundurMaksMs, this.intervalMs * 2 ** p.gagalBeruntun)', ganti: 'this.intervalMs', tes: TES('misiKlien.test.mjs') },
 ];
 
 function jalankan(files, cwd) {
