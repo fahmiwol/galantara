@@ -16,3 +16,6 @@ export {
   pasangPenandaAgen, PenandaKerumunan, geometriPenanda, bahanPenanda, WARNA_PENANDA, WARNA_PENANDA_GELAP, UKURAN_PENANDA,
 } from './penanda.js';
 export { POSE, terapkanPose } from './pose.js';
+export {
+  pasangKitKelas, geometriKit, bahanKit, ukuranBenda, kunciKelas, KELAS, WARNA_KIT, RANGKA_NPC,
+} from './kit.js';
