@@ -98,13 +98,17 @@ export function limasTertutup(lebar, dalam, naik, puncak) {
   return f;
 }
 
-/** Flat polygon (fan) in the XY plane, both faces. Used for the flag and the ✦ star. */
-export function bidangPoligon(titik2d) {
+/**
+ * Flat polygon (fan) in the XY plane. Front face = counter-clockwise points seen
+ * from +Z. `duaSisi` adds the back face (a flag seen from both sides); a decal
+ * that lies on the ground needs only the side that faces up.
+ */
+export function bidangPoligon(titik2d, { duaSisi = true } = {}) {
   const p = [];
   for (let i = 1; i < titik2d.length - 1; i++) {
     const a = titik2d[0]; const b = titik2d[i]; const c = titik2d[i + 1];
     p.push(a[0], a[1], 0, b[0], b[1], 0, c[0], c[1], 0); // front
-    p.push(a[0], a[1], 0, c[0], c[1], 0, b[0], b[1], 0); // back
+    if (duaSisi) p.push(a[0], a[1], 0, c[0], c[1], 0, b[0], b[1], 0); // back
   }
   const g = new THREE.BufferGeometry();
   g.setAttribute('position', new THREE.Float32BufferAttribute(p, 3));

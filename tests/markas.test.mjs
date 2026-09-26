@@ -347,6 +347,29 @@ test('titikKerja(): terjangkau berjalan kaki dari titik muncul — dicari BFS, l
   }
 });
 
+test('Semua titik status Markas: yang berdiri bebas dan terjangkau; kursi punya titik dekat yang bebas dan terjangkau', () => {
+  const semua = Object.keys(M.TITIK).map((n) => M.titikMarkas(n));
+  const berdiri = semua.filter((t) => !t.duduk);
+  const kursi = semua.filter((t) => t.duduk);
+  assert.ok(kursi.length >= 4 && berdiri.length >= 16);
+  const k = buatKarakter(O.f, { x: SPAWN.x, y: 0, z: SPAWN.z });
+  try {
+    for (const t of berdiri) {
+      const r = ruangBebas(k, { x: t.x, z: t.z, y: t.y });
+      assert.equal(r.bebas, true, `${t.id} terhalang (${r.sebab})`);
+      assert.ok(Math.abs(r.tanahY - t.y) < 0.02, `${t.id}: lantai di y=${r.tanahY}, titik menyatakan ${t.y}`);
+    }
+  } finally { lepasKarakter(k); }
+  for (const t of kursi) {
+    assert.ok(t.dekat && M.TITIK[t.dekat] && !M.TITIK[t.dekat].duduk, `${t.id}: kursi tanpa titik dekat yang berdiri`);
+    const d = M.titikMarkas(t.dekat);
+    assert.ok(Math.hypot(d.x - t.x, d.z - t.z) <= 0.9, `${t.id}: titik dekat ${t.dekat} terlalu jauh dari kursinya`);
+  }
+  const jalur = cariJalur(O.f, SPAWN, berdiri);
+  const tak = berdiri.filter((t) => !jalur.get(t.id)).map((t) => t.id);
+  assert.deepEqual(tak, [], `tidak terjangkau dari titik muncul: ${tak.join(', ')}`);
+});
+
 test('Tidak ada titik kerja di bawah atap: kepala agen terlihat dari setiap kamera orbit di depan Markas', () => {
   const m = O.world.markas;
   m.root.updateMatrixWorld(true);
