@@ -59,10 +59,12 @@ before(async () => { O = await oola(); });
 test('Oola: setiap prop menyatakan collider-nya, tidak ada yang diam-diam tembus', () => {
   const tembus = O.peringatan.filter((p) => p.includes('[fisika]'));
   assert.deepEqual(tembus, []);
-  // 1 tanah + 32 cincin + 5 prop native + 14 prop prosedural + 7 meja warung.
+  // 1 tanah + 32 cincin + 5 prop native + 14 prop prosedural + 7 meja warung
+  // + 8 Markas Penjelajah (alas, undak, balai, menara, 2 pasang meja, papan hasil,
+  // bangku — src/world/markas/spek.js; rinciannya diuji tests/markas.test.mjs).
   // (Tiga bangku lempeng native dihapus 15 Sep — lihat LIVING_LOG, suasana Oola.)
-  assert.equal(O.f.hitung()[KELOMPOK_OOLA], 59);
-  assert.equal(O.f.jumlahDiDunia(), 59);
+  assert.equal(O.f.hitung()[KELOMPOK_OOLA], 67);
+  assert.equal(O.f.jumlahDiDunia(), 67);
 });
 
 test('Oola: paling banyak tiga PointLight, dan bohlam lain tetap ikut siklus hari', async () => {
