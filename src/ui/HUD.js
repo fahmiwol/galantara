@@ -22,6 +22,10 @@ export class HUD {
   init() {
     this._buildMenu();
     this._bindHamburger();
+    // One tab bar for guests and members (design §9.1). The long login banner is retired:
+    // "Masuk" lives in the HUD (desktop) and behind the Profil tab (phone).
+    this._bottomBar?.classList.add('on');
+    if (this._loginGate) this._loginGate.style.display = 'none';
     return this;
   }
 
@@ -65,15 +69,11 @@ export class HUD {
       this._userEl.textContent = getName(user);
       this._userEl.style.display = '';
     }
-    if (this._loginGate)  this._loginGate.style.display  = 'none';
-    if (this._bottomBar)  this._bottomBar.classList.add('on');
   }
 
   setLoggedOut() {
     if (this._loginBtnEl) this._loginBtnEl.style.display = '';
     if (this._userEl)     this._userEl.style.display = 'none';
-    if (this._loginGate)  this._loginGate.style.display  = '';
-    if (this._bottomBar)  this._bottomBar.classList.remove('on');
   }
 
   /** Label Spot / hub di HUD (Sprint 5). */
@@ -97,9 +97,27 @@ export class HUD {
   }
 
   // ── NPC HINT ─────────────────────────────────────────
-  showNpcHint(name, msg) {
+  /**
+   * "Sari · Penjejak Intelijen [💬 Ngobrol]": a real button, so a phone can open the dialog
+   * without a keyboard (design D1). Built with textContent: names may come from the runtime.
+   * @param {{name:string, role?:string}} npc
+   * @param {() => void} onNgobrol
+   */
+  showNpcHint(npc, onNgobrol) {
     if (!this._proxEl) return;
-    this._proxEl.innerHTML = `<b>${name}:</b> ${msg} <span style="opacity:.6;font-size:.85em">[E untuk bicara]</span>`;
+    const teks = document.createElement('span');
+    teks.className = 'prox-teks';
+    teks.textContent = npc?.role ? `${npc.name} · ${npc.role}` : String(npc?.name ?? '');
+    const tombol = document.createElement('button');
+    tombol.type = 'button';
+    tombol.className = 'prox-aksi';
+    tombol.textContent = '💬 Ngobrol';
+    const kbd = document.createElement('span');
+    kbd.className = 'prox-kbd';
+    kbd.textContent = '[E]';
+    tombol.appendChild(kbd);
+    tombol.addEventListener('click', (e) => { e.stopPropagation(); onNgobrol?.(); });
+    this._proxEl.replaceChildren(teks, tombol);
     this._proxEl.classList.add('on');
   }
 

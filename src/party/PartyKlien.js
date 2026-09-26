@@ -101,6 +101,8 @@ export class PartyKlien {
     if (sp?.spesies) this.spesies = new Map(sp.spesies.map((s) => [s.id, s]));
     try {
       const saya = await this.api.get('/saya');
+      // A runtime may answer guests with {pemain: null} instead of 401 (asked in PERMINTAAN B-P2).
+      if (!saya?.pemain) throw new GalatRuntime({ kode: 'BELUM_MASUK', pesan: 'Kamu belum masuk.' });
       this.pemain = saya.pemain;
       this.masuk = true;
     } catch (err) {

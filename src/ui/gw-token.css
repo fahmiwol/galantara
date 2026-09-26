@@ -1,0 +1,29 @@
+/* ═══════════════════════════════════════════════════════
+   gw-token.css — Galantara World tokens, WORLD skin (paper / warm wood).
+   Source: docs/riset/2026-09-26-pivot/LAPORAN-DESAIN-ART-DIRECTION.md §9.6 (values measured
+   there: contrast and colour-blind ΔE). Change a status colour only with that measurement.
+   The Kantor (mighan-web) maps the same names onto its own tokens; it does not load this file.
+   ═══════════════════════════════════════════════════════ */
+:root {
+  --gw-font: 'Nunito', system-ui, sans-serif;          /* vendored: /vendor/nunito.css */
+  --gw-kertas: #FDF6E8;   --gw-kertas-2: #F6ECD6;       /* sheet background / chip background */
+  --gw-tinta: #2A1F14;    /* 14.97:1 on paper */        --gw-tinta-2: #5A4A36; /* 7.91:1 */
+  --gw-tinta-3: #7A6448;  /* 5.21:1, meta only */       --gw-garis: rgba(90,66,40,.22);
+  --gw-emas: #D4A537;     /* party CTA, ink on it 7.08:1 */
+  --gw-emas-tua: #8A6212; /* gold text/icons, 5.09:1 on paper */
+  --gw-bayang: 0 -8px 30px rgba(48,32,16,.22);
+  --gw-pil-gelap: rgba(42,31,20,.88);                  /* markers above heads */
+  /* status, light surfaces (min ΔE 22.8 across 4 visions; ≥ 3.05:1 on white/#f4f5f7/paper) */
+  --st-siaga: #7D848C; --st-kerja: #2E7D32; --st-perlu: #C77C02; --st-gagal: #A4133C; --st-info: #2A4FC7;
+  --st-perlu-ikon: #9A5B00;                             /* "!" icon on its tint (≥ 4.65:1) */
+  --st-siaga-tint: #F5F5F6; --st-kerja-tint: #EEF5EF; --st-perlu-tint: #FBF5EB;
+  --st-gagal-tint: #F8ECEF; --st-info-tint: #EEF1FB;
+  /* status, dark surfaces = DNA-VISUAL-MIGHAN as is (min ΔE 22.1; ≥ 4.94:1) */
+  --st-siaga-g: #8B93A7; --st-kerja-g: #2FE39A; --st-perlu-g: #FFC15C; --st-gagal-g: #FF7A6B; --st-info-g: #7DB8FF;
+  /* space, shape, touch */
+  --gw-s1: 4px; --gw-s2: 8px; --gw-s3: 12px; --gw-s4: 16px; --gw-s5: 24px;
+  --gw-r-sheet: 22px; --gw-r-kartu: 16px; --gw-r-chip: 10px; --gw-r-pil: 999px;
+  --gw-sentuh: 44px; --gw-cta: 48px; --gw-sheet-maks: 75vh;
+  --gw-gerak: 200ms ease-out;                           /* DNA: 150–250 ms */
+}
+@media (prefers-reduced-motion: reduce) { :root { --gw-gerak: 0ms; } }

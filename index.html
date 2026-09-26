@@ -2,7 +2,10 @@
 <html lang="id">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<!-- Zoom TIDAK dikunci (WCAG 2.2 SC 1.4.4): hasil misi berupa teks panjang. Gestur zoom tidak
+     mengganggu permainan karena kanvas, D-pad, dan tombol orbit memakai touch-action:none
+     (src/ui/gw-markas.css), pola yang sama dengan benteng.html. -->
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Galantara — Pasar Malam Digital Indonesia</title>
 <meta name="description" content="Galantara adalah platform social-commerce hyperlocal berbasis peta Indonesia. Nongkrong, jualan, ngamen, live streaming — semua di satu dunia virtual.">
 <meta property="og:title" content="Galantara — Pasar Malam Digital Indonesia">
@@ -262,6 +265,9 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
 #hamburger-menu.open{display:block}
 #hud-user{font-size:11px;font-weight:800;color:#374151;max-width:80px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;display:none}
 </style>
+<!-- Galantara World M1: token kulit dunia + UI party (sheet, plakat agen, HP dulu). -->
+<link href="/src/ui/gw-token.css" rel="stylesheet">
+<link href="/src/ui/gw-markas.css" rel="stylesheet">
 </head>
 <body>
 
@@ -325,7 +331,7 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
   <div class="dp" id="dp-u">▲</div>
   <div></div>
   <div class="dp" id="dp-l">◀</div>
-  <div class="dp dp-c" id="dp-c">OOLA</div>
+  <div class="dp dp-c" id="dp-c">AKSI</div>
   <div class="dp" id="dp-r">▶</div>
   <div></div>
   <div class="dp" id="dp-d">▼</div>
@@ -365,10 +371,13 @@ canvas{display:block;position:absolute;inset:0;width:100%!important;height:100%!
   <button class="bb" id="chat-toggle-btn" onclick="G_UI.toggleChat()" style="position:relative">
     <div class="bb-ic">💬</div><span class="bb-t">Chat</span>
   </button>
-  <button class="bb" onclick="G_UI.openPanel('token-panel')">
-    <div class="bb-ic">🪙</div><span class="bb-t">Token</span>
+  <!-- Party menggantikan Token (Token tetap di menu sebagai "Mighan Coin"). Diisi DuniaParty. -->
+  <button class="bb bb-party" id="bb-party-btn" aria-label="Party, 0 dari 4">
+    <div class="bb-ic"><span class="gw-mini-titik" id="bb-party-titik" aria-hidden="true"><i></i><i></i><i></i><i></i></span></div>
+    <span class="bb-t" id="bb-party-t">Party 0/4</span>
+    <span class="bb-lencana" id="bb-party-lencana" hidden>!</span>
   </button>
-  <button class="bb" onclick="G_UI.openProfile()">
+  <button class="bb" onclick="G_UI.profilAtauMasuk()">
     <div class="bb-ic">👤</div><span class="bb-t">Profil</span>
   </button>
 </div>

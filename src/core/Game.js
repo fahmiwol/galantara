@@ -38,6 +38,9 @@ import { MapBuilder        } from '../tools/MapBuilder.js';
 import { Fisika, cincinTepi } from '../fisika/Fisika.js';
 import { buatKarakter, UKURAN_KAPSUL } from '../fisika/Karakter.js';
 import { LihatCollider     } from '../fisika/LihatCollider.js';
+import { DuniaParty        } from '../party/DuniaParty.js';
+import { KontrolSentuh     } from './KontrolSentuh.js';
+import { INTERACT_R        } from '../entities/NPC.js';
 
 /** Kelompok collider Spot yang sedang dipasang — dilepas utuh saat warp. */
 const KELOMPOK_SPOT = 'spot';
@@ -182,6 +185,17 @@ export class Game {
     this._applySpotChrome();
     this.chat.onSend((msg) => this._kirimChat(msg));
 
+    // Galantara World M1: party, Markas, missions (runtime at /rt/api), and touch paths to talk.
+    this.dunia = new DuniaParty(this).init();
+    this.sentuh = new KontrolSentuh({
+      kanvas: this.renderer.canvas,
+      ambilKamera: () => this.camera?.cam,
+      ambilNpc: () => (this.npcs?.terlihat ? this.npcs.npcs.map((n) => ({ id: n.data.id, x: n.x, z: n.z })) : []),
+      onKetukNpc: (id) => this._ketukNpc(id),
+      tombolTengah: document.getElementById('dp-c'),
+      onTengah: () => this._aksiTengah(),
+    });
+
     // Auth + tamu multiplayer (getSession tanpa user → join sebagai guest)
     G_Auth.init(
       (user) => this._onLogin(user),
@@ -192,8 +206,9 @@ export class Game {
     // Expose UI API globally (untuk onclick di HTML + menu items)
     this._exposeGlobals();
 
-    // Keyboard: F = open zone panel, E = talk NPC
+    // Keyboard: F = open zone panel, E = talk NPC (never while typing in a field)
     window.addEventListener('keydown', (e) => {
+      if (['INPUT', 'TEXTAREA', 'SELECT'].includes(document.activeElement?.tagName)) return;
       if (e.code === 'KeyF') this._tryOpenZonePanel();
       if (e.code === 'KeyE') this._tryTalkNPC();
     });
@@ -336,8 +351,9 @@ export class Game {
       this.harian.catat('magrib', 1, 'magrib-hari-ini');
     }
 
-    // NPC patrol
-    this.npcs.update(dt, this._t);
+    // NPC behaviour (patrol / walk to work / report); the NPC in an open dialog stays put.
+    this.npcs.update(dt, this._t, { dialogNpcId: this.panels.dialogNpcId, posisiPemain: this.avatar.getPosition() });
+    this.dunia?.perbarui(dt);
 
     // Zone check (Oola) — nonaktif saat Spot Bogor agar hint tidak tabrakan
     if (this._spotRuntime) {
@@ -378,7 +394,7 @@ export class Game {
     if (nearNPC !== this._lastNPC) {
       this._lastNPC = nearNPC;
       if (nearNPC) {
-        this.hud.showNpcHint(nearNPC.name, nearNPC.idleMsg);
+        this.hud.showNpcHint(nearNPC, () => this._tryTalkNPC());
       } else {
         this.hud.hideNpcHint();
       }
@@ -582,6 +598,27 @@ export class Game {
     const npc = this._lastNPC;
     if (!npc) return;
     this.panels.openDialog(npc);
+  }
+
+  /** Tap on an NPC in the world: talk when close, otherwise guide the player there. */
+  _ketukNpc(id) {
+    const npc = this.npcs.get(id);
+    if (!npc) return;
+    const p = this.avatar.getPosition();
+    if (Math.hypot(npc.x - p.x, npc.z - p.z) < INTERACT_R) {
+      this._lastNPC = npc.data;
+      this._tryTalkNPC();
+    } else {
+      this.dunia?.arahkanKe(id);
+    }
+  }
+
+  /** D-pad centre: interact with what is near — an NPC first, then a zone or table. */
+  _aksiTengah() {
+    if (this._lastNPC) return this._tryTalkNPC();
+    if (this._activeInteractionVolume || this.zones?.active) return this._tryOpenZonePanel();
+    this.toast.show('Tidak ada yang bisa diajak bicara di dekatmu. Dekati warga dulu.', 'a');
+    return undefined;
   }
 
   // ── MULTIPLAYER ───────────────────────────────────────
@@ -937,6 +974,8 @@ export class Game {
       openLM:         (_reason)         => this.loginModal.open(),
       closeLM:        ()                => this.loginModal.close(),
       openProfile:    ()                => this.panels.openProfile(this.user),
+      profilAtauMasuk: ()               => (this.user ? this.panels.openProfile(this.user) : this.loginModal.open()),
+      openMarkas:     ()                => this.dunia?.bukaMarkas(),
       openPanel:      (id)              => this.panels.openPanel(id),
       closePanel:     (id)              => this.panels.closePanel(id),
       saveProfile:    ()                => {
