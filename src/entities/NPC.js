@@ -1,16 +1,21 @@
 // ═══════════════════════════════════════════════════════
-// NPC.js — NPC entities dengan patrol & dialog tree
+// NPC.js — NPC entities: mesh + dialog data. Movement lives in PerilakuNpc.js.
 // ═══════════════════════════════════════════════════════
 
 import { NPCS } from '../data/config.js';
+import { PerilakuNpc } from './PerilakuNpc.js';
 
-const INTERACT_R = 2.5; // radius interaksi
+export const INTERACT_R = 2.5; // radius interaksi
+
+/** Height of the head top (world units) — anchor for labels above an NPC. */
+export const TINGGI_KEPALA_NPC = 1.3;
 
 export class NPCManager {
   constructor(scene) {
     this.scene  = scene;
-    this.npcs   = []; // { data, mesh, labelEl, timer, phase, dx, dz }
+    this.npcs   = []; // { data, mesh, perilaku, spawnX, spawnZ, x, z }
     this._onDialog = null;
+    this._terlihat = true;
   }
 
   onDialog(fn) { this._onDialog = fn; return this; }
@@ -18,10 +23,13 @@ export class NPCManager {
   // ── BUILD SEMUA NPC ───────────────────────────────────
   /** Sembunyikan NPC Oola saat Spot visual lain (mis. Bogor) aktif. */
   setHubVisible(visible) {
+    this._terlihat = visible;
     this.npcs.forEach((npc) => {
       npc.mesh.visible = visible;
     });
   }
+
+  get terlihat() { return this._terlihat; }
 
   build() {
     NPCS.forEach(data => {
@@ -50,7 +58,7 @@ export class NPCManager {
         new THREE.SphereGeometry(0.08, 6, 5),
         new THREE.MeshBasicMaterial({ color: data.color }),
       );
-      tag.position.y = 1.3;
+      tag.position.y = TINGGI_KEPALA_NPC;
       group.add(tag);
 
       group.position.set(data.x, 0, data.z);
@@ -59,70 +67,62 @@ export class NPCManager {
       this.npcs.push({
         data,
         mesh: group,
+        perilaku: new PerilakuNpc({ x: data.x, z: data.z }),
         spawnX: data.x,
         spawnZ: data.z,
         x: data.x,
         z: data.z,
-        timer: Math.random() * 3,
-        phase: 'idle', // idle | walk
-        dx: 0,
-        dz: 0,
       });
     });
     return this;
   }
 
-  // ── UPDATE PATROL + IDLE BOB ──────────────────────────
-  update(dt, t) {
+  /** @returns {object|undefined} the NPC entry (data, mesh, perilaku, x, z) */
+  get(id) {
+    return this.npcs.find((n) => n.data.id === id);
+  }
+
+  /** Command one NPC's behaviour (see PerilakuNpc.perintah). */
+  perintah(id, p) {
+    const npc = this.get(id);
+    if (!npc) return false;
+    npc.perilaku.perintah(p);
+    return true;
+  }
+
+  // ── UPDATE: behaviour + pose ──────────────────────────
+  /**
+   * @param {number} dt
+   * @param {number} t
+   * @param {{dialogNpcId?: string|null, posisiPemain?: {x:number,z:number}|null}} [ctx]
+   */
+  update(dt, t, ctx = {}) {
     this.npcs.forEach(npc => {
-      npc.timer -= dt;
+      const p = npc.perilaku;
+      p.perbarui(dt, {
+        dialogTerbuka: ctx.dialogNpcId === npc.data.id,
+        posisiPemain: ctx.posisiPemain ?? null,
+      });
+      npc.x = p.x;
+      npc.z = p.z;
 
-      if (npc.timer <= 0) {
-        // Decide next action
-        if (npc.phase === 'idle') {
-          npc.phase = 'walk';
-          const angle = Math.random() * Math.PI * 2;
-          npc.dx = Math.cos(angle) * 0.04;
-          npc.dz = Math.sin(angle) * 0.04;
-          npc.timer = 1.5 + Math.random() * 2;
-        } else {
-          npc.phase = 'idle';
-          npc.timer = 2 + Math.random() * 3;
-          npc.dx = 0;
-          npc.dz = 0;
-        }
-      }
+      // Pose: walking bounces, working nods over the desk, reporting waves (a hop), idle breathes.
+      let bobY;
+      let condong = 0;
+      if (p.bergerak) bobY = Math.abs(Math.sin(t * 6 + npc.spawnX)) * 0.1;
+      else if (p.keadaan === 'bekerja') { bobY = Math.sin(t * 2.4 + npc.spawnX) * 0.02; condong = 0.14 + Math.sin(t * 2.4) * 0.05; }
+      else if (p.melambai) bobY = Math.max(0, Math.sin(t * 7)) * 0.12;
+      else bobY = Math.sin(t * 1.2 + npc.spawnX) * 0.03;
 
-      if (npc.phase === 'walk') {
-        npc.x += npc.dx;
-        npc.z += npc.dz;
-
-        // Keep near spawn
-        const distFromSpawn = Math.sqrt(
-          (npc.x - npc.spawnX) ** 2 + (npc.z - npc.spawnZ) ** 2,
-        );
-        if (distFromSpawn > 3) {
-          // Walk back toward spawn
-          const angle = Math.atan2(npc.spawnZ - npc.z, npc.spawnX - npc.x);
-          npc.dx = Math.cos(angle) * 0.04;
-          npc.dz = Math.sin(angle) * 0.04;
-        }
-      }
-
-      // Bob animation
-      const bobY = npc.phase === 'walk'
-        ? Math.abs(Math.sin(t * 6 + npc.spawnX)) * 0.1
-        : Math.sin(t * 1.2 + npc.spawnX) * 0.03;
-
-      npc.mesh.position.set(npc.x, bobY, npc.z);
-      if (npc.phase === 'walk' && (npc.dx || npc.dz)) {
-        npc.mesh.rotation.y = Math.atan2(npc.dx, npc.dz);
-      }
+      npc.mesh.position.set(p.x, bobY, p.z);
+      npc.mesh.rotation.y = p.arah;
+      npc.mesh.rotation.x = condong;
     });
   }
 
   // ── CHECK PROXIMITY — kembalikan NPC terdekat jika dalam range ─
   checkProximity(avatarPos) {
+    if (!this._terlihat) return null;
     let closest = null;
     let closestDist = Infinity;
 
