@@ -34,6 +34,13 @@ export const MUTASI = [
   { id: 'api-header', pengaman: 'tulisan membawa x-galantara-world', berkas: 'src/party/apiRuntime.js', cari: "headers['x-galantara-world'] = '1';", ganti: '', tes: TES('apiRuntime.test.mjs') },
   { id: 'api-cookie', pengaman: "credentials:'include'", berkas: 'src/party/apiRuntime.js', cari: "credentials: 'include',", ganti: "credentials: 'omit',", tes: TES('apiRuntime.test.mjs') },
   { id: 'api-segmen', pengaman: 'id di jalur URL divalidasi', berkas: 'src/party/apiRuntime.js', cari: "if (typeof id !== 'string' || !POLA_ID[jenis]?.test(id)) {", ganti: 'if (false) {', tes: TES('apiRuntime.test.mjs') },
+  // /rt proxy in galantara-server.
+  { id: 'proxy-jalur', pengaman: 'proxy: hanya /rt/api/<segmen polos>', berkas: 'galantara-server/proxyRuntime.js', cari: 'if (!JALUR_API.test(jalur)) return null;', ganti: '', tes: TES('proxyRuntime.test.mjs') },
+  { id: 'proxy-kueri', pengaman: 'proxy: kueri hanya karakter RFC 3986', berkas: 'galantara-server/proxyRuntime.js', cari: 'if (kueri && !KUERI.test(kueri)) return null;', ganti: '', tes: TES('proxyRuntime.test.mjs') },
+  { id: 'proxy-hop', pengaman: 'proxy: header hop-by-hop tidak menyeberang', berkas: 'galantara-server/proxyRuntime.js', cari: 'if (!HOP.has(k) && !perHop.has(k) && v !== undefined)', ganti: 'if (!perHop.has(k) && v !== undefined)', tes: TES('proxyRuntime.test.mjs') },
+  { id: 'proxy-connection', pengaman: 'proxy: header yang disebut Connection ikut hop-by-hop', berkas: 'galantara-server/proxyRuntime.js', cari: 'if (!HOP.has(k) && !perHop.has(k) && v !== undefined)', ganti: 'if (!HOP.has(k) && v !== undefined)', tes: TES('proxyRuntime.test.mjs') },
+  { id: 'proxy-galat-json', pengaman: 'proxy: runtime mati = JSON yang bisa ditampilkan', berkas: 'galantara-server/proxyRuntime.js', cari: 'balasJson(res, habis ? 504 : 502, {', ganti: 'res.destroy(); void ({', tes: TES('proxyRuntime.test.mjs') },
+  { id: 'proxy-terpasang', pengaman: 'server --local benar-benar memasang proxy', berkas: 'galantara-server/index.js', cari: 'if (RUNTIME_URL) app.use(', ganti: 'if (false) app.use(', tes: TES('localServerRuntime.test.mjs') },
   // MisiKlien.
   { id: 'misi-kunci', pengaman: 'findSecrets di input misi', berkas: 'src/party/MisiKlien.js', cari: "if (adaKunci(tanya, ...alamat)) throw", ganti: 'if (false) throw', tes: TES('misiKlien.test.mjs') },
   { id: 'misi-kunci-token', pengaman: 'kunci di tengah kalimat/URL tertangkap', berkas: 'src/party/MisiKlien.js', cari: "bagian.push(t, ...t.split(/\\r?\\n/), ...t.split(/[\\s\"'`<>()[\\]{},;|?&=#/]+/));", ganti: 'bagian.push(t);', tes: TES('misiKlien.test.mjs') },
