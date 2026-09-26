@@ -1,0 +1,80 @@
+#!/usr/bin/env node
+// ═══════════════════════════════════════════════════════
+// tests/alat/mutasi.mjs — prove that the M1 world-client safeguards are really tested.
+//
+// For each entry: remove or bend ONE safeguard in the working tree, run the tests that should
+// catch it, expect red, restore the file byte for byte. A control run without any mutation
+// must be green first; otherwise every "red" below would prove nothing.
+//
+//   node tests/alat/mutasi.mjs            all mutations
+//   node tests/alat/mutasi.mjs proxy      only ids/safeguards containing "proxy"
+//
+// Not part of `npm test` (it edits files in place). Run it on a clean tree.
+// ═══════════════════════════════════════════════════════
+
+import { readFileSync, writeFileSync } from 'node:fs';
+import { spawnSync } from 'node:child_process';
+import { join } from 'node:path';
+
+const APP = join(import.meta.dirname, '..', '..');
+const ROOT = join(APP, '..', '..');
+const TES = (...f) => f.map((x) => (x.startsWith('/') ? x : join(APP, 'tests', x)));
+const TES_AKAR = (...f) => f.map((x) => join(ROOT, 'tools', 'test', x));
+
+export const MUTASI = [
+  // Vendored contract parity (root test).
+  { id: 'vendor-byte', pengaman: 'paritas vendor', berkas: 'vendor/party-contract/party.js', cari: 'MAX_SLOTS = 4', ganti: 'MAX_SLOTS = 5', tes: TES_AKAR('party-vendor.test.mjs') },
+  // PartyKlien / apiRuntime.
+  { id: 'party-validasi', pengaman: 'validasi party di klien', berkas: 'src/party/PartyKlien.js', cari: 'if (!vonis.ok) {', ganti: 'if (false) {', tes: TES('partyKlien.test.mjs') },
+  { id: 'party-penuh', pengaman: 'slot ke-5 ditolak sebelum permintaan', berkas: 'src/party/PartyKlien.js', cari: 'if (this.jumlah() >= MAX_SLOTS) {', ganti: 'if (false) {', tes: TES('partyKlien.test.mjs') },
+  { id: 'party-ganda', pengaman: 'agen yang sama tidak direkrut dua kali', berkas: 'src/party/PartyKlien.js', cari: 'if (ada && this._slotDari(ada.agen.instance_id) >= 0) {', ganti: 'if (false) {', tes: TES('partyKlien.test.mjs') },
+  { id: 'party-bentrok', pengaman: 'versi bentrok: muat ulang + ulang sekali', berkas: 'src/party/PartyKlien.js', cari: "err.kode === 'VERSI_BENTROK' && sisaUlang > 0", ganti: 'false', tes: TES('partyKlien.test.mjs') },
+  { id: 'cache-findsecrets', pengaman: 'localStorage bersih menurut findSecrets', berkas: 'src/party/PartyKlien.js', cari: 'if (findSecrets(isi).length) {\n      // Never write', ganti: 'if (false) {\n      // Never write', tes: TES('partyKlien.test.mjs') },
+  { id: 'cache-allowlist', pengaman: 'cache hanya field yang diizinkan', berkas: 'src/party/PartyKlien.js', cari: "const a = { instance_id: id, template: { id: item?.agen.template?.id ?? null } };", ganti: 'const a = { ...(item?.agen ?? { instance_id: id }) };', tes: TES('partyKlien.test.mjs') },
+  { id: 'api-header', pengaman: 'tulisan membawa x-galantara-world', berkas: 'src/party/apiRuntime.js', cari: "headers['x-galantara-world'] = '1';", ganti: '', tes: TES('apiRuntime.test.mjs') },
+  { id: 'api-cookie', pengaman: "credentials:'include'", berkas: 'src/party/apiRuntime.js', cari: "credentials: 'include',", ganti: "credentials: 'omit',", tes: TES('apiRuntime.test.mjs') },
+  { id: 'api-segmen', pengaman: 'id di jalur URL divalidasi', berkas: 'src/party/apiRuntime.js', cari: "if (typeof id !== 'string' || !POLA_ID[jenis]?.test(id)) {", ganti: 'if (false) {', tes: TES('apiRuntime.test.mjs') },
+];
+
+function jalankan(files, cwd) {
+  const r = spawnSync(process.execPath, ['--experimental-default-type=module', '--test', '--test-timeout=60000', ...files], { cwd, encoding: 'utf8' });
+  const pass = Number(/^# pass (\d+)/m.exec(r.stdout)?.[1] ?? 0);
+  const fail = Number(/^# fail (\d+)/m.exec(r.stdout)?.[1] ?? 0);
+  return { code: r.status, pass, fail };
+}
+
+function main(filter) {
+  const pilih = MUTASI.filter((m) => !filter || m.id.includes(filter) || m.pengaman.includes(filter));
+  const semuaTes = [...new Set(pilih.flatMap((m) => m.tes))];
+  const kontrol = jalankan(semuaTes, APP);
+  console.log(`Kontrol tanpa mutasi: ${kontrol.code === 0 ? 'HIJAU' : 'MERAH'} (${kontrol.pass} lulus, ${kontrol.fail} gagal)`);
+  if (kontrol.code !== 0 || kontrol.pass === 0) {
+    console.error('Kontrol harus hijau dulu; hasil mutasi tidak berarti apa-apa. Berhenti.');
+    return 1;
+  }
+  let lolos = 0;
+  console.log('\n| Mutasi | Pengaman | Hasil |\n|---|---|---|');
+  for (const m of pilih) {
+    const jalur = join(APP, m.berkas);
+    const asli = readFileSync(jalur);
+    const teks = asli.toString('utf8');
+    const n = teks.split(m.cari).length - 1;
+    if (n !== 1) {
+      console.log(`| ${m.id} | ${m.pengaman} | BASI: pola ditemukan ${n}× (perbarui daftar mutasi) |`);
+      continue;
+    }
+    try {
+      writeFileSync(jalur, teks.replace(m.cari, m.ganti));
+      const h = jalankan(m.tes, APP);
+      const merah = h.code !== 0;
+      if (merah) lolos++;
+      console.log(`| ${m.id} | ${m.pengaman} | ${merah ? `merah (${h.fail} gagal)` : '**HIJAU: pengaman tidak teruji**'} |`);
+    } finally {
+      writeFileSync(jalur, asli);
+    }
+  }
+  console.log(`\nMutasi tertangkap: ${lolos}/${pilih.length}`);
+  return lolos === pilih.length ? 0 : 1;
+}
+
+process.exitCode = main(process.argv[2]);
