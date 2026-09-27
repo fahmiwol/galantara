@@ -1,0 +1,178 @@
+/* ═══════════════════════════════════════════════════════
+   gw-markas.css — M1 party UI (sheets, Kartu Warga, agent plaques, "Arahkan saya") and the
+   phone-first world chrome (design report §9.1–§9.7, D1–D3).
+   Uses gw-token.css only; no new colours outside it.
+   ═══════════════════════════════════════════════════════ */
+
+/* ── Sheet: bottom sheet on phones, right drawer (380 px) on desktop ── */
+#gw-lapis{position:fixed;inset:0;z-index:205;display:none;font-family:var(--gw-font)}
+#gw-lapis.on{display:block}
+/* Light scrim, no blur: the world (and the agent at work) stays visible. */
+.gw-tirai{position:absolute;inset:0;background:rgba(20,14,8,.18)}
+.gw-sheet{position:absolute;left:0;right:0;bottom:0;max-height:var(--gw-sheet-maks);overflow:auto;overscroll-behavior:contain;
+  background:var(--gw-kertas);color:var(--gw-tinta);border-top:1px solid var(--gw-garis);
+  border-radius:var(--gw-r-sheet) var(--gw-r-sheet) 0 0;box-shadow:var(--gw-bayang);
+  padding:var(--gw-s2) var(--gw-s4) calc(var(--gw-s4) + env(safe-area-inset-bottom, 0px));
+  transform:translateY(0);transition:transform var(--gw-gerak)}
+.gw-pegangan{width:40px;height:4px;border-radius:2px;background:var(--gw-garis);margin:2px auto 6px}
+@media (min-width:768px){
+  .gw-sheet{left:auto;top:62px;right:12px;bottom:12px;width:380px;max-height:none;border-radius:var(--gw-r-sheet);border:1px solid var(--gw-garis)}
+  .gw-pegangan{display:none}
+}
+
+.gw-isi{display:flex;flex-direction:column;gap:var(--gw-s3)}
+.gw-kepala{display:flex;align-items:center;gap:var(--gw-s2)}
+.gw-judul{flex:1;margin:0;font:900 18px/1.2 var(--gw-font);color:var(--gw-tinta);outline:none}
+.gw-x{flex:none;width:var(--gw-sentuh);height:var(--gw-sentuh);border:0;border-radius:12px;background:var(--gw-kertas-2);color:var(--gw-tinta-2);font:800 16px var(--gw-font);cursor:pointer}
+.gw-sub{margin:0;font:600 14px/1.45 var(--gw-font);color:var(--gw-tinta-2)}
+.gw-meta{margin:0;font:700 12px/1.4 var(--gw-font);color:var(--gw-tinta-3)}
+.gw-label{font:800 12px/1.3 var(--gw-font);color:var(--gw-tinta-2);letter-spacing:.02em}
+.gw-blok{display:flex;flex-direction:column;gap:6px}
+.gw-baris{display:flex;gap:var(--gw-s2)}.gw-baris>*{flex:1}
+.gw-baris-teks{display:flex;flex-wrap:wrap;gap:0 var(--gw-s3)}
+.gw-baris-lbl{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+
+/* Kartu Warga */
+.gw-kartu{display:flex;flex-direction:column;gap:var(--gw-s2);background:#fff;border:1px solid var(--gw-garis);border-radius:var(--gw-r-kartu);padding:var(--gw-s3)}
+.gw-warga{display:flex;gap:var(--gw-s3);align-items:center;min-height:72px}
+.gw-isi>.gw-warga{background:#fff;border:1px solid var(--gw-garis);border-radius:var(--gw-r-kartu);padding:var(--gw-s3)}
+.gw-warga-teks{display:flex;flex-direction:column;gap:3px;min-width:0}
+.gw-potret{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--gw-kertas-2);color:var(--gw-tinta);font:900 22px var(--gw-font);border:3px solid var(--st-siaga)}
+.gw-cincin-kerja{border-color:var(--st-kerja)}.gw-cincin-perlu{border-color:var(--st-perlu)}.gw-cincin-gagal{border-color:var(--st-gagal)}.gw-cincin-info{border-color:var(--st-info)}
+.gw-nama{font:900 16px/1.2 var(--gw-font);color:var(--gw-tinta)}
+.gw-peran{font:700 13px/1.3 var(--gw-font);color:var(--gw-tinta-2)}
+.gw-otak{display:flex;flex-wrap:wrap;align-items:center;gap:6px;font:700 12px/1.3 var(--gw-font);color:var(--gw-tinta-2)}
+.gw-tag-ai{display:inline-block;margin-left:6px;padding:2px 6px;border:1.5px solid var(--gw-tinta-2);border-radius:6px;font:900 11px/1 var(--gw-font);letter-spacing:.04em;color:var(--gw-tinta-2);vertical-align:2px}
+
+/* Status: glyph + label + colour, never colour alone (WCAG 1.4.1). Text stays ink. */
+.gw-pil{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;min-height:28px;padding:3px 10px 3px 8px;border-radius:var(--gw-r-pil);border:1.5px solid var(--c);background:var(--t);font:800 12px/1.2 var(--gw-font);color:var(--gw-tinta);font-variant-numeric:tabular-nums}
+.gw-pil b{color:var(--ci,var(--c));font-size:13px}
+.gw-st-siaga{--c:var(--st-siaga);--t:var(--st-siaga-tint)}
+.gw-st-kerja{--c:var(--st-kerja);--t:var(--st-kerja-tint)}
+.gw-st-perlu{--c:var(--st-perlu);--ci:var(--st-perlu-ikon);--t:var(--st-perlu-tint)}
+.gw-st-gagal{--c:var(--st-gagal);--t:var(--st-gagal-tint)}
+.gw-st-info{--c:var(--st-info);--t:var(--st-info-tint)}
+
+.gw-lbl{display:inline-block;padding:3px 7px;border-radius:6px;font:900 11px/1.2 var(--gw-font)}
+.gw-lbl-sendiri{background:var(--st-kerja-tint);color:#1f5a23;border:1.5px solid var(--st-kerja)}
+.gw-lbl-cloud{background:var(--st-perlu-tint);color:#6e4200;border:1.5px solid var(--st-perlu-ikon)}
+.gw-lbl-simulasi{background:var(--st-gagal-tint);color:#7a0e2d;border:1.5px solid var(--st-gagal)}
+.gw-lbl-kosong{background:var(--gw-kertas-2);color:var(--gw-tinta-2)}
+
+.gw-chip{display:flex;flex-wrap:wrap;align-items:baseline;gap:6px;min-height:36px;padding:8px 10px;border-radius:var(--gw-r-chip);background:var(--gw-kertas-2);font:700 13px/1.35 var(--gw-font);color:var(--gw-tinta)}
+.gw-chip small{font:700 12px var(--gw-font);color:var(--gw-tinta-2)}
+.gw-slot{display:flex;align-items:center;gap:var(--gw-s2);min-height:52px;padding:var(--gw-s3);border:1.5px dashed var(--gw-garis);border-radius:var(--gw-r-kartu);font:700 13px/1.35 var(--gw-font);color:var(--gw-tinta-2);font-variant-numeric:tabular-nums}
+.gw-titik{display:inline-flex;gap:6px;flex:none}
+.gw-titik i{width:14px;height:14px;border-radius:50%;border:2px solid var(--gw-tinta-3)}
+.gw-titik i.isi{background:var(--gw-emas);border-color:var(--gw-emas-tua)}
+
+/* Buttons: one gold CTA per sheet, outlined second, text third */
+.gw-cta{display:flex;align-items:center;justify-content:center;width:100%;min-height:var(--gw-cta);padding:0 16px;border:0;border-radius:14px;background:var(--gw-emas);color:var(--gw-tinta);font:900 15px var(--gw-font);box-shadow:0 2px 0 var(--gw-emas-tua);cursor:pointer;text-decoration:none;touch-action:manipulation}
+.gw-cta[disabled]{opacity:.6;cursor:progress}
+.gw-cta2{min-height:var(--gw-sentuh);width:100%;padding:0 12px;border:1.5px solid var(--gw-garis);border-radius:14px;background:#fff;color:var(--gw-tinta);font:800 14px var(--gw-font);cursor:pointer;touch-action:manipulation}
+.gw-teks{min-height:var(--gw-sentuh);padding:0 4px;border:0;background:none;color:var(--gw-emas-tua);font:800 14px var(--gw-font);text-decoration:underline;cursor:pointer;touch-action:manipulation}
+.gw-tautan{display:flex;align-items:center;justify-content:center;min-height:var(--gw-sentuh);color:var(--gw-emas-tua);font:800 14px var(--gw-font);text-align:center}
+.gw-cta:focus-visible,.gw-cta2:focus-visible,.gw-teks:focus-visible,.gw-x:focus-visible,.gw-tautan:focus-visible,.gw-input:focus-visible{outline:3px solid var(--st-info);outline-offset:2px}
+
+.gw-opsi{border:2px solid var(--gw-garis);border-radius:var(--gw-r-kartu);padding:var(--gw-s3);background:#fff}
+.gw-opsi.pilih{border-color:var(--gw-emas-tua);box-shadow:0 0 0 3px rgba(212,165,55,.25)}
+.gw-opsi h3{margin:0;font:900 15px var(--gw-font)}
+.gw-opsi p{margin:4px 0 0;font:600 13px/1.45 var(--gw-font);color:var(--gw-tinta-2)}
+
+.gw-form{display:flex;flex-direction:column;gap:var(--gw-s2)}
+/* 16 px: iOS zooms into anything smaller on focus. */
+.gw-input{width:100%;padding:10px 12px;border:1.5px solid var(--gw-garis);border-radius:12px;background:#fff;color:var(--gw-tinta);font:600 16px/1.4 var(--gw-font);resize:vertical;touch-action:manipulation}
+.gw-input::placeholder{color:var(--gw-tinta-3)}
+.gw-peringatan{margin:0;border-left:4px solid var(--st-perlu);background:var(--st-perlu-tint);border-radius:10px;padding:10px 12px;font:700 13px/1.45 var(--gw-font);color:var(--gw-tinta)}
+.gw-kartu-galat{display:flex;flex-direction:column;gap:var(--gw-s2);border-left:4px solid var(--st-gagal);background:var(--st-gagal-tint);border-radius:12px;padding:12px}
+.gw-kartu-galat p{margin:0;font:700 14px/1.45 var(--gw-font);color:var(--gw-tinta)}
+
+.gw-ringkasan{display:flex;flex-direction:column;gap:6px}
+.gw-kalimat{margin:0;font:600 15px/1.5 var(--gw-font);color:var(--gw-tinta)}
+.gw-rujuk{font:800 11px var(--gw-font);color:var(--gw-emas-tua);margin-left:2px}
+.gw-sumber{display:flex;align-items:center;gap:8px;padding:8px 0;border-top:1px solid var(--gw-garis);font:600 13px/1.4 var(--gw-font)}
+.gw-sumber>b{flex:none;width:24px;height:24px;border-radius:6px;background:var(--gw-kertas-2);display:grid;place-items:center;font:900 12px var(--gw-font)}
+.gw-sumber-teks{flex:1;min-width:0;overflow-wrap:anywhere}
+.gw-sumber small{display:block;color:var(--gw-tinta-3);font:700 12px var(--gw-font)}
+.gw-buka{flex:none;display:grid;place-items:center;min-width:var(--gw-sentuh);min-height:var(--gw-sentuh);color:var(--gw-emas-tua);font:800 13px var(--gw-font)}
+.gw-umum{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0);white-space:nowrap}
+
+/* ── Agent plaques and status markers (ChatBubble layer, one projection path) ── */
+.chat-bubble.plakat-agen{padding:3px 8px;border-radius:8px;border:1.5px solid var(--gw-tinta-3);background:var(--gw-kertas);color:var(--gw-tinta);
+  font:800 12px/1.25 var(--gw-font);white-space:nowrap;box-shadow:0 2px 6px rgba(48,32,16,.18)}
+.chat-bubble.plakat-agen::after{display:none}
+.chat-bubble.plakat-agen.redup.on{opacity:.78}
+.plakat-agen .pk-bintang{color:var(--gw-emas-tua);margin-right:4px}
+.plakat-agen .pk-ai{display:inline-block;margin-left:6px;padding:1px 5px;border:1.5px solid var(--gw-tinta-2);border-radius:5px;font:900 11px/1.1 var(--gw-font);letter-spacing:.04em;color:var(--gw-tinta-2)}
+.plakat-agen .pk-catatan{display:block;font:700 11px/1.2 var(--gw-font);color:var(--gw-tinta-2)}
+.chat-bubble.status-agen{padding:4px 10px 4px 5px;border:0;border-radius:999px;background:var(--gw-pil-gelap);color:#fff;font:800 12px/1.2 var(--gw-font);white-space:nowrap;font-variant-numeric:tabular-nums}
+.chat-bubble.status-agen::after{border-top-color:rgba(42,31,20,.88);filter:none}
+.status-agen .st-glyph{display:inline-grid;place-items:center;width:20px;height:20px;margin-right:6px;border-radius:50%;border:2px solid var(--mc,var(--st-siaga-g));color:var(--mc,var(--st-siaga-g));font-size:12px;vertical-align:middle}
+.status-agen.st-kerja{--mc:var(--st-kerja-g)}.status-agen.st-perlu{--mc:var(--st-perlu-g)}.status-agen.st-gagal{--mc:var(--st-gagal-g)}.status-agen.st-info{--mc:var(--st-info-g)}
+.status-agen.st-bisa{--mc:var(--st-perlu-g)}
+
+/* ── "Arahkan saya": distance chip + screen arrow ── */
+#gw-arah{position:fixed;left:50%;top:96px;transform:translateX(-50%);z-index:60;display:none;align-items:center;gap:8px;max-width:calc(100vw - 24px);
+  padding:4px 4px 4px 6px;border-radius:999px;background:var(--gw-pil-gelap);color:#fff;font:800 13px/1.2 var(--gw-font);font-variant-numeric:tabular-nums;box-shadow:0 4px 14px rgba(0,0,0,.2)}
+#gw-arah.on{display:flex}
+#gw-arah .gw-panah{flex:none;width:32px;height:32px;display:grid;place-items:center;border-radius:50%;background:var(--gw-emas);color:var(--gw-tinta);font-size:17px;transform:rotate(var(--sudut,0deg));transition:transform 120ms linear}
+#gw-arah .gw-arah-teks{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#gw-arah button{flex:none;min-width:var(--gw-sentuh);min-height:var(--gw-sentuh);border:0;border-radius:999px;background:rgba(255,255,255,.14);color:#fff;font:800 12px var(--gw-font);cursor:pointer}
+@media (prefers-reduced-motion:reduce){#gw-arah .gw-panah{transition:none}}
+
+/* ── Proximity hint with a real button (D1: talk without a keyboard) ── */
+#prox{top:auto;bottom:90px;display:flex;align-items:center;gap:8px;padding:6px 6px 6px 14px;background:var(--gw-pil-gelap);border-radius:999px;font:800 13px/1.2 var(--gw-font);color:#fff;
+  max-width:calc(100vw - 24px);pointer-events:none;visibility:hidden}
+#prox.on{visibility:visible}
+#prox .prox-teks{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#prox .prox-aksi{pointer-events:auto;flex:none;min-height:var(--gw-sentuh);min-width:var(--gw-sentuh);padding:0 14px;border:0;border-radius:999px;background:var(--gw-emas);color:var(--gw-tinta);font:900 14px var(--gw-font);cursor:pointer;touch-action:manipulation}
+#prox .prox-kbd{font:800 11px var(--gw-font);opacity:.8;margin-left:2px}
+@media (pointer:coarse){#prox .prox-kbd{display:none}}
+
+/* ── Party tab (replaces Token; same bar for guests and members) ── */
+#bottom-bar{display:flex}
+#bottom-bar .bb-t{font-size:11px;color:#4B5563}
+.bb-party{position:relative}
+.bb-lencana{position:absolute;top:0;right:2px;min-width:20px;height:20px;padding:0 5px;border-radius:10px;border:2px solid #fff;background:var(--st-perlu);color:var(--gw-tinta);font:900 11px/16px var(--gw-font);text-align:center}
+.bb-lencana[hidden]{display:none}
+.gw-mini-titik{display:inline-flex;gap:2px}
+.gw-mini-titik i{width:7px;height:7px;border-radius:50%;border:1.5px solid #7A6448}
+.gw-mini-titik i.isi{background:var(--gw-emas);border-color:var(--gw-emas-tua)}
+#login-gate{display:none}
+#dpad .dp-c{font-size:11px}
+#dpad,#orbit,#c{touch-action:none}
+
+/* Toasts wrap. The base rule is nowrap + max-width with no clipping, so a long message
+   ("Koneksi putus. Sari tetap bekerja…", a guest id) spilled past the right edge; with zoom
+   allowed (D2) a phone then widens the layout viewport (390 → 525 px measured) and every
+   fixed control shifts off its touch target. */
+html body #toast{width:max-content;max-width:min(88vw,480px);white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+
+/* ── Phone-first world chrome (D3): one-line HUD, chat as a folded sheet ── */
+@media (max-width:650px){
+  #hud{height:44px;padding:0 12px;gap:8px}
+  #hud .logo{font-size:16px;flex:none}
+  #hud .hud-mid{flex:1 1 auto;min-width:0;display:block;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:rgba(30,16,64,.78)}
+  #hud .hud-mid .od{display:inline-block;margin-right:4px;vertical-align:1px}
+  #hud .hud-r{flex:none;gap:6px}
+  #hud-login{display:none}
+  #bottom-bar{height:64px;padding:0 4px}
+  #bottom-bar .bb{padding:4px 6px;min-width:var(--gw-sentuh)}
+  #dpad{bottom:76px;right:12px}
+  #orbit{bottom:76px;left:12px}
+  #prox{bottom:232px}
+  #harian-kartu{top:96px}
+  #chat-panel{left:8px;right:8px;width:auto;bottom:72px;height:min(52vh,420px)}
+  #chat-panel.collapsed{display:none}
+  html body #arena-door{top:52px;right:12px;width:auto;height:36px;padding:0 12px;border-radius:18px;display:flex;align-items:center}
+  html body #arena-door span,html body #arena-door small,html body #arena-door b{display:none}
+  html body #arena-door strong{font-size:14px;line-height:1}
+  html body #arena-door strong::after{content:' →';color:#fde68a}
+}
+
+/* ── D4: contrast and touch size on the recruit path (dialog) ── */
+.ph-s{color:#6B7280}                          /* was #9CA3AF on white: 2.54:1 → 4.83:1 */
+.btn-sec{color:#4B5563}                       /* was #6B7280 on #F3F4F6: 4.39:1 → 6.9:1 */
+#npc-choices .btn-p{min-height:var(--gw-sentuh)}
+#npc-choices .gw-pilihan-aksi{background:var(--gw-emas);color:var(--gw-tinta);box-shadow:0 2px 0 var(--gw-emas-tua);font-weight:900}
+button,.gw-cta,.gw-tautan,#prox .prox-aksi{-webkit-tap-highlight-color:transparent}

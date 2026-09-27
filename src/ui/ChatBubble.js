@@ -95,13 +95,20 @@ export class ChatBubbleLayer {
    * @param {() => ({x:number,y:number,z:number} | null)} ambilPosisi
    *   posisi dunia titik gantung bubble; kembalikan null kalau pemiliknya
    *   sudah tidak ada (mis. pemain keluar) — bubble ikut disembunyikan.
+   * @param {{tetap?: boolean, kelas?: string, isi?: Array<{teks: string, kelas?: string}>}} [opsi]
+   *   tetap: tidak pernah kedaluwarsa (plakat nama & status agen; dibuang lewat buang()).
+   *   kelas: kelas CSS tambahan (mis. 'plakat-agen'). isi: potongan teks ber-kelas,
+   *   dirakit dengan textContent — dipakai kalau `pesan` kosong.
    */
-  ucap(id, pesan, ambilPosisi) {
-    if (!this._lapisan || !pesan || typeof ambilPosisi !== 'function') return;
+  ucap(id, pesan, ambilPosisi, opsi = {}) {
+    const potongan = Array.isArray(opsi.isi)
+      ? opsi.isi.filter((s) => s && typeof s.teks === 'string' && s.teks)
+      : [];
+    if (!this._lapisan || (!pesan && !potongan.length) || typeof ambilPosisi !== 'function') return;
     // Array.from, bukan slice/length: keduanya bekerja pada code unit UTF-16,
     // sehingga satu emoji terhitung dua "huruf" (durasi jadi berlebih) dan
     // pemotongan di batas 100 bisa membelah pasangan surrogate jadi sampah.
-    const huruf = Array.from(String(pesan));
+    const huruf = Array.from(pesan ? String(pesan) : potongan.map((s) => s.teks).join(''));
     const teks = huruf.slice(0, MAKS_HURUF).join('');
     const jumlahHuruf = Math.min(huruf.length, MAKS_HURUF);
 
@@ -110,14 +117,34 @@ export class ChatBubbleLayer {
       const el = document.createElement('div');
       el.className = 'chat-bubble';
       this._lapisan.appendChild(el);
-      b = { el, ambilPosisi, kadaluarsa: 0, keluar: false, terlihat: false };
+      b = { el, ambilPosisi, kadaluarsa: 0, keluar: false, terlihat: false, kelas: '' };
       this._bubble.set(id, b);
       this._byElement.set(el, b);
       this._resize?.observe(el);
     }
+    const kelas = typeof opsi.kelas === 'string' ? opsi.kelas.trim() : '';
+    if (b.kelas !== kelas) {
+      if (b.kelas) b.el.classList.remove(...b.kelas.split(/\s+/));
+      if (kelas) b.el.classList.add(...kelas.split(/\s+/));
+      b.kelas = kelas;
+    }
 
     // textContent, bukan innerHTML — isinya diketik pemain lain.
-    b.el.textContent = teks;
+    if (pesan) {
+      b.el.textContent = teks;
+    } else {
+      b.el.textContent = '';
+      let sisa = MAKS_HURUF;
+      for (const s of potongan) {
+        if (sisa <= 0) break;
+        const bagian = Array.from(s.teks).slice(0, sisa);
+        sisa -= bagian.length;
+        const span = document.createElement('span');
+        if (typeof s.kelas === 'string' && s.kelas) span.className = s.kelas;
+        span.textContent = bagian.join('');
+        b.el.appendChild(span);
+      }
+    }
     b.ambilPosisi = ambilPosisi;
     b.keluar = false;
 
@@ -144,7 +171,12 @@ export class ChatBubbleLayer {
     else b.el.classList.add('on');
 
     const lama = Math.min(DETIK_MAKS, DETIK_DASAR + jumlahHuruf * DETIK_PER_HURUF);
-    b.kadaluarsa = performance.now() + lama * 1000;
+    b.kadaluarsa = opsi.tetap ? Infinity : performance.now() + lama * 1000;
+  }
+
+  /** Apakah pemilik ini masih punya bubble (mis. plakat yang terhapus saat pindah Spot)? */
+  ada(id) {
+    return this._bubble.has(id);
   }
 
   /** Hapus bubble milik satu pemilik (mis. pemainnya keluar). */
