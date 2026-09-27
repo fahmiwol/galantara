@@ -10,6 +10,7 @@ import { buatApiRuntime } from './apiRuntime.js';
 import { PartyKlien, normalisasiPemilik } from './PartyKlien.js';
 import { MisiKlien, STATUS_AKHIR, JENIS, SEMUA_JENIS, judulMisi } from './MisiKlien.js';
 import { kartuGalat } from './pesanGalat.js';
+import { JejakPemilik } from './JejakPemilik.js';
 import {
   ruteKerja, posisiMarkas, statusKe3D, statusTerlihat, gulungan, gulunganDibaca, buangGulungan, pasangPenanda, lepasAgen,
 } from './kaitDunia.js';
@@ -59,6 +60,8 @@ export const STATUS_DARI_MISI = Object.freeze({
 });
 
 const PERLU_PERHATIAN = new Set(['hasil_siap', 'gagal', 'menunggu_otak', 'menunggu_persetujuan']);
+/** Party members with these statuses walk behind the player; the rest keep to the Markas (SPRINT-02 B4). */
+export const BOLEH_IKUT = new Set(['siap', null]);
 /** An agent with one of these statuses is busy with a mission (1 active mission per agent, SPRINT-02). */
 export const SEDANG_MISI = new Set(['antre', 'bekerja', 'menunggu_otak', 'menunggu_persetujuan']);
 
@@ -101,6 +104,11 @@ export class DuniaParty {
     this._terputus = false;
     this.penanda = null;
     this.arah = null;
+    /** The player's recent path; companion k walks where the player was k·0.35 s of walking ago. */
+    this.jejak = new JejakPemilik();
+    /** species ids following the player, in party slot order (companion k = index + 1) */
+    this.pengikut = [];
+    this._jedaIkut = 0;
   }
 
   init() {
@@ -141,11 +149,54 @@ export class DuniaParty {
   /** Every frame. */
   perbarui(dt) {
     this.arah?.perbarui();
+    this._perbaruiIkut(dt);
     this._jedaPenanda -= dt;
     if (this._jedaPenanda <= 0) {
       this._jedaPenanda = 0.5;
       this.penanda?.perbarui();
     }
+  }
+
+  // ── Party follows the player (local, Game report §6b) ──
+
+  _perbaruiIkut(dt) {
+    const g = this.game;
+    const pos = g.avatar?.getPosition?.();
+    if (pos) this.jejak.catat(pos, dt, g.avatar?._facing ?? 0);
+    this._jedaIkut -= dt;
+    if (this._jedaIkut <= 0) {
+      this._jedaIkut = 0.5;
+      this._selaraskanIkut();
+    }
+    this.pengikut.forEach((spId, i) => g.npcs?.setelTitikIkut?.(spId, this.jejak.titikPendamping(i + 1)));
+  }
+
+  /**
+   * Who follows: party members that are not on a mission (status siap), in slot order. A member
+   * strolling (just recruited, back from the desk) starts following; one that stopped qualifying
+   * (a mission, left the party) strolls from where it stands. Mission moves (desk, results board,
+   * report) are never interrupted: only 'keliling' is turned into 'ikut'.
+   */
+  _selaraskanIkut() {
+    const npcs = this.game.npcs;
+    if (!npcs) return;
+    const ikut = [];
+    if (this.party.masuk) {
+      for (const a of this.party.anggota()) {
+        if (!a || a.hilang || !BOLEH_IKUT.has(a.status_kerja ?? null)) continue;
+        const spId = a.agen.template?.id;
+        const k = npcs.get(spId)?.perilaku?.keadaan;
+        if (k === 'keliling') npcs.perintah(spId, { jenis: 'ikut' });
+        if (k === 'keliling' || k === 'ikut') ikut.push(spId);
+      }
+    }
+    for (const spId of this.pengikut) {
+      if (ikut.includes(spId)) continue;
+      const npc = npcs.get(spId);
+      npcs.setelTitikIkut?.(spId, null);
+      if (npc?.perilaku?.keadaan === 'ikut') npcs.perintah(spId, { jenis: 'keliling', jangkar: { x: npc.x, z: npc.z } });
+    }
+    this.pengikut = ikut;
   }
 
   // ── Species & agents as the UI needs them ──────────────
@@ -484,6 +535,10 @@ export class DuniaParty {
     if (st === 'antre' || st === 'bekerja' || st === 'menunggu_persetujuan') {
       // Waiting for approval is still mid-mission: the agent stays at its desk.
       if (!hanyaDariKeliling || npcs.get(spId)?.perilaku.keadaan === 'keliling') this._keTempatKerja(spId, r.rute);
+    } else if (st === 'siap' && this.party.diParty(spId)) {
+      // Free again: back to walking behind the player (the next sync gives it its place in line).
+      npcs.perintah(spId, { jenis: 'ikut' });
+      this._jedaIkut = 0;
     } else if (r.rute) {
       npcs.perintah(spId, { jenis: 'menuju', titik: r.rute, lalu: 'bekerja' });
     } else if (st === 'hasil_siap') {
@@ -802,5 +857,6 @@ export class DuniaParty {
     d.getElementById('bb-party-btn')?.setAttribute('aria-label', `Party, ${jumlah} dari ${maks}${perlu ? `, ${perlu} perlu perhatianmu` : ''}`);
     if (this.sheet.terbuka && this.sheet.nama === 'markas') this.sheet.ganti('markas', this._pohonMarkas());
     this._jedaPenanda = 0;
+    this._jedaIkut = 0;
   }
 }

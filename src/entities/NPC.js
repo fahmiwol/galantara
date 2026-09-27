@@ -116,6 +116,12 @@ export class NPCManager {
     npc._poseMulai = null;
   }
 
+  /** A companion's spot on the owner's trail this frame (null = none). */
+  setelTitikIkut(id, titik) {
+    const npc = this.get(id);
+    if (npc) npc.perilaku.titikIkut = titik ?? null;
+  }
+
   /** Command one NPC's behaviour (see PerilakuNpc.perintah). */
   perintah(id, p) {
     const npc = this.get(id);
@@ -178,6 +184,9 @@ export class NPCManager {
     let closestDist = Infinity;
 
     this.npcs.forEach(npc => {
+      // A companion walking behind the player is always "near": offering it for talk would hide
+      // every other NPC and zone from the prompt. It is still reachable by tapping it, or the Markas.
+      if (npc.perilaku?.keadaan === 'ikut') return;
       const dx = avatarPos.x - npc.x;
       const dz = avatarPos.z - npc.z;
       const dist = Math.sqrt(dx * dx + dz * dz);
