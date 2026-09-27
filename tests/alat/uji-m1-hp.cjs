@@ -16,7 +16,8 @@
 // is labelled SIMULASI so the screenshot cannot pass for a real result.
 // Measures (design report §9.10): UI coverage of the screen, text left of x = 12 px, one-line
 // HUD, frames per second (software GPU: not a phone number), console errors, third-party
-// requests, localStorage against findSecrets.
+// requests, localStorage against findSecrets, and that the phone layout viewport stays 390 px
+// wide (exit code 1 otherwise).
 // Not part of `npm test` (needs a browser and two servers).
 // ═══════════════════════════════════════════════════════
 'use strict';
@@ -30,7 +31,7 @@ const KELUAR = path.resolve(process.argv[3] || '.');
 const AWALAN = process.argv[4] || '2026-09-26-b-';
 const ARGS = ['--use-angle=swiftshader', '--enable-unsafe-swiftshader', '--ignore-gpu-blocklist'];
 
-const hasil = { langkah: [], ukur: {}, galatKonsol: [], pihakKetiga: [], tangkapan: [] };
+const hasil = { langkah: [], ukur: {}, galatKonsol: [], pihakKetiga: [], tangkapan: [], viewportMelebar: [] };
 const catat = (s) => { hasil.langkah.push(s); console.log(`• ${s}`); };
 
 // UI chrome boxes, rasterised and unioned (method: design report §9.10).
@@ -138,6 +139,11 @@ async function main() {
   const browser = await chromium.launch({ args: ARGS });
   const panel = [];
   const potret = async (page, nama, judul) => {
+    // The layout viewport must stay at the phone width: content spilling past the right edge
+    // makes a zoomable page widen (a long toast once took it to 525 px) and shifts every
+    // fixed control off its touch target.
+    const lebar = await page.evaluate(() => innerWidth);
+    if (lebar !== 390) hasil.viewportMelebar.push(`${nama}: ${lebar}px`);
     const buf = await page.screenshot();
     panel.push({ judul, b64: buf.toString('base64') });
     hasil.tangkapan.push(nama);
@@ -296,7 +302,10 @@ async function main() {
     await browser.close();
   }
   console.log(JSON.stringify({ ...hasil, langkah: undefined }, null, 1));
-  return 0;
+  const masalah = [...hasil.viewportMelebar.map((x) => `viewport melebar di ${x}`), ...hasil.pihakKetiga.map((u) => `permintaan pihak ketiga: ${u}`)];
+  if (hasil.ukur.cache?.temuanFindSecrets.length) masalah.push('localStorage memuat sesuatu yang mirip kunci');
+  for (const m of masalah) console.error(`MASALAH: ${m}`);
+  return masalah.length ? 1 : 0;
 }
 
 main().then((k) => { process.exitCode = k; }).catch((e) => { console.error('UJI GAGAL:', e); process.exitCode = 1; });

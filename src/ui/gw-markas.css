@@ -142,6 +142,12 @@
 #dpad .dp-c{font-size:11px}
 #dpad,#orbit,#c{touch-action:none}
 
+/* Toasts wrap. The base rule is nowrap + max-width with no clipping, so a long message
+   ("Koneksi putus. Sari tetap bekerja…", a guest id) spilled past the right edge; with zoom
+   allowed (D2) a phone then widens the layout viewport (390 → 525 px measured) and every
+   fixed control shifts off its touch target. */
+html body #toast{width:max-content;max-width:min(88vw,480px);white-space:normal;overflow-wrap:anywhere;line-height:1.4}
+
 /* ── Phone-first world chrome (D3): one-line HUD, chat as a folded sheet ── */
 @media (max-width:650px){
   #hud{height:44px;padding:0 12px;gap:8px}
