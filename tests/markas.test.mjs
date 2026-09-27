@@ -3,7 +3,7 @@
 //
 // Guards laporan 3D §6.9 "uji wajib" with the REAL THREE r128 (vendor/) and the
 // REAL Rapier, on the Oola that World.js builds from the map:
-//   1. deterministic build          2. ≤ 12 draw calls, ≤ 1.500 triangles, 0 PointLight
+//   1. deterministic build          2. ≤ 12 draw calls, ≤ 2.000 triangles (M2, with props), 0 PointLight
 //   3. every part declares a collider, blockers ≥ 0,70 m    4. Oola stays ≤ 150 / 20k / 3
 //   5. no work point under a roof, from any camera the player can orbit to
 //   + work points free of colliders AND reachable on foot from the spawn point.
@@ -57,7 +57,9 @@ function sidikGeometri(markas) {
     h.update(Buffer.from(g.attributes.position.array.buffer));
     h.update(Buffer.from(g.attributes.normal.array.buffer));
   }
-  for (const im of [markas.lampuMeja, markas.gulungan]) h.update(Buffer.from(im.instanceMatrix.array.buffer));
+  h.update(Buffer.from(markas.perabot.geometry.attributes.position.array.buffer));
+  h.update(Buffer.from(markas.perabot.geometry.attributes.color.array.buffer));
+  for (const im of [markas.lampuMeja, markas.gulungan, markas.gelas]) h.update(Buffer.from(im.instanceMatrix.array.buffer));
   return h.digest('hex');
 }
 
@@ -80,14 +82,28 @@ test('Markas: dibangun deterministik — dua kali bangun, geometri identik byte 
   assert.equal(sidikGeometri(a), sidikGeometri(b));
 });
 
-test('Markas: ≤ 10 draw call, ≤ 1.068 segitiga saat semua slot penuh, tanpa PointLight (SPRINT-01 C, laporan 3D §6.9)', () => {
+/**
+ * Markas budget. M1 (SPRINT-01 C, laporan 3D §6.9): 10 DC / 1.068 triangles. M2 adds the
+ * office props (SPRINT-02 C butir 4): +2 DC (one merged mesh, one InstancedMesh of 4) and
+ * ≤ 891 triangles with every desk taken — new budget 12 DC / 2.000, still inside the
+ * landmark class of laporan 3D §6.3 (≤ 3.000, ≤ 10 + props) and measured against Oola's
+ * 150 / 20.000 in tests/pendampingAnggaran.test.mjs. Reasoning in docs/aset/LOG-C.md §8.
+ */
+const ANGGARAN_MARKAS = Object.freeze({ drawCall: 12, segitiga: 2000 });
+
+test('Markas: ≤ 12 draw call, ≤ 2.000 segitiga saat semua slot penuh (termasuk perabot), tanpa PointLight (SPRINT-02 C)', () => {
   const markas = markasPenuh();
   const u = ukurPohon(markas.root);
-  assert.ok(u.drawCall <= 10, `${u.drawCall} draw call > 10`);
-  assert.ok(u.segitiga <= 1068, `${u.segitiga} segitiga > 1.068`);
+  assert.ok(u.drawCall <= ANGGARAN_MARKAS.drawCall, `${u.drawCall} draw call > ${ANGGARAN_MARKAS.drawCall}`);
+  assert.ok(u.segitiga <= ANGGARAN_MARKAS.segitiga, `${u.segitiga} segitiga > ${ANGGARAN_MARKAS.segitiga}`);
   assert.equal(u.lampu, 0, 'Markas tidak boleh menambah PointLight (suar = emissive/unlit)');
   assert.ok(u.kaster <= 3, `${u.kaster} kaster bayangan > 3 (laporan 3D §6.3: landmark ≤ 3)`);
   assert.equal(markas.gulungan.count, M.KAPASITAS_GULUNGAN, 'uji anggaran harus mengukur kapasitas penuh');
+  assert.equal(markas.gelas.count, 4, 'uji anggaran harus mengukur gelas di keempat meja');
+  // Bangunan M1 sendiri tetap di angka spek M1: perabot tidak boleh jadi alasan bangunannya membengkak.
+  markas.root.remove(markas.perabot); markas.root.remove(markas.gelas);
+  const bangunan = ukurPohon(markas.root);
+  assert.ok(bangunan.drawCall <= 10 && bangunan.segitiga <= 1068, `bangunan M1 ${bangunan.drawCall} DC / ${bangunan.segitiga} segitiga > 10 / 1.068`);
 });
 
 test('Markas: bagian statis digabung — satu mesh per bahan, bukan satu per bagian', () => {

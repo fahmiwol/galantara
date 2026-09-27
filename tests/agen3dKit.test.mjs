@@ -1,5 +1,5 @@
 // ═══════════════════════════════════════════════════════
-// tests/agen3dKit.test.mjs — class kit v0: cost, readability, distinctness
+// tests/agen3dKit.test.mjs — class kit v1: cost, readability, distinctness, emblem
 //
 // Laporan 3D §6.4 gate, automated without a GPU:
 //   silhouette — each class rendered orthographically, front and ¾, 32 px tall,
@@ -80,7 +80,13 @@ test('kit: setiap benda ≥ 0,3 m (terbaca di 36 px) dan segitiga dalam target p
   for (const k of KELAS) {
     const benda = A.ukuranBenda(k);
     assert.ok(Object.keys(benda).length >= 2, `${k}: kurang dari dua slot bertanda`);
-    for (const [n, v] of Object.entries(benda)) assert.ok(v.terpanjang >= 0.3, `${k}/${n}: ${v.terpanjang.toFixed(2)} m < 0,3`);
+    // The emblem is the close-up identity (≥ 48 px), not a silhouette mark: exempt,
+    // and guarded by its own test below.
+    for (const [n, v] of Object.entries(benda)) {
+      if (n === 'emblem') continue;
+      assert.ok(v.terpanjang >= 0.3, `${k}/${n}: ${v.terpanjang.toFixed(2)} m < 0,3`);
+    }
+    assert.ok(Object.keys(benda).filter((n) => n !== 'emblem').length >= 2, `${k}: kurang dari dua benda siluet`);
     const tri = A.geometriKit(k).attributes.position.count / 3;
     assert.ok(tri <= TARGET_SEGITIGA[k], `${k}: ${tri} segitiga > ${TARGET_SEGITIGA[k]}`);
   }
@@ -165,4 +171,34 @@ test('topi dan caping tidak ditembus kepala; berlaku juga untuk proporsi badan l
     }
   }
   assert.notEqual(A.geometriKit('operator', RANGKA_AVATAR), A.geometriKit('operator'), 'geometri badan lain tertukar di cache');
+});
+
+test('emblem kelas v1: bentuk berbeda per kelas (lingkaran/persegi/segitiga), menghadap depan-atas, menempel di dada', () => {
+  const bentuk = new Set(Object.values(A.KELAS).map((k) => k.emblem.bentuk));
+  assert.deepEqual([...bentuk].sort(), ['lingkaran', 'persegi', 'segitiga']);
+  const r = A.RANGKA_NPC;
+  const alasEmblem = {};
+  for (const k of KELAS) {
+    const bagian = A.bagianKit(k).filter((b) => b.benda === 'emblem');
+    assert.ok(bagian.length >= 2, `${k}: emblem tanpa glyph`);
+    // Badge = first piece, in paper colour; glyph pieces are not all paper.
+    assert.equal(bagian[0].warna, A.WARNA_KIT.kertas);
+    assert.ok(bagian.slice(1).some((b) => b.warna === A.KELAS[k].warnaKelas), `${k}: glyph tidak memakai warna kelas`);
+    let tri = 0;
+    for (const b of bagian) {
+      const p = b.geo.attributes.position; const n = b.geo.attributes.normal;
+      tri += p.count / 3;
+      for (let i = 0; i < p.count; i++) {
+        // Outside the body ellipsoid, but hugging it (≤ 3 cm off).
+        const x = p.getX(i) / r.badanR; const y = p.getY(i) / (r.badanR * r.badanSkalaY); const z = p.getZ(i) / r.badanR;
+        const d = Math.hypot(x, y, z);
+        assert.ok(d >= 1 && d <= 1 + 0.03 / r.badanR, `${k}: verteks emblem ${d < 1 ? 'tenggelam di badan' : 'melayang'} (${d.toFixed(3)})`);
+        assert.ok(n.getZ(i) > 0.5 && n.getY(i) > 0.1, `${k}: emblem tidak menghadap depan-atas`);
+      }
+    }
+    assert.ok(tri <= 30, `${k}: emblem ${tri} segitiga`);
+    // The badge outline: its vertex count tells the shape apart (not the colour).
+    alasEmblem[k] = new Set(Array.from({ length: bagian[0].geo.attributes.position.count }, (_, i) => bagian[0].geo.attributes.position.getX(i).toFixed(4) + ',' + bagian[0].geo.attributes.position.getY(i).toFixed(4))).size;
+  }
+  assert.deepEqual(alasEmblem, { penjejak: 10, operator: 4, pemandu: 3 });
 });

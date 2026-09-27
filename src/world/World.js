@@ -11,7 +11,7 @@ import { cincinTepi } from '../fisika/Fisika.js';
 import { ISLAND_R } from '../data/config.js';
 import { UKURAN_KAPSUL } from '../fisika/Karakter.js';
 import { bangunMarkas, lepasMarkas, perbaruiIkonStatus } from './markas/index.js';
-import { pasangUkurBilaDiminta } from './ukur.js';
+import { pasangUkurBilaDiminta, jumlahPartyUkur, pasangPartyUkur } from './ukur.js';
 
 /** Kelompok collider Oola di dunia fisika — dilepas utuh saat pindah Spot. */
 export const KELOMPOK_OOLA = 'oola';
@@ -535,6 +535,12 @@ export class World {
       x, y, z,
       rotasiY: Number.isFinite(obj?.rotationY) ? obj.rotationY : undefined,
     });
+    // `?ukur&party=N`: worst-case party + full Markas for the measurement page (ukur.js).
+    if (jumlahPartyUkur()) {
+      Promise.all([import('./pendamping/index.js'), import('./markas/index.js')])
+        .then(([P, M]) => pasangPartyUkur(this, P, M))
+        .catch((e) => console.warn('[ukur] party ukur gagal', e));
+    }
   }
 
   // ── DECORATIONS (benches, flowers, rocks) ─────────
