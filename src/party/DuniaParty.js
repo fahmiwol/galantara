@@ -380,12 +380,36 @@ export class DuniaParty {
       this.party.setelStatus(instanceId, STATUS_DARI_MISI[misi.status] ?? 'antre');
       this.sheet.tutup();
       this.game.toast?.show(`${nama} berangkat ke meja kerja di Markas. Kamu bisa lanjut jalan-jalan.`, 'g');
+      // 3D first: the Markas assigns this agent a desk, and the walk goes to that desk.
+      statusKe3D(sp.id, STATUS_DARI_MISI[misi.status] ?? 'antre');
       this._keTempatKerja(sp.id);
       this._pantau(instanceId, misi.id);
     } catch (err) {
       // The text stays (unless it holds a key): the card explains, the form is right there.
       const aman = err.kode === 'KUNCI_DITEMPEL' ? {} : masukan;
       this.bukaMisi(instanceId, aman, kartuGalat(err, { nama }));
+    }
+  }
+
+  /**
+   * The 3D hooks arrived after init() (C's modules load asynchronously): put the ✦ markers on
+   * the agent NPCs, replay each member's status so the Markas shows it, and send agents that are
+   * already walking to the desk C assigned instead of the fallback spot.
+   */
+  kait3DSiap() {
+    for (const id of this.agenDunia) {
+      const npc = this.game.npcs?.get(id);
+      if (npc) pasangPenanda(id, npc.mesh);
+    }
+    for (const a of this.party.anggota()) {
+      if (!a || a.hilang) continue;
+      const spId = a.agen.template?.id;
+      if (!spId) continue;
+      statusKe3D(spId, a.status_kerja ?? null);
+      const keadaan = this.game.npcs?.get(spId)?.perilaku.keadaan;
+      if ((a.status_kerja === 'antre' || a.status_kerja === 'bekerja') && (keadaan === 'menuju' || keadaan === 'bekerja')) {
+        this._keTempatKerja(spId);
+      }
     }
   }
 

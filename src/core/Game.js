@@ -39,6 +39,7 @@ import { Fisika, cincinTepi } from '../fisika/Fisika.js';
 import { buatKarakter, UKURAN_KAPSUL } from '../fisika/Karakter.js';
 import { LihatCollider     } from '../fisika/LihatCollider.js';
 import { DuniaParty        } from '../party/DuniaParty.js';
+import { sambungDunia3D    } from '../party/sambungDunia3D.js';
 import { KontrolSentuh     } from './KontrolSentuh.js';
 import { INTERACT_R        } from '../entities/NPC.js';
 
@@ -187,6 +188,14 @@ export class Game {
 
     // Galantara World M1: party, Markas, missions (runtime at /rt/api), and touch paths to talk.
     this.dunia = new DuniaParty(this).init();
+    // Stream C's Markas + agent looks (src/world/markas, src/world/agen). Loaded only when this
+    // World can build the Markas, so a world without C's code never requests missing files.
+    if (typeof this.world?._buildMarkas === 'function') {
+      sambungDunia3D({ kelasDari: (id) => this.npcs?.get(id)?.data?.role }).then((r) => {
+        this.dunia?.kait3DSiap();
+        if (r.hilang.length) console.info('[dunia3D] kait belum ada di aliran C, pakai cadangan:', r.hilang.join(', '));
+      });
+    }
     this.sentuh = new KontrolSentuh({
       kanvas: this.renderer.canvas,
       ambilKamera: () => this.camera?.cam,

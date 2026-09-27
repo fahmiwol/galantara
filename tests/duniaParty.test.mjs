@@ -14,6 +14,7 @@ import { DuniaParty, STATUS_DARI_MISI } from '../src/party/DuniaParty.js';
 import { MisiKlien } from '../src/party/MisiKlien.js';
 import { buatApiRuntime } from '../src/party/apiRuntime.js';
 import { pasangKaitDunia, lepasKaitDunia, TITIK_KERJA_CADANGAN } from '../src/party/kaitDunia.js';
+import { kaitDari3D } from '../src/party/sambungDunia3D.js';
 import { cariTombol, teksPohon } from '../src/ui/gw/pohon.js';
 import { arahLayar } from '../src/ui/ArahkanSaya.js';
 import { pilihNpcDiLayar } from '../src/core/KontrolSentuh.js';
@@ -166,4 +167,51 @@ test('screen arrow follows the camera; tap hit test; plaque contents', () => {
   assert.deepEqual(kerja.plakat.isi.map((s) => s.teks), ['Sari', 'AI', 'Sudah di party-mu']);
   assert.equal(kerja.penanda.isi[1].teks, 'Sari bekerja · 1 mnt');
   assert.equal(isiPenanda({ nama: 'Sari', bisaDirekrut: false, diParty: true, status: 'siap' }).penanda, null, 'a calm world: no marker when ready');
+});
+
+test('with C\'s Markas wired in: the status reaches 3D BEFORE the walk, so Sari goes to her own desk', async (t) => {
+  t.after(() => lepasKaitDunia());
+  const { dp, perintah } = siapkan();
+  const status = [];
+  // C-shaped: a desk is handed out by the status call, per agent (markas/index.js tampilkanStatus3D).
+  const { impl } = kaitDari3D({
+    markas: {
+      tampilkanStatus3D: (id, st) => {
+        status.push([id, st]);
+        return st === 'antre' || st === 'bekerja' ? { titik: { x: 7, z: -9, arah: 1, dekat: { x: 7, z: -8, arah: 2 } } } : { titik: null };
+      },
+    },
+  });
+  pasangKaitDunia(impl);
+  await dp.muat();
+  await dp.party.masukDev('usr-meja');
+  await dp.party.rekrut('sari');
+  const iid = dp.party.agenDariSpesies('sari').agen.instance_id;
+  await dp.kirimMisi(iid, { pertanyaan: 'harga cabai', sumber: [] });
+  assert.deepEqual(status[0], ['sari', 'antre']);
+  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', { x: 7, z: -8, arah: 2 }], 'the desk C assigned, not the fallback spot');
+});
+
+test('3D hooks that arrive late: markers go on, statuses replay, a walking agent is re-routed', async (t) => {
+  t.after(() => lepasKaitDunia());
+  const { dp, game, perintah } = siapkan();
+  await dp.muat();
+  await dp.party.masukDev('usr-telat');
+  await dp.party.rekrut('sari');
+  const iid = dp.party.agenDariSpesies('sari').agen.instance_id;
+  dp.party.setelStatus(iid, 'bekerja');
+  const keadaan = { sari: 'menuju' };
+  game.npcs.get = (id) => ({ x: 0, z: 0, data: { id }, mesh: { id: `mesh-${id}` }, perilaku: { keadaan: keadaan[id] ?? 'keliling' } });
+
+  const penanda = [];
+  const status = [];
+  pasangKaitDunia({
+    pasangPenandaAgen: (id) => penanda.push(id),
+    tampilkanStatus3D: (id, st) => status.push([id, st]),
+    titikKerjaMarkas: () => ({ x: 5, z: 5, arah: 0 }),
+  });
+  dp.kait3DSiap();
+  assert.deepEqual(penanda.sort(), [...dp.agenDunia].sort());
+  assert.deepEqual(status, [['sari', 'bekerja']]);
+  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', { x: 5, z: 5, arah: 0 }]);
 });
