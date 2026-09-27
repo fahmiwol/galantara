@@ -44,6 +44,7 @@ import { buangKodeHandoff  } from './kodeHandoff.js';
 import * as markas3D         from '../world/markas/index.js';
 import * as agen3D           from '../world/agen/index.js';
 import { KontrolSentuh     } from './KontrolSentuh.js';
+import { pecahLangkah      } from './langkah.js';
 import { INTERACT_R        } from '../entities/NPC.js';
 
 /** Kelompok collider Spot yang sedang dipasang — dilepas utuh saat warp. */
@@ -331,7 +332,8 @@ export class Game {
   _loop() {
     requestAnimationFrame((ts) => this._loop(ts));
 
-    const dt = Math.min(this.renderer.getDelta(), 0.05);
+    const dtMentah = this.renderer.getDelta();
+    const dt = Math.min(dtMentah, 0.05);
     this._t += dt;
 
     // Avatar move
@@ -371,7 +373,9 @@ export class Game {
     }
 
     // NPC behaviour (patrol / walk to work / report); the NPC in an open dialog stays put.
-    this.npcs.update(dt, this._t, { dialogNpcId: this.panels.dialogNpcId, posisiPemain: this.avatar.getPosition() });
+    // Agents keep real-time pace on slow devices: real elapsed time in small steps (see langkah.js).
+    const kontekNpc = { dialogNpcId: this.panels.dialogNpcId, posisiPemain: this.avatar.getPosition() };
+    for (const langkah of pecahLangkah(dtMentah)) this.npcs.update(langkah, this._t, kontekNpc);
     // Icons follow the NPCs moved just now (World.animate also updates them, one frame earlier).
     markas3D.perbaruiIkonStatus();
     this.dunia?.perbarui(dt);
