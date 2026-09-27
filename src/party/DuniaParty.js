@@ -10,7 +10,9 @@ import { buatApiRuntime } from './apiRuntime.js';
 import { PartyKlien, normalisasiPemilik } from './PartyKlien.js';
 import { MisiKlien, STATUS_AKHIR } from './MisiKlien.js';
 import { kartuGalat } from './pesanGalat.js';
-import { titikKerja, posisiMarkas, statusKe3D, gulungan, pasangPenanda } from './kaitDunia.js';
+import {
+  ruteKerja, posisiMarkas, statusKe3D, statusTerlihat, gulungan, gulunganDibaca, buangGulungan, pasangPenanda, lepasAgen,
+} from './kaitDunia.js';
 import { Sheet } from '../ui/Sheet.js';
 import { PenandaAgen } from '../ui/PenandaAgen.js';
 import { ArahkanSaya } from '../ui/ArahkanSaya.js';
@@ -23,6 +25,21 @@ import { NPCS, KANTOR_URL } from '../data/config.js';
 import { getOrCreateGuestId } from '../data/guestIdentity.js';
 
 /** Mission status (runtime) → agent status in the world (design §9.3). */
+/**
+ * Queue line for a mission just sent (runtime `posisi`, `eta_detik`; LOG-A A6). `eta_detik` stays
+ * null until one mission finished on that brain host: say so, never invent a number.
+ * @returns {string|null}
+ */
+export function teksAntrean(misi) {
+  const posisi = Number.isInteger(misi?.posisi) && misi.posisi > 0 ? misi.posisi : null;
+  if (!posisi) return null;
+  const eta = Number.isFinite(misi.eta_detik) && misi.eta_detik >= 0 ? `± ${Math.max(1, Math.ceil(misi.eta_detik / 60))} mnt` : 'perkiraan belum terukur';
+  return `Antrean ke-${posisi} · ${eta}`;
+}
+
+/** Mission statuses that carry a result the player can read (one scroll each on the Papan Hasil). */
+export const HASIL_ADA = new Set(['selesai', 'selesai_tanpa_temuan']);
+
 export const STATUS_DARI_MISI = Object.freeze({
   antre: 'antre',
   berjalan: 'bekerja',
@@ -76,7 +93,7 @@ export class DuniaParty {
     const g = this.game;
     g.panels?.onAksi?.((aksi, npc) => this.aksiDialog(aksi, npc));
     g.panels?.saringSyarat?.((syarat, npc) => this.syarat(syarat, npc));
-    this.penanda = new PenandaAgen({ bubble: g.bubble, npcs: g.npcs, daftar: () => this._daftarPenanda() });
+    this.penanda = new PenandaAgen({ bubble: g.bubble, npcs: g.npcs, daftar: () => this._daftarPenanda(), adaIkon: (id) => statusTerlihat(id) });
     this.arah = new ArahkanSaya({
       doc: this.doc,
       ambilPemain: () => g.avatar?.getPosition(),
@@ -187,7 +204,9 @@ export class DuniaParty {
         nama: item?.agen.julukan || sp.nama,
         bisaDirekrut: sp.bisa_direkrut && !item,
         diParty,
-        status: diParty ? item?.status_kerja ?? null : null,
+        // One status, one channel (ADR-0005): while the Markas's 28 px icon shows it over the
+        // agent, B's text marker stays away (the plaque with name + AI remains).
+        status: diParty && !statusTerlihat(id) ? item?.status_kerja ?? null : null,
         durasi: misi ? durasi(misi.dibuat) : null,
       };
     });
@@ -383,10 +402,11 @@ export class DuniaParty {
       this._misiTerakhir.set(instanceId, { ...misi, instance_id: instanceId, pertanyaan: masukan.pertanyaan, dibuat: misi.dibuat ?? new Date().toISOString() });
       this.party.setelStatus(instanceId, STATUS_DARI_MISI[misi.status] ?? 'antre');
       this.sheet.tutup();
-      this.game.toast?.show(`${nama} berangkat ke meja kerja di Markas. Kamu bisa lanjut jalan-jalan.`, 'g');
+      const antrean = teksAntrean(misi);
+      this.game.toast?.show(`${nama} berangkat ke meja kerja di Markas.${antrean ? ` ${antrean}.` : ''} Kamu bisa lanjut jalan-jalan.`, 'g');
       // 3D first: the Markas assigns this agent a desk, and the walk goes to that desk.
-      statusKe3D(sp.id, STATUS_DARI_MISI[misi.status] ?? 'antre');
-      this._keTempatKerja(sp.id);
+      const st = STATUS_DARI_MISI[misi.status] ?? 'antre';
+      this._gerakkan(sp.id, st, this._status3D(sp.id, st));
       this._pantau(instanceId, misi.id);
     } catch (err) {
       // The text stays (unless it holds a key): the card explains, the form is right there.
@@ -395,30 +415,36 @@ export class DuniaParty {
     }
   }
 
-  /**
-   * The 3D hooks arrived after init() (C's modules load asynchronously): put the ✦ markers on
-   * the agent NPCs, replay each member's status so the Markas shows it, and send agents that are
-   * already walking to the desk C assigned instead of the fallback spot.
-   */
-  kait3DSiap() {
-    for (const id of this.agenDunia) {
-      const npc = this.game.npcs?.get(id);
-      if (npc) pasangPenanda(id, npc.mesh);
-    }
-    for (const a of this.party.anggota()) {
-      if (!a || a.hilang) continue;
-      const spId = a.agen.template?.id;
-      if (!spId) continue;
-      statusKe3D(spId, a.status_kerja ?? null);
-      const keadaan = this.game.npcs?.get(spId)?.perilaku.keadaan;
-      if ((a.status_kerja === 'antre' || a.status_kerja === 'bekerja') && (keadaan === 'menuju' || keadaan === 'bekerja')) {
-        this._keTempatKerja(spId);
-      }
-    }
+  _keTempatKerja(spesiesId, rute = null) {
+    this.game.npcs?.perintah(spesiesId, { jenis: 'menuju', titik: rute ?? ruteKerja(spesiesId), lalu: 'bekerja' });
   }
 
-  _keTempatKerja(spesiesId) {
-    this.game.npcs?.perintah(spesiesId, { jenis: 'menuju', titik: titikKerja(spesiesId), lalu: 'bekerja' });
+  /** Tell the 3D world the status; the pose it names is held by the NPC once it has arrived. */
+  _status3D(spId, st) {
+    const r = statusKe3D(spId, st);
+    this.game.npcs?.setelPose?.(spId, r.pose);
+    return r;
+  }
+
+  /**
+   * Walk the agent to where its status lives. The 3D Markas decides the place (desk, results
+   * board, the brain question spot, the bench); without it B falls back to its own moves:
+   * work spot in front of the site, coming to the player to report, strolling.
+   * @param {{r: ReturnType<typeof statusKe3D>}|any} r plan from _status3D
+   * @param {{hanyaDariKeliling?: boolean}} [opsi] desk statuses: do not restart a walk already under way
+   */
+  _gerakkan(spId, st, r, { hanyaDariKeliling = false } = {}) {
+    const npcs = this.game.npcs;
+    if (!npcs) return;
+    if (st === 'antre' || st === 'bekerja') {
+      if (!hanyaDariKeliling || npcs.get(spId)?.perilaku.keadaan === 'keliling') this._keTempatKerja(spId, r.rute);
+    } else if (r.rute) {
+      npcs.perintah(spId, { jenis: 'menuju', titik: r.rute, lalu: 'bekerja' });
+    } else if (st === 'hasil_siap') {
+      npcs.perintah(spId, { jenis: 'lapor' });
+    } else {
+      npcs.perintah(spId, { jenis: 'keliling' });
+    }
   }
 
   _pantau(instanceId, misiId) {
@@ -445,26 +471,26 @@ export class DuniaParty {
       const st = STATUS_DARI_MISI[misi.status] ?? item?.status_kerja ?? null;
       const sebelum = item?.status_kerja;
       this.party.setelStatus(instanceId, st);
+      // Every finished result gets its scroll (idempotent per id, so polling may resend it).
+      const gabung = this._misiTerakhir.get(instanceId);
+      if (HASIL_ADA.has(misi.status) && gabung?.putusan !== 'buang') gulungan(gabung);
       if (st !== sebelum) this._statusBerubah(spId, nama, st, sebelum);
     }
     this._segarkan();
   }
 
   _statusBerubah(spId, nama, st, sebelum) {
-    statusKe3D(spId, st);
-    const npcs = this.game.npcs;
-    if (st === 'bekerja' || st === 'antre') {
-      if (npcs?.get(spId)?.perilaku.keadaan === 'keliling') this._keTempatKerja(spId);
-    } else if (st === 'hasil_siap') {
-      npcs?.perintah(spId, { jenis: 'lapor' });
-      this.game.toast?.show(`Hasil ${nama} siap. Periksa dulu sebelum disimpan.`, 'g');
+    const r = this._status3D(spId, st);
+    if (st === 'siap' && !sebelum) return;
+    this._gerakkan(spId, st, r, { hanyaDariKeliling: true });
+    // A toast only when the world is not already showing it (icon over the agent or edge arrow).
+    const tampak = statusTerlihat(spId);
+    if (st === 'hasil_siap') {
+      if (!tampak) this.game.toast?.show(`Hasil ${nama} siap. Periksa dulu sebelum disimpan.`, 'g');
       this.sheet.umumkan(`${nama}: hasil siap.`);
     } else if (st === 'gagal') {
-      npcs?.perintah(spId, { jenis: 'keliling' });
-      this.game.toast?.show(`Misi ${nama} gagal. Buka Markas untuk sebab dan langkahnya.`, 'a');
+      if (!tampak) this.game.toast?.show(`Misi ${nama} gagal. Buka Markas untuk sebab dan langkahnya.`, 'a');
       this.sheet.umumkan(`${nama}: misi gagal.`);
-    } else if (st === 'siap' && sebelum) {
-      npcs?.perintah(spId, { jenis: 'keliling' });
     }
   }
 
@@ -486,13 +512,13 @@ export class DuniaParty {
       this._misiTerakhir.set(a.agen.instance_id, terbaru);
       const menunggu = STATUS_AKHIR.has(terbaru.status) ? (terbaru.putusan ? 'siap' : STATUS_DARI_MISI[terbaru.status]) : STATUS_DARI_MISI[terbaru.status];
       this.party.setelStatus(a.agen.instance_id, menunggu ?? a.status_kerja);
-      statusKe3D(sp.id, menunggu);
-      if (!STATUS_AKHIR.has(terbaru.status)) {
-        this._keTempatKerja(sp.id);
-        this._pantau(a.agen.instance_id, terbaru.id);
-      } else if (menunggu === 'hasil_siap') {
-        this.game.npcs?.perintah(sp.id, { jenis: 'lapor' });
+      const r = this._status3D(sp.id, menunggu);
+      if (HASIL_ADA.has(terbaru.status) && terbaru.putusan !== 'buang') {
+        gulungan(terbaru);
+        if (terbaru.putusan) gulunganDibaca(terbaru);
       }
+      if (menunggu && menunggu !== 'siap') this._gerakkan(sp.id, menunggu, r);
+      if (!STATUS_AKHIR.has(terbaru.status)) this._pantau(a.agen.instance_id, terbaru.id);
     }
   }
 
@@ -514,6 +540,7 @@ export class DuniaParty {
       this._kartuDiSheet('hasil', kartuGalat({ kode: 'MISI_TIDAK_ADA' }, { nama }));
       return;
     }
+    if (HASIL_ADA.has(misi.status)) gulunganDibaca(misi); // opened: its scroll turns from gold to paper
     const brain = item.agen.loadout?.brain;
     const galatMisi = galat ?? (misi.status === 'gagal'
       ? kartuGalat(misi.error_code ?? misi.galat?.kode ?? 'GALAT_SERVER', { nama, otak: namaOtak(brain), topik: misi.pertanyaan, selfHosted: brain && ['migancore', 'ollama', 'local'].includes(brain.provider), pesan: misi.galat?.pesan })
@@ -546,22 +573,21 @@ export class DuniaParty {
       this._misiTerakhir.set(instanceId, gabung);
       if (putusan === 'setujui') {
         this.party.setelStatus(instanceId, 'siap');
-        gulungan(gabung);
-        this.game.toast?.show('Tersimpan. Gulungannya dipasang di Papan Hasil.', 'g');
-        this.game.npcs?.perintah(spId, { jenis: 'keliling' });
-        statusKe3D(spId, 'siap');
+        gulungan(gabung); // already there since the result finished; resent in case that was missed (idempotent)
+        this.game.toast?.show('Tersimpan. Gulungannya ada di Papan Hasil.', 'g');
+        this._gerakkan(spId, 'siap', this._status3D(spId, 'siap'));
         this.bukaHasil(instanceId);
       } else if (putusan === 'buang') {
         this.party.setelStatus(instanceId, 'siap');
-        this.game.npcs?.perintah(spId, { jenis: 'keliling' });
-        statusKe3D(spId, 'siap');
+        buangGulungan(gabung);
+        this._gerakkan(spId, 'siap', this._status3D(spId, 'siap'));
         this.sheet.tutup();
         this.game.toast?.show('Hasil dibuang.', 'a');
       } else {
         this.party.setelStatus(instanceId, 'antre');
         this.sheet.tutup();
         this.game.toast?.show(`${nama} memperbaiki hasilnya.`, 'g');
-        this._keTempatKerja(spId);
+        this._gerakkan(spId, 'antre', this._status3D(spId, 'antre'));
         this._pantau(instanceId, gabung.id);
       }
     } catch (err) {
@@ -588,6 +614,12 @@ export class DuniaParty {
     this._ulang = () => this.keluarkan(instanceId);
     try {
       await this.party.keluarkan(instanceId);
+      const spId = item?.agen.template?.id;
+      if (spId) {
+        lepasAgen(spId); // frees its desk and status icon in the Markas
+        this.game.npcs?.setelPose?.(spId, null);
+        this.game.npcs?.perintah(spId, { jenis: 'keliling' });
+      }
       this.game.toast?.show(`${nama} keluar dari party. Ia tetap di Markas-mu.`, 'a');
       this.bukaMarkas();
     } catch (err) {

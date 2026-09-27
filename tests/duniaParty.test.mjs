@@ -10,11 +10,11 @@
 
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
-import { DuniaParty, STATUS_DARI_MISI } from '../src/party/DuniaParty.js';
+import { DuniaParty, STATUS_DARI_MISI, teksAntrean } from '../src/party/DuniaParty.js';
 import { MisiKlien } from '../src/party/MisiKlien.js';
 import { buatApiRuntime } from '../src/party/apiRuntime.js';
 import { pasangKaitDunia, lepasKaitDunia, TITIK_KERJA_CADANGAN } from '../src/party/kaitDunia.js';
-import { kaitDari3D } from '../src/party/sambungDunia3D.js';
+import { sambungDunia3D } from '../src/party/sambungDunia3D.js';
 import { cariTombol, teksPohon } from '../src/ui/gw/pohon.js';
 import { arahLayar } from '../src/ui/ArahkanSaya.js';
 import { pilihNpcDiLayar } from '../src/core/KontrolSentuh.js';
@@ -82,7 +82,7 @@ test('the M1 loop: guest → sign in → recruit → mission → work → result
   const iid = dp.party.agenDariSpesies('sari').agen.instance_id;
   await dp.kirimMisi(iid, { pertanyaan: 'harga cabai rawit di Bogor minggu ini', sumber: [] });
   assert.equal(sheet.terbuka, false);
-  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', { ...TITIK_KERJA_CADANGAN }]);
+  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', [{ ...TITIK_KERJA_CADANGAN }]]);
   assert.equal(dp.misi.jumlahDipantau, 1);
   await kuras(); // the first look (status antre) lands before the runtime moves on
 
@@ -95,7 +95,8 @@ test('the M1 loop: guest → sign in → recruit → mission → work → result
   rt.misi.get(misiId).laporan = { schema: 'galantara.laporan-misi/v1', ringkasan: [{ kalimat: 'Harga naik.', rujukan: ['T1'] }], temuan: [{ id: 'T1', sumber: 'S1' }], sumber: [{ id: 'S1', url: 'https://contoh.go.id/a', judul: 'Harga' }] };
   await jam.maju(3000);
   assert.equal(dp.party.agenDariId(iid).status_kerja, 'hasil_siap');
-  assert.deepEqual(perintah.at(-1).slice(0, 2), ['sari', 'lapor'], 'Sari comes to report');
+  assert.deepEqual(perintah.at(-1).slice(0, 2), ['sari', 'lapor'], 'without a 3D Markas, Sari comes to report');
+  assert.deepEqual(gulungan, [misiId], 'a finished result gets its scroll right away');
   assert.match(toast.at(-1), /Hasil Sari siap/);
 
   await dp.bukaHasil(iid);
@@ -103,9 +104,9 @@ test('the M1 loop: guest → sign in → recruit → mission → work → result
   assert.match(teksPohon(sheet.pohon), /Harga naik\. \[1\]/);
   await tekan('Setujui & simpan');
   assert.equal(rt.misi.get(misiId).putusan, 'setujui');
-  assert.deepEqual(gulungan, [misiId], 'the 3D hook gets the approved result');
+  assert.deepEqual([...new Set(gulungan)], [misiId], 'approving resends the same scroll (idempotent in 3D)');
   assert.equal(dp.party.agenDariId(iid).status_kerja, 'siap');
-  assert.match(toast.at(-1), /Gulungannya dipasang di Papan Hasil/);
+  assert.match(toast.at(-1), /Gulungannya ada di Papan Hasil/);
 });
 
 test('a pasted key in the mission form becomes a card with buttons, and the text is dropped', async () => {
@@ -169,49 +170,102 @@ test('screen arrow follows the camera; tap hit test; plaque contents', () => {
   assert.equal(isiPenanda({ nama: 'Sari', bisaDirekrut: false, diParty: true, status: 'siap' }).penanda, null, 'a calm world: no marker when ready');
 });
 
-test('with C\'s Markas wired in: the status reaches 3D BEFORE the walk, so Sari goes to her own desk', async (t) => {
+test('with C\'s Markas wired in: each status walks Sari to the place 3D gives, pose and scroll follow', async (t) => {
   t.after(() => lepasKaitDunia());
-  const { dp, perintah } = siapkan();
-  const status = [];
-  // C-shaped: a desk is handed out by the status call, per agent (markas/index.js tampilkanStatus3D).
-  const { impl } = kaitDari3D({
+  const { rt, dp, game, perintah, toast, jam } = siapkan();
+  const pose = [];
+  game.npcs.setelPose = (id, p) => pose.push([id, p]);
+  const panggil = [];
+  const TEMPAT = {
+    antre: { x: 7, y: 0.2, z: -9, arah: 1 },
+    bekerja: { x: 7, y: 0.2, z: -9, arah: 1 },
+    hasil_siap: { x: 4, y: 0.2, z: -8, arah: 0 },
+    gagal: { x: 9, y: 0.62, z: -7, arah: 0, duduk: true, dekat: { x: 9, y: 0.2, z: -6.5 } },
+  };
+  let terlihat = null;
+  // C-shaped module (src/world/markas/index.js): the status call hands out the place and pose.
+  sambungDunia3D({
     markas: {
-      tampilkanStatus3D: (id, st) => {
-        status.push([id, st]);
-        return st === 'antre' || st === 'bekerja' ? { titik: { x: 7, z: -9, arah: 1, dekat: { x: 7, z: -8, arah: 2 } } } : { titik: null };
-      },
+      tampilkanStatus: (id, st, opsi) => { panggil.push([id, st, Boolean(opsi.mesh)]); return { status: st, pose: `pose-${st}`, titik: TEMPAT[st] ?? null }; },
+      terlihatStatus: () => terlihat,
+      tambahGulungan: (m) => panggil.push(['gulungan', m.id]),
+      tandaiGulunganDibaca: (m) => panggil.push(['dibaca', m.id]),
     },
+    meshDari: (id) => game.npcs.get(id).mesh,
   });
-  pasangKaitDunia(impl);
   await dp.muat();
   await dp.party.masukDev('usr-meja');
   await dp.party.rekrut('sari');
   const iid = dp.party.agenDariSpesies('sari').agen.instance_id;
   await dp.kirimMisi(iid, { pertanyaan: 'harga cabai', sumber: [] });
-  assert.deepEqual(status[0], ['sari', 'antre']);
-  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', { x: 7, z: -8, arah: 2 }], 'the desk C assigned, not the fallback spot');
+  assert.deepEqual(panggil[0], ['sari', 'antre', true], 'status reaches 3D BEFORE the walk, with the mesh the first time');
+  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', [{ x: 7, y: 0.2, z: -9, arah: 1 }]], 'the desk C assigned, not the fallback');
+  assert.deepEqual(pose.at(-1), ['sari', 'pose-antre']);
+  await kuras();
+
+  const [misiId] = [...rt.misi.keys()];
+  rt.misi.get(misiId).status = 'selesai';
+  rt.misi.get(misiId).laporan = { schema: 'galantara.laporan-misi/v1', ringkasan: [], temuan: [], sumber: [] };
+  terlihat = 'panah'; // the edge arrow already says it
+  const nToast = toast.length;
+  await jam.maju(3000);
+  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', [{ x: 4, y: 0.2, z: -8, arah: 0 }]], 'to the Papan Hasil, not to the player');
+  assert.ok(panggil.some((p) => p[0] === 'gulungan' && p[1] === misiId), 'finished → scroll');
+  assert.equal(toast.length, nToast, 'no toast while the world already shows the status');
+  assert.ok(panggil.filter((p) => p[0] === 'sari').every((p, i) => i === 0 || p[2] === false), 'mesh sent once');
+  await dp.bukaHasil(iid);
+  assert.ok(panggil.some((p) => p[0] === 'dibaca' && p[1] === misiId), 'opened → scroll turns to paper');
+
+  // A seat is approached through its free point first.
+  dp._gerakkan('sari', 'gagal', dp._status3D('sari', 'gagal'));
+  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', [{ x: 9, y: 0.2, z: -6.5 }, { x: 9, y: 0.62, z: -7, arah: 0 }]]);
 });
 
-test('3D hooks that arrive late: markers go on, statuses replay, a walking agent is re-routed', async (t) => {
+test('an agent leaving the party frees its desk in the Markas', async (t) => {
   t.after(() => lepasKaitDunia());
-  const { dp, game, perintah } = siapkan();
+  const { dp, perintah } = siapkan();
+  const lepas = [];
+  pasangKaitDunia({ lepasAgen: (id) => lepas.push(id) });
   await dp.muat();
-  await dp.party.masukDev('usr-telat');
+  await dp.party.masukDev('usr-keluar');
   await dp.party.rekrut('sari');
-  const iid = dp.party.agenDariSpesies('sari').agen.instance_id;
-  dp.party.setelStatus(iid, 'bekerja');
-  const keadaan = { sari: 'menuju' };
-  game.npcs.get = (id) => ({ x: 0, z: 0, data: { id }, mesh: { id: `mesh-${id}` }, perilaku: { keadaan: keadaan[id] ?? 'keliling' } });
+  await dp.keluarkan(dp.party.agenDariSpesies('sari').agen.instance_id);
+  assert.deepEqual(lepas, ['sari']);
+  assert.deepEqual(perintah.at(-1).slice(0, 2), ['sari', 'keliling']);
+});
 
-  const penanda = [];
-  const status = [];
-  pasangKaitDunia({
-    pasangPenandaAgen: (id) => penanda.push(id),
-    tampilkanStatus3D: (id, st) => status.push([id, st]),
-    titikKerjaMarkas: () => ({ x: 5, z: 5, arah: 0 }),
-  });
-  dp.kait3DSiap();
-  assert.deepEqual(penanda.sort(), [...dp.agenDunia].sort());
-  assert.deepEqual(status, [['sari', 'bekerja']]);
-  assert.deepEqual(perintah.at(-1), ['sari', 'menuju', { x: 5, z: 5, arah: 0 }]);
+test('one status, one channel: B\'s text marker yields while the 3D icon shows the status', async (t) => {
+  t.after(() => lepasKaitDunia());
+  const { dp } = siapkan();
+  await dp.muat();
+  await dp.party.masukDev('usr-ikon');
+  await dp.party.rekrut('sari');
+  dp.party.setelStatus(dp.party.agenDariSpesies('sari').agen.instance_id, 'bekerja');
+  const sari = () => dp._daftarPenanda().find((a) => a.id === 'sari');
+  assert.equal(sari().status, 'bekerja', 'no 3D icon: B shows it');
+  pasangKaitDunia({ terlihatStatus: (id) => (id === 'sari' ? 'ikon' : null) });
+  assert.equal(sari().status, null);
+  assert.equal(sari().diParty, true, 'the plaque (name + AI) stays');
+});
+
+test('queue line: position, and an honest "belum terukur" until the runtime has measured one', () => {
+  assert.equal(teksAntrean({ posisi: 2, eta_detik: null }), 'Antrean ke-2 · perkiraan belum terukur');
+  assert.equal(teksAntrean({ posisi: 1, eta_detik: 95 }), 'Antrean ke-1 · ± 2 mnt');
+  assert.equal(teksAntrean({ posisi: 1, eta_detik: 5 }), 'Antrean ke-1 · ± 1 mnt');
+  assert.equal(teksAntrean({ status: 'antre' }), null, 'no position from the runtime: nothing made up');
+});
+
+test('the name plaque climbs over the 3D status icon and follows the floor the agent stands on', async () => {
+  const { PenandaAgen, TINGGI_PLAKAT_DI_ATAS_IKON } = await import('../src/ui/PenandaAgen.js');
+  const ucap = new Map();
+  const bubble = { ucap: (k, _t, pos) => ucap.set(k, pos), buang() {}, ada: (k) => ucap.has(k) };
+  let ikon = false;
+  const npcs = { terlihat: true, get: () => ({ x: 1, z: 2, perilaku: { y: 0.2 } }) };
+  const p = new PenandaAgen({ bubble, npcs, adaIkon: () => ikon, daftar: () => [{ id: 'sari', nama: 'Sari', bisaDirekrut: false, diParty: true, status: null }] });
+  p.perbarui();
+  const pos = ucap.get('plakat:sari');
+  const rendah = pos().y;
+  ikon = true;
+  assert.ok(Math.abs(pos().y - (TINGGI_PLAKAT_DI_ATAS_IKON + 0.2)) < 1e-9, 'above the icon, on the terrace');
+  assert.ok(pos().y > rendah);
 });

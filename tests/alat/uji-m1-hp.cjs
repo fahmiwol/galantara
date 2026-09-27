@@ -189,12 +189,12 @@ async function main() {
     await page.tap('#npc-choices .gw-pilihan-aksi');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Masuk dulu, ya', null, { timeout: 10000 });
     await potret(page, 'masuk', '4 · Masuk dulu (tamu)');
-    await page.tap('text=Masuk (mode pengembang)');
+    await page.tap('button:text-is("Masuk (mode pengembang)")');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Ajak Sari gabung party?', null, { timeout: 15000 });
     catat(`masuk lewat /rt/api/dev/masuk sebagai ${await page.evaluate(() => window._game.dunia.party.pemain)}`);
     hasil.ukur.sheetRekrut = await page.evaluate(() => { const s = document.querySelector('.gw-sheet').getBoundingClientRect(); return { tinggi: Math.round(s.height), persenLayar: +(100 * s.height / innerHeight).toFixed(1) }; });
     await potret(page, 'rekrut', '5 · Sheet Rekrut');
-    await page.tap('text=Rekrut Sari');
+    await page.tap('button:text-is("Rekrut Sari")');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Markas · Party 1/4', null, { timeout: 15000 });
     catat(`rekrut OK → ${await page.textContent('#gw-judul')} · tab "${await page.textContent('#bb-party-t')}"`);
     await potret(page, 'markas', '6 · Markas 1/4');
@@ -206,7 +206,7 @@ async function main() {
     await potret(page, 'otak', '7 · Otak (tampilan, ubah di Kantor)');
     await page.tap('button[aria-label="Kembali"]');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Markas · Party 1/4', null, { timeout: 10000 });
-    await page.tap('text=Beri misi');
+    await page.tap('button:text-is("Beri misi")');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Misi untuk Sari', null, { timeout: 10000 });
     const kunci = ['sk', 'or', 'v1', 'c'.repeat(40)].join('-');
     await page.fill('#gw-pertanyaan', `tolong pakai ${kunci}`);
@@ -215,42 +215,56 @@ async function main() {
     const bocor = await page.evaluate((k) => document.body.innerHTML.includes(k), kunci);
     catat(`kunci ditempel → kartu galat bertombol; kunci masih di halaman: ${bocor}`);
     await potret(page, 'kunci', '8 · Kunci ditempel → kartu galat');
-    await page.tap('text=Hapus teks');
-    await page.fill('#gw-pertanyaan', 'harga cabai rawit di Bogor minggu ini');
+    await page.tap('button:text-is("Hapus teks")');
+    await page.fill('#gw-pertanyaan', 'apa isi dungeon Oola?');
+    // RUNTIME_MODE=demo serves this source offline and labels everything SIMULASI (LOG-A A4).
+    await page.fill('input[name=sumber1]', 'https://sumber.example/dungeon-oola');
     await page.tap('.gw-form button[type=submit]');
     await page.waitForFunction(() => document.querySelector('.gw-kartu-galat') || !document.querySelector('#gw-lapis.on'), null, { timeout: 15000 });
     const kartuMisi = await page.evaluate(() => document.querySelector('.gw-kartu-galat')?.textContent ?? null);
     catat(`misi ke runtime sungguhan: ${kartuMisi ? `kartu "${kartuMisi.replace(/\s+/g, ' ').slice(0, 90)}"` : 'terkirim'}`);
     if (kartuMisi) await potret(page, 'misi-belum', '9 · Runtime tanpa rute misi → kartu jujur');
 
-    // 5 · Mission screens with the contract-shaped fake (SIMULASI).
-    await misiPalsu(page);
+    // 5 · Mission screens: the real runtime (demo mode) or, when its mission routes are missing,
+    // the contract-shaped fake (SIMULASI).
     if (kartuMisi) {
+      await misiPalsu(page);
       await page.tap('.gw-kartu-galat >> text=Tutup');
       await page.evaluate(() => window._game.dunia.bukaMarkas());
-      await page.tap('text=Beri misi');
+      await page.tap('button:text-is("Beri misi")');
       await page.fill('#gw-pertanyaan', 'harga cabai rawit di Bogor minggu ini');
       await page.tap('.gw-form button[type=submit]');
     }
     await page.waitForFunction(() => !document.querySelector('#gw-lapis.on'), null, { timeout: 15000 });
     await page.waitForFunction(() => window._game.npcs.get('sari').perilaku.keadaan === 'menuju', null, { timeout: 15000 });
-    catat('misi (palsu, SIMULASI) terkirim → Sari berjalan ke titik kerja Markas');
+    catat(`misi (${kartuMisi ? 'palsu' : 'runtime demo'}, SIMULASI) terkirim → Sari berjalan ke mejanya di Markas`);
     const t0 = Date.now();
     await page.waitForFunction(() => window._game.npcs.get('sari').perilaku.keadaan === 'bekerja', null, { timeout: 120000, polling: 500 });
     catat(`Sari tiba di titik kerja dalam ${((Date.now() - t0) / 1000).toFixed(0)} dtk nyata (dt dijepit 0,05; GPU perangkat lunak)`);
-    await page.evaluate(() => { const g = window._game; const n = g.npcs.get('sari'); g.avatar.teleport(n.x + 3, n.z + 3, 0); });
-    await page.waitForFunction(() => /bekerja/.test([...document.querySelectorAll('#lbl-layer .status-agen.on')].map((e) => e.textContent).join(' ')), null, { timeout: 30000 });
+    await page.evaluate(() => { const g = window._game; const n = g.npcs.get('sari'); g.avatar.teleport(n.x + 1.5, n.z + 4, 0); });
+    // Status shown once: the Markas's 28 px icon (stream C) or, without it, B's text marker.
+    const saluran = await page.waitForFunction(() => {
+      const ikon = document.querySelector('#lbl-layer .gw-ikon-status.on');
+      if (ikon && /antre|bekerja/.test(ikon.dataset.status)) return 'ikon 3D';
+      if (/bekerja|giliran/.test([...document.querySelectorAll('#lbl-layer .status-agen.on')].map((e) => e.textContent).join(' '))) return 'penanda teks';
+      const st = window._game.dunia.party.agenDariSpesies('sari')?.status_kerja;
+      return st === 'hasil_siap' ? 'sudah selesai' : false;
+    }, null, { timeout: 30000 });
+    catat(`status bekerja tampil lewat: ${await saluran.jsonValue()}`);
     await potret(page, 'bekerja', '10 · Sari bekerja di Markas');
-    await page.waitForFunction(() => window._game.dunia.party.agenDariSpesies('sari')?.status_kerja === 'hasil_siap', null, { timeout: 60000, polling: 500 });
-    await page.waitForFunction(() => window._game.npcs.get('sari').perilaku.melambai, null, { timeout: 120000, polling: 500 });
-    catat(`hasil siap → Sari datang melapor · tab "${await page.getAttribute('#bb-party-btn', 'aria-label')}"`);
-    await potret(page, 'lapor', '11 · Hasil siap: Sari melapor');
+    await page.waitForFunction(() => window._game.dunia.party.agenDariSpesies('sari')?.status_kerja === 'hasil_siap', null, { timeout: 120000, polling: 500 });
+    // With the 3D Markas the agent waits at the Papan Hasil (C's place for hasil_siap);
+    // without it she walks over to the player (B's fallback).
+    await page.waitForFunction(() => { const p = window._game.npcs.get('sari').perilaku; return p.melambai || (p.keadaan === 'bekerja' && !p.bergerak); }, null, { timeout: 120000, polling: 500 });
+    const lapor = await page.evaluate(() => { const g = window._game; const p = g.npcs.get('sari').perilaku; return { melambai: p.melambai, y: +p.y.toFixed(2), gulungan: document.querySelectorAll('#lbl-layer .gw-ikon-status.on').length }; });
+    catat(`hasil siap → ${lapor.melambai ? 'Sari datang melapor' : `Sari menunggu di Papan Hasil (lantai ${lapor.y} m)`} · tab "${await page.getAttribute('#bb-party-btn', 'aria-label')}"`);
+    await potret(page, 'lapor', '11 · Hasil siap');
     await page.tap('#bb-party-btn');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Markas · Party 1/4', null, { timeout: 10000 });
-    await page.tap('text=Periksa hasil');
+    await page.tap('button:text-is("Periksa hasil")');
     await page.waitForFunction(() => document.getElementById('gw-judul')?.textContent === 'Hasil misi Sari', null, { timeout: 15000 });
     await potret(page, 'hasil', '12 · Hasil + sumber (SIMULASI)');
-    await page.tap('text=Setujui & simpan');
+    await page.tap('button:text-is("Setujui & simpan")');
     await page.waitForFunction(() => /Disetujui/.test(document.querySelector('.gw-sheet')?.textContent ?? ''), null, { timeout: 15000 });
     catat('Setujui & simpan → "Disetujui · tersimpan"');
 

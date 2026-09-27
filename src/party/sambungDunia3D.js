@@ -1,79 +1,81 @@
 // ═══════════════════════════════════════════════════════
 // sambungDunia3D.js — plug stream C's 3D modules into B's hooks (kaitDunia.js).
 //
-// C exports (SPRINT-01 "Titik sambung B ↔ C"):
-//   src/world/markas/index.js  titikKerja(), titikMarkas(nama), tampilkanStatus3D(npcId, st) → {titik, pose, …},
-//                              tambahGulungan(hasil), markasAktif(), LETAK_MARKAS
-//   src/world/agen/index.js    pasangPenandaAgen(mesh), pasangKitKelas(mesh, kelas)
+// C's API (docs/aset/LOG-C.md §2):
+//   src/world/markas/index.js  tampilkanStatus(npcId, status, {mesh?}) → {status, slot, pose, titik},
+//                              titikKerja(), lepasAgenMarkas(npcId), terlihatStatus(npcId),
+//                              tambahGulungan / tandaiGulunganDibaca / buangGulungan(hasil),
+//                              markasAktif(), LETAK_MARKAS
+//   src/world/agen/index.js    pasangPenandaAgen(mesh), pasangKitKelas(mesh, kelas),
+//                              terapkanPose(mesh, pose, detik, {kurangiGerak})
 //
-// Every function is feature-checked: a missing one leaves B's no-op/fallback in place and is
-// reported in `hilang`, so the M1 flow keeps working with any subset of C's code. The modules
-// are loaded only when the World says the Markas exists (World._buildMarkas), so a world
-// without C's code never requests a file that is not there (a 404 is a console error).
+// Game.js imports both modules and calls sambungDunia3D() once, before the party glue starts.
+// Each function is still checked before use: a missing one leaves B's fallback in place and is
+// named in `hilang`, so a partial 3D world degrades instead of throwing.
 // ═══════════════════════════════════════════════════════
 
-import { pasangKaitDunia } from './kaitDunia.js';
-
-/** B hooks this adapter can fill, with the C function each one needs. */
-export const KEBUTUHAN = Object.freeze({
-  titikKerjaMarkas: 'markas.titikKerja | markas.tampilkanStatus3D',
-  posisiMarkas: 'markas.markasAktif | markas.LETAK_MARKAS',
-  tampilkanStatus3D: 'markas.tampilkanStatus3D',
-  tambahGulungan: 'markas.tambahGulungan',
-  pasangPenandaAgen: 'agen.pasangPenandaAgen',
-  arahkanPanah: '(belum ada di aliran C)',
-});
-
-/** Statuses that send the agent to its desk (the others free the remembered desk). */
-const KE_MEJA = new Set(['antre', 'bekerja']);
+import { pasangKaitDunia, NAMA_KAIT } from './kaitDunia.js';
 
 const fungsi = (m, nama) => typeof m?.[nama] === 'function';
 const titikSah = (t) => t && Number.isFinite(t.x) && Number.isFinite(t.z);
-const keTitik = (t) => {
-  // A seat names a free approach point in `dekat`; B's walker stops there.
-  const p = titikSah(t?.dekat) ? t.dekat : t;
-  if (!titikSah(p)) return null;
-  const arah = Number.isFinite(p.arah) ? p.arah : t.arah;
-  return Number.isFinite(arah) ? { x: p.x, z: p.z, arah } : { x: p.x, z: p.z };
-};
+
+/**
+ * A Markas point → the route B walks: a seat (`duduk`) is approached through its free point
+ * `dekat` first (the seat sits inside the bench's collider on purpose), then sat on.
+ */
+export function ruteDariTitik(titik) {
+  if (!titikSah(titik)) return null;
+  if (titik.duduk && titikSah(titik.dekat)) return [titik.dekat, titik];
+  return [titik];
+}
 
 /**
  * Build the hook implementations from C's modules (pure: nothing is installed).
- * @param {{ markas?: object|null, agen?: object|null, kelasDari?: (npcId:string) => string|null|undefined }} m
+ * @param {{ markas?: object|null, agen?: object|null, kelasDari?: (npcId:string) => string|null|undefined,
+ *   meshDari?: (npcId:string) => object|null|undefined, kurangiGerak?: () => boolean }} m
  * @returns {{ impl: object, hilang: string[] }}
  */
-export function kaitDari3D({ markas = null, agen = null, kelasDari = () => null } = {}) {
+export function kaitDari3D({ markas = null, agen = null, kelasDari = () => null, meshDari = () => null, kurangiGerak = () => false } = {}) {
   const impl = {};
-  /** npcId → desk point C assigned on the last antre/bekerja */
-  const meja = new Map();
+  /** npcIds whose mesh C already has (C wants it once per agent). */
+  const meshTerkirim = new Set();
+  const statusFn = fungsi(markas, 'tampilkanStatus') ? 'tampilkanStatus' : fungsi(markas, 'tampilkanStatus3D') ? 'tampilkanStatus3D' : null;
 
-  if (fungsi(markas, 'tampilkanStatus3D')) {
+  if (statusFn) {
     impl.tampilkanStatus3D = (npcId, status) => {
-      const r = markas.tampilkanStatus3D(npcId, status);
-      const t = keTitik(r?.titik);
-      if (KE_MEJA.has(status) && t) meja.set(npcId, t);
-      else if (!KE_MEJA.has(status)) meja.delete(npcId);
-      return r;
+      const opsi = {};
+      if (!meshTerkirim.has(npcId)) {
+        const mesh = meshDari(npcId);
+        if (mesh) {
+          opsi.mesh = mesh;
+          meshTerkirim.add(npcId);
+        }
+      }
+      const r = markas[statusFn](npcId, status, opsi);
+      return { rute: ruteDariTitik(r?.titik), pose: r?.pose ?? null };
     };
   }
-  if (fungsi(markas, 'titikKerja') || fungsi(markas, 'tampilkanStatus3D')) {
-    impl.titikKerjaMarkas = (npcId) => {
-      if (meja.has(npcId)) return meja.get(npcId);
-      if (!fungsi(markas, 'titikKerja')) return null;
-      const t = markas.titikKerja()?.[0];
-      // titikKerja() names a seat's approach point (`dekat: 'nama'`); resolve it like C's status call does.
-      if (typeof t?.dekat === 'string' && fungsi(markas, 'titikMarkas')) return keTitik({ ...t, dekat: markas.titikMarkas(t.dekat) });
-      return keTitik(t);
-    };
-  }
+  if (fungsi(markas, 'titikKerja')) impl.titikKerjaMarkas = () => ruteDariTitik(markas.titikKerja()?.[0]);
   if (fungsi(markas, 'markasAktif') || titikSah(markas?.LETAK_MARKAS)) {
     impl.posisiMarkas = () => {
       const l = (fungsi(markas, 'markasAktif') ? markas.markasAktif()?.letak : null) ?? markas.LETAK_MARKAS;
       return titikSah(l) ? { x: l.x, z: l.z } : null;
     };
   }
+  if (fungsi(markas, 'lepasAgenMarkas')) {
+    impl.lepasAgen = (npcId) => {
+      meshTerkirim.delete(npcId); // recruited again later: C needs the mesh again
+      return markas.lepasAgenMarkas(npcId);
+    };
+  }
+  if (fungsi(markas, 'terlihatStatus')) impl.terlihatStatus = (npcId) => markas.terlihatStatus(npcId);
   if (fungsi(markas, 'tambahGulungan')) impl.tambahGulungan = (misi) => markas.tambahGulungan(misi);
+  if (fungsi(markas, 'tandaiGulunganDibaca')) impl.tandaiGulunganDibaca = (misi) => markas.tandaiGulunganDibaca(misi);
+  if (fungsi(markas, 'buangGulungan')) impl.buangGulungan = (misi) => markas.buangGulungan(misi);
 
+  if (fungsi(agen, 'terapkanPose')) {
+    impl.terapkanPose = (mesh, pose, detik) => agen.terapkanPose(mesh, pose, detik, { kurangiGerak: Boolean(kurangiGerak()) });
+  }
   if (fungsi(agen, 'pasangPenandaAgen') || fungsi(agen, 'pasangKitKelas')) {
     impl.pasangPenandaAgen = (npcId, mesh) => {
       // Two independent pieces: a kit that fails (unknown class) must not take the ✦ ring with it.
@@ -87,28 +89,17 @@ export function kaitDari3D({ markas = null, agen = null, kelasDari = () => null 
     };
   }
 
-  const hilang = Object.keys(KEBUTUHAN).filter((k) => !impl[k]);
+  const hilang = NAMA_KAIT.filter((k) => !impl[k]);
   return { impl, hilang };
 }
 
-const MUAT_BAWAAN = (nama) => import(`../world/${nama}/index.js`);
-
 /**
- * Load C's modules (each on its own: one failing does not drop the other) and install the hooks.
- * @param {{ muat?: (nama:'markas'|'agen') => Promise<object>, kelasDari?: Function, pasang?: Function }} [opsi]
- * @returns {Promise<{ markas: boolean, agen: boolean, hilang: string[] }>}
+ * Install C's modules as B's hooks.
+ * @param {Parameters<typeof kaitDari3D>[0] & { pasang?: Function }} opsi
+ * @returns {{ hilang: string[] }} hooks still on B's fallback (e.g. arahkanPanah: not in C yet)
  */
-export async function sambungDunia3D({ muat = MUAT_BAWAAN, kelasDari, pasang = pasangKaitDunia } = {}) {
-  const coba = async (nama) => {
-    try {
-      return await muat(nama);
-    } catch (err) {
-      console.warn(`[sambungDunia3D] modul ${nama} tidak termuat; dunia jalan dengan cadangan`, err);
-      return null;
-    }
-  };
-  const [markas, agen] = await Promise.all([coba('markas'), coba('agen')]);
-  const { impl, hilang } = kaitDari3D({ markas, agen, kelasDari });
+export function sambungDunia3D({ pasang = pasangKaitDunia, ...modul } = {}) {
+  const { impl, hilang } = kaitDari3D(modul);
   pasang(impl);
-  return { markas: Boolean(markas), agen: Boolean(agen), hilang };
+  return { hilang };
 }

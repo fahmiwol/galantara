@@ -40,6 +40,9 @@ import { buatKarakter, UKURAN_KAPSUL } from '../fisika/Karakter.js';
 import { LihatCollider     } from '../fisika/LihatCollider.js';
 import { DuniaParty        } from '../party/DuniaParty.js';
 import { sambungDunia3D    } from '../party/sambungDunia3D.js';
+import { buangKodeHandoff  } from './kodeHandoff.js';
+import * as markas3D         from '../world/markas/index.js';
+import * as agen3D           from '../world/agen/index.js';
 import { KontrolSentuh     } from './KontrolSentuh.js';
 import { INTERACT_R        } from '../entities/NPC.js';
 
@@ -48,6 +51,8 @@ const KELOMPOK_SPOT = 'spot';
 
 export class Game {
   constructor() {
+    // A Kantor handoff code (?mighan=) is one-time: out of the address bar before anything else.
+    buangKodeHandoff();
     this.renderer = new Renderer('c');
     this.camera   = null;
     this.world    = null;
@@ -179,6 +184,8 @@ export class Game {
     // Remote players (harus sebelum auth agar event Socket terpasang)
     this.remotePlayers = new RemotePlayers(scene);
     this.bubble = new ChatBubbleLayer('lbl-layer', this.camera?.cam ?? null);
+    // Status layers 2–3 of the Markas (28 px icon over the agent, arrow at the screen edge).
+    if (this.camera?.cam) markas3D.pasangLapisanIkon(this.camera.cam);
     this._initMultiplayer();
 
     // Chat
@@ -186,16 +193,19 @@ export class Game {
     this._applySpotChrome();
     this.chat.onSend((msg) => this._kirimChat(msg));
 
+    // Stream C's Markas + agent looks drive B's hooks (docs/aset/LOG-C.md §2). Installed before
+    // the party glue starts, so the ✦ rings, class kits and desks are there from the first frame.
+    const gerakHalus = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)');
+    sambungDunia3D({
+      markas: markas3D,
+      agen: agen3D,
+      kelasDari: (id) => this.npcs?.get(id)?.data?.role,
+      meshDari: (id) => this.npcs?.get(id)?.mesh,
+      kurangiGerak: () => Boolean(gerakHalus?.matches),
+    });
+
     // Galantara World M1: party, Markas, missions (runtime at /rt/api), and touch paths to talk.
     this.dunia = new DuniaParty(this).init();
-    // Stream C's Markas + agent looks (src/world/markas, src/world/agen). Loaded only when this
-    // World can build the Markas, so a world without C's code never requests missing files.
-    if (typeof this.world?._buildMarkas === 'function') {
-      sambungDunia3D({ kelasDari: (id) => this.npcs?.get(id)?.data?.role }).then((r) => {
-        this.dunia?.kait3DSiap();
-        if (r.hilang.length) console.info('[dunia3D] kait belum ada di aliran C, pakai cadangan:', r.hilang.join(', '));
-      });
-    }
     this.sentuh = new KontrolSentuh({
       kanvas: this.renderer.canvas,
       ambilKamera: () => this.camera?.cam,
@@ -362,6 +372,8 @@ export class Game {
 
     // NPC behaviour (patrol / walk to work / report); the NPC in an open dialog stays put.
     this.npcs.update(dt, this._t, { dialogNpcId: this.panels.dialogNpcId, posisiPemain: this.avatar.getPosition() });
+    // Icons follow the NPCs moved just now (World.animate also updates them, one frame earlier).
+    markas3D.perbaruiIkonStatus();
     this.dunia?.perbarui(dt);
 
     // Zone check (Oola) — nonaktif saat Spot Bogor agar hint tidak tabrakan

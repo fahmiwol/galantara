@@ -13,6 +13,8 @@
 import { TINGGI_KEPALA_NPC } from '../entities/NPC.js';
 
 const TINGGI_PLAKAT = TINGGI_KEPALA_NPC + 0.32;
+/** The Markas status icon (stream C, 28 px) sits right above the head: the plaque moves over it. */
+export const TINGGI_PLAKAT_DI_ATAS_IKON = TINGGI_KEPALA_NPC + 0.95;
 const TINGGI_STATUS = TINGGI_KEPALA_NPC + 0.78;
 
 /** What the world shows above an agent for each runtime status_kerja. */
@@ -56,7 +58,8 @@ export class PenandaAgen {
    * @param {{bubble: import('./ChatBubble.js').ChatBubbleLayer, npcs: import('../entities/NPC.js').NPCManager,
    *          daftar: () => Array<{id:string, nama:string, bisaDirekrut:boolean, diParty:boolean, status:string|null, durasi?:string|null}>}} p
    */
-  constructor({ bubble, npcs, daftar }) {
+  constructor({ bubble, npcs, daftar, adaIkon = () => false }) {
+    this.adaIkon = adaIkon;
     this.bubble = bubble;
     this.npcs = npcs;
     this.daftar = daftar;
@@ -67,7 +70,9 @@ export class PenandaAgen {
     return () => {
       const npc = this.npcs?.get(id);
       if (!npc || !this.npcs.terlihat) return null;
-      return { x: npc.x, y: tinggi, z: npc.z };
+      const t = typeof tinggi === 'function' ? tinggi() : tinggi;
+      // Follow the floor the NPC stands on (the Markas terrace is above the ground).
+      return { x: npc.x, y: t + (Number.isFinite(npc.perilaku?.y) ? npc.perilaku.y : 0), z: npc.z };
     };
   }
 
@@ -76,7 +81,7 @@ export class PenandaAgen {
     if (!this.bubble) return;
     for (const a of this.daftar()) {
       const { plakat, penanda } = isiPenanda(a);
-      this._pasang(`plakat:${a.id}`, plakat, TINGGI_PLAKAT, a.id);
+      this._pasang(`plakat:${a.id}`, plakat, () => (this.adaIkon(a.id) ? TINGGI_PLAKAT_DI_ATAS_IKON : TINGGI_PLAKAT), a.id);
       this._pasang(`status:${a.id}`, penanda, TINGGI_STATUS, a.id);
     }
   }
