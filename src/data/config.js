@@ -13,7 +13,11 @@ export const GA_ID = 'G-WNDQL8J455';
 // ── KANTOR (mighan.com) ──────────────────────────────
 // Keys, billing and brain changes live there, never in the world (ADR-0002).
 const DI_LOKAL = typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname);
-export const KANTOR_URL = DI_LOKAL ? 'http://localhost:3200/dashboard' : 'https://mighan.com/dashboard';
+/** Kantor origin (dev: the mighan-web dev server). */
+export const KANTOR_BASIS = DI_LOKAL ? 'http://localhost:3200' : 'https://mighan.com';
+export const KANTOR_URL = `${KANTOR_BASIS}/dashboard`;
+/** Where "Buka Kantor" lands with a handoff code (the Kantor redeems `?mighan=` there, D2-5). */
+export const KANTOR_HANDOFF_URL = `${KANTOR_BASIS}/dashboard/kantor`;
 
 // ── CAMERA ───────────────────────────────────────────
 // JANGAN DIUBAH — sudah dikonfirmasi di PRD

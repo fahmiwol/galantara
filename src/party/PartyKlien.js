@@ -14,6 +14,7 @@ import { validateParty, emptyParty, memberCount, MAX_SLOTS } from '../../vendor/
 import { validateAgent } from '../../vendor/party-contract/agen.js';
 import { findSecrets, jenisOtak, ID } from '../../vendor/party-contract/umum.js';
 import { GalatRuntime, segmen } from './apiRuntime.js';
+import { kodeSah } from '../core/kodeHandoff.js';
 
 export const KUNCI_CACHE = 'galantara_party_v2';
 /** Party the world creates when the player has none yet. The Kantor reads the same one. */
@@ -171,6 +172,38 @@ export class PartyKlien {
       throw err;
     }
     return this.muat();
+  }
+
+  // ── Handoff world ↔ Kantor (D-12) ──────────────────────
+
+  /**
+   * Redeem a Kantor → world code (already stripped from the URL). The runtime answers with a session
+   * cookie; the caller loads the party afterwards. The code is sent once and not kept.
+   */
+  async tukarKode(kode) {
+    if (!kodeSah(kode)) throw galat('KODE_DITOLAK', 'Kode dari Kantor tidak terbaca. Buka dunia dari Kantor sekali lagi, atau masuk dari sini.');
+    try {
+      await this.api.post('/handoff/tukar-dunia', { kode });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') {
+        throw galat('HANDOFF_BELUM_ADA', 'Masuk lewat Kantor belum tersedia di server ini (segera hadir). Kamu tetap bisa jalan-jalan, atau masuk dari dunia.');
+      }
+      throw err;
+    }
+  }
+
+  /** A world → Kantor code for this party, issued at click time only. Returns the code (never stored). */
+  async terbitkanKode() {
+    this._pastikanMasuk();
+    let r;
+    try {
+      r = await this.api.post('/handoff/terbitkan-dunia', { party_id: this.party?.id ?? ID_PARTY_BAWAAN });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') throw galat('HANDOFF_BELUM_ADA', 'Membawa sesi ke Kantor belum tersedia di server ini (segera hadir). Masuk sekali lagi di Kantor.');
+      throw err;
+    }
+    if (!kodeSah(r?.kode)) throw galat('GALAT_SERVER', 'Server tidak memberi kode yang sah. Kantor dibuka tanpa kode; masuk di sana.');
+    return r.kode;
   }
 
   // ── Reading ────────────────────────────────────────────

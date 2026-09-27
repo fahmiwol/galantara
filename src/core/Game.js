@@ -40,7 +40,7 @@ import { buatKarakter, UKURAN_KAPSUL } from '../fisika/Karakter.js';
 import { LihatCollider     } from '../fisika/LihatCollider.js';
 import { DuniaParty        } from '../party/DuniaParty.js';
 import { sambungDunia3D    } from '../party/sambungDunia3D.js';
-import { buangKodeHandoff  } from './kodeHandoff.js';
+import { ambilKodeHandoff  } from './kodeHandoff.js';
 import * as markas3D         from '../world/markas/index.js';
 import * as agen3D           from '../world/agen/index.js';
 import { KontrolSentuh     } from './KontrolSentuh.js';
@@ -52,8 +52,9 @@ const KELOMPOK_SPOT = 'spot';
 
 export class Game {
   constructor() {
-    // A Kantor handoff code (?mighan=) is one-time: out of the address bar before anything else.
-    buangKodeHandoff();
+    // A Kantor handoff code (?mighan=) is one-time: out of the address bar before anything else,
+    // then redeemed by the party glue (DuniaParty.muat → /api/handoff/tukar-dunia).
+    this._handoffMasuk = ambilKodeHandoff();
     this.renderer = new Renderer('c');
     this.camera   = null;
     this.world    = null;
@@ -208,7 +209,8 @@ export class Game {
     });
 
     // Galantara World M1: party, Markas, missions (runtime at /rt/api), and touch paths to talk.
-    this.dunia = new DuniaParty(this).init();
+    this.dunia = new DuniaParty(this, { kodeMasuk: this._handoffMasuk?.kode ?? null }).init();
+    this._handoffMasuk = null;
     this.sentuh = new KontrolSentuh({
       kanvas: this.renderer.canvas,
       ambilKamera: () => this.camera?.cam,

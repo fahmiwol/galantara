@@ -23,7 +23,8 @@ import {
   tampilanKartuGalat, durasi, namaTempat, namaOtak,
 } from '../ui/gw/tampilan.js';
 import { h, render } from '../ui/gw/pohon.js';
-import { NPCS, KANTOR_URL } from '../data/config.js';
+import { NPCS, KANTOR_URL, KANTOR_HANDOFF_URL } from '../data/config.js';
+import { urlKantorDenganKode } from '../core/kodeHandoff.js';
 import { getOrCreateGuestId } from '../data/guestIdentity.js';
 
 /** Mission status (runtime) → agent status in the world (design §9.3). */
@@ -79,13 +80,17 @@ function penyimpananAman() {
 export class DuniaParty {
   /**
    * @param {any} game the Game instance (npcs, avatar, camera, panels, toast, hud, bubble)
-   * @param {{api?: any, penyimpanan?: Storage|null, doc?: Document, lokal?: boolean}} [opsi]
+   * @param {{api?: any, penyimpanan?: Storage|null, doc?: Document, lokal?: boolean, kodeMasuk?: string|null,
+   *   buka?: (url: string, target: string, fitur?: string) => any}} [opsi]
    */
-  constructor(game, { api, penyimpanan, doc, lokal } = {}) {
+  constructor(game, { api, penyimpanan, doc, lokal, kodeMasuk = null, buka } = {}) {
     this.game = game;
     this.doc = doc ?? globalThis.document;
     this.lokal = lokal ?? Boolean(globalThis.window?.G_LOCAL);
     this.api = api ?? buatApiRuntime();
+    /** A Kantor → world code taken out of the URL by Game; redeemed once by muat(). */
+    this._kodeMasuk = kodeMasuk;
+    this._buka = buka ?? ((...a) => globalThis.open?.(...a) ?? null);
     const simpanan = penyimpanan === undefined ? penyimpananAman() : penyimpanan;
     this.party = new PartyKlien({ api: this.api, penyimpanan: simpanan });
     this.buku = new BukuWarga({ penyimpanan: simpanan });
@@ -137,6 +142,19 @@ export class DuniaParty {
   }
 
   async muat() {
+    if (this._kodeMasuk) {
+      const kode = this._kodeMasuk;
+      this._kodeMasuk = null; // one try, whatever happens: a code is single-use
+      try {
+        await this.party.tukarKode(kode);
+        this.game.toast?.show('Tersambung dari Kantor. Party-mu ikut ke dunia.', 'g');
+      } catch (err) {
+        const pesan = err.kode === 'KODE_DITOLAK'
+          ? 'Kode dari Kantor sudah tidak berlaku (sekali pakai, 60 detik). Buka dunia dari Kantor sekali lagi, atau masuk dari sini.'
+          : err.pesan;
+        this.game.toast?.show(pesan, 'a');
+      }
+    }
     try {
       await this.party.muat();
       this._terputus = false;
@@ -350,6 +368,7 @@ export class DuniaParty {
       tutup: () => this.sheet.tutup(),
       kartu: (aksi, kartu) => this.aksiKartu(aksi, kartu),
       urlKantor: KANTOR_URL,
+      bukaKantor: () => this.bukaKantor(),
     };
   }
 
@@ -905,9 +924,40 @@ export class DuniaParty {
       case 'simpanLagi': return this._ulang ? this._ulang() : this.muat().then(() => this.bukaMarkas());
       case 'cobaSambung':
       case 'cekLagi': return this.muat().then(() => this.bukaMarkas());
-      case 'bukaKantor': globalThis.open?.(KANTOR_URL, '_blank', 'noopener'); return undefined;
+      case 'bukaKantor': return this.bukaKantor();
       default: return this.bukaMarkas();
     }
+  }
+
+  // ── "Buka Kantor" with the session (D-12) ─────────────
+
+  /**
+   * Open the Kantor in a new tab carrying this session: a one-time code issued now (never earlier,
+   * never stored). The tab is opened inside the click, before any await (a tab opened later is a
+   * blocked popup), then pointed at the Kantor. Without a session, or when the route is not live,
+   * the Kantor still opens, just without a code.
+   */
+  async bukaKantor() {
+    if (!this.party.masuk) {
+      this._buka(KANTOR_URL, '_blank', 'noopener');
+      return { denganKode: false };
+    }
+    const tab = this._buka('about:blank', '_blank');
+    let url = KANTOR_URL;
+    let denganKode = false;
+    try {
+      url = urlKantorDenganKode(KANTOR_HANDOFF_URL, await this.party.terbitkanKode()) ?? KANTOR_URL;
+      denganKode = url !== KANTOR_URL;
+    } catch (err) {
+      this.game.toast?.show(err.kode === 'HANDOFF_BELUM_ADA' ? err.pesan : `${err.pesan} Kantor dibuka tanpa kode; masuk di sana.`, 'a');
+    }
+    if (!tab) {
+      this.game.toast?.show('Browser menahan tab baru. Izinkan pop-up untuk dunia ini, lalu tekan Buka Kantor lagi.', 'a');
+      return { denganKode: false, ditahan: true };
+    }
+    try { tab.opener = null; } catch { /* cross-origin already */ }
+    tab.location.replace(url);
+    return { denganKode };
   }
 
   // ── "Arahkan saya" ─────────────────────────────────────

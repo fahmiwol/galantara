@@ -379,7 +379,9 @@ export function tampilanOtak({ nama, brain, statusOtak = null }, aksi = {}) {
       ),
     ),
     h('p', { kelas: 'gw-sub', teks: 'Mengganti otak atau memasang kunci API dilakukan di Kantor (mighan.com), bukan di dunia.' }),
-    h('a', { kelas: 'gw-cta gw-cta-tautan', attr: { href: aksi.urlKantor, target: '_blank', rel: 'noopener noreferrer' }, teks: 'Ubah di Kantor ↗' }),
+    aksi.bukaKantor
+      ? cta('Ubah di Kantor ↗', aksi.bukaKantor)
+      : h('a', { kelas: 'gw-cta gw-cta-tautan', attr: { href: aksi.urlKantor, target: '_blank', rel: 'noopener noreferrer' }, teks: 'Ubah di Kantor ↗' }),
   );
 }
 
