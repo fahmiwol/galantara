@@ -122,3 +122,17 @@ test('bad input does not move or break the NPC', () => {
   p.perbarui(NaN);
   assert.deepEqual([p.x, p.z], [1, 1]);
 });
+
+test('floor height eases along the leg (terrace, then seat) and back to the ground when strolling', () => {
+  const p = new PerilakuNpc({ x: 0, z: 0, rng: acak() });
+  // Approach point on the terrace (0,2 m), then the seat (0,62 m): the Markas "dekat → duduk" route.
+  p.perintah({ jenis: 'menuju', titik: [{ x: 2, z: 0, y: 0.2 }, { x: 2, z: 1, y: 0.62, arah: 0 }] });
+  p.perbarui(1 / KECEPATAN_MENUJU); // half of leg one
+  assert.ok(Math.abs(p.y - 0.1) < 1e-9, `halfway up: ${p.y}`);
+  p.perbarui(10);
+  assert.equal(p.keadaan, 'bekerja');
+  assert.equal(p.y, 0.62, 'sits at the seat height, not on the ground');
+  p.perintah({ jenis: 'keliling' });
+  jalankan(p, 20, 30);
+  assert.equal(p.y, 0, 'strolling brings it back down to the ground');
+});

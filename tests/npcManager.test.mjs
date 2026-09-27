@@ -8,6 +8,7 @@
 
 import { test, before } from 'node:test';
 import assert from 'node:assert/strict';
+import { pasangKaitDunia, lepasKaitDunia } from '../src/party/kaitDunia.js';
 
 class Obj {
   constructor() {
@@ -27,6 +28,7 @@ before(async () => {
     Group: Obj,
     Mesh: class extends Obj {},
     SphereGeometry: class {},
+    CircleGeometry: class { rotateX() { return this; } },
     MeshStandardMaterial: class {},
     MeshBasicMaterial: class {},
   };
@@ -76,4 +78,40 @@ test('NPCs hidden in a Spot are not offered for talking', () => {
   assert.equal(m.checkProximity({ x: sari.x + 0.5, z: sari.z })?.id, 'sari');
   m.setHubVisible(false);
   assert.equal(m.checkProximity({ x: sari.x + 0.5, z: sari.z }), null);
+});
+
+test('NPCs cast no real shadows: one soft blob each, kept on the floor while the body bobs', () => {
+  const m = buat();
+  for (const n of m.npcs) {
+    const kaster = [];
+    const jalan = (o) => { if (o.castShadow) kaster.push(o); o.children.forEach(jalan); };
+    jalan(n.mesh);
+    assert.deepEqual(kaster, [], `${n.data.id} casts a shadow`);
+    assert.equal(n.mesh.children.filter((c) => c.name === 'bayangan_gumpal').length, 1);
+  }
+  const sari = m.get('sari');
+  for (let i = 0; i < 20; i++) m.update(1 / 60, 0.3 + i / 60, {});
+  assert.ok(Math.abs(sari.mesh.position.y + sari.bayangan.position.y - 0.015) < 1e-9, 'blob world height = floor');
+});
+
+test('at its status spot the NPC stands at the floor height and holds C\'s pose; walking uses B\'s bob', (t) => {
+  t.after(() => lepasKaitDunia());
+  const panggil = [];
+  pasangKaitDunia({ terapkanPose: (mesh, pose, detik) => { panggil.push([pose, +detik.toFixed(3)]); mesh.rotation.x = 0.2; return 0.05; } });
+  const m = buat();
+  const sari = m.get('sari');
+  m.setelPose('sari', 'bekerja');
+  m.perintah('sari', { jenis: 'menuju', titik: { x: sari.x + 0.1, y: 0.2, z: sari.z }, lalu: 'bekerja' });
+  m.update(1 / 60, 1, {}); // still walking
+  assert.equal(panggil.length, 0, 'no pose while walking');
+  for (let i = 1; i <= 30; i++) m.update(1 / 60, 1 + i / 60, {});
+  assert.equal(sari.perilaku.keadaan, 'bekerja');
+  assert.ok(panggil.length > 0 && panggil.every(([p]) => p === 'bekerja'));
+  assert.ok(panggil[0][1] === 0, 'the pose clock starts on arrival');
+  assert.ok(Math.abs(sari.mesh.position.y - 0.25) < 1e-9, `floor 0.2 + pose 0.05, got ${sari.mesh.position.y}`);
+  assert.equal(sari.mesh.rotation.x, 0.2);
+
+  m.setelPose('sari', null);
+  m.update(1 / 60, 3, {});
+  assert.notEqual(sari.mesh.rotation.x, 0.2, 'B takes the body back when the pose is cleared');
 });

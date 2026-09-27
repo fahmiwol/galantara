@@ -26,6 +26,8 @@ export class PerilakuNpc {
   constructor({ x, z, arah = 0, rng = Math.random }) {
     this.x = x;
     this.z = z;
+    /** Floor height under the NPC (a Markas terrace or seat is above the ground). */
+    this.y = 0;
     this.arah = arah;
     this.rng = rng;
     this.jangkar = { x, z };
@@ -43,7 +45,7 @@ export class PerilakuNpc {
 
   /**
    * @param {{jenis:'keliling', jangkar?:{x:number,z:number}}
-   *   | {jenis:'menuju', titik:{x:number,z:number,arah?:number}|Array<{x:number,z:number,arah?:number}>, lalu?:'bekerja'|'keliling'}
+   *   | {jenis:'menuju', titik:{x:number,z:number,y?:number,arah?:number}|Array<{x:number,z:number,y?:number,arah?:number}>, lalu?:'bekerja'|'keliling'}
    *   | {jenis:'bekerja'}
    *   | {jenis:'lapor'}} p
    */
@@ -52,7 +54,7 @@ export class PerilakuNpc {
     if (p.jenis === 'menuju') {
       const rute = (Array.isArray(p.titik) ? p.titik : [p.titik]).filter((t) => Number.isFinite(t?.x) && Number.isFinite(t?.z));
       if (!rute.length) return;
-      this._rute = rute.map((t) => ({ x: t.x, z: t.z }));
+      this._rute = rute.map((t) => ({ x: t.x, z: t.z, y: Number.isFinite(t.y) ? t.y : 0 }));
       this._arahAkhir = Number.isFinite(rute.at(-1).arah) ? rute.at(-1).arah : null;
       this._lalu = p.lalu ?? 'bekerja';
       this._tujuan = this._rute.shift();
@@ -91,8 +93,11 @@ export class PerilakuNpc {
     if (dx * dx + dz * dz > 1e-8) this.arah = Math.atan2(dx, dz);
   }
 
-  /** Move toward (tx,tz) at v m/s. Returns true on arrival; never overshoots. */
-  _langkah(tx, tz, v, dt) {
+  /**
+   * Move toward (tx,tz) at v m/s, easing the floor height toward ty along the way (a terrace is
+   * climbed over the leg, not popped onto at the end). Returns true on arrival; never overshoots.
+   */
+  _langkah(tx, tz, v, dt, ty = 0) {
     const dx = tx - this.x, dz = tz - this.z;
     const jarak = Math.hypot(dx, dz);
     const maju = v * dt;
@@ -101,10 +106,12 @@ export class PerilakuNpc {
       if (jarak > 1e-6) this.arah = Math.atan2(dx, dz);
       this.x = tx;
       this.z = tz;
+      this.y = ty;
       return true;
     }
     this.x += (dx / jarak) * maju;
     this.z += (dz / jarak) * maju;
+    this.y += (ty - this.y) * (maju / jarak);
     this.arah = Math.atan2(dx, dz);
     this.bergerak = maju > 0;
     return false;
@@ -131,7 +138,7 @@ export class PerilakuNpc {
     while (this._tujuan && sisa > 0) {
       const jarak = Math.hypot(this._tujuan.x - this.x, this._tujuan.z - this.z);
       const perlu = jarak / KECEPATAN_MENUJU;
-      if (this._langkah(this._tujuan.x, this._tujuan.z, KECEPATAN_MENUJU, sisa)) {
+      if (this._langkah(this._tujuan.x, this._tujuan.z, KECEPATAN_MENUJU, sisa, this._tujuan.y)) {
         sisa -= perlu;
         this._tujuan = this._rute.shift() ?? null;
       } else {
