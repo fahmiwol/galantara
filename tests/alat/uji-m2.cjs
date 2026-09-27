@@ -38,6 +38,8 @@ async function tungguStatus(page, spesies, status, ms = 120000) {
 
 async function hp(browser) {
   const context = await browser.newContext({ viewport: { width: 390, height: 844 }, isMobile: true, hasTouch: true, deviceScaleFactor: 1 });
+  // No Kantor server in this run: answer its address with a stub page, so the tab's URL can be read.
+  await context.route(/localhost:3200\//, (r) => r.fulfill({ status: 200, contentType: 'text/html', body: '<title>Kantor</title>' }));
   const page = await context.newPage();
   const galat = [];
   page.on('console', (m) => m.type() === 'error' && galat.push(m.text().slice(0, 200)));
@@ -83,7 +85,7 @@ async function hp(browser) {
   // Sari: a question without sources → the runtime stops before cari-web → Persetujuan sheet.
   const sariId = await page.evaluate(() => window._game.dunia.party.agenDariSpesies('sari').agen.instance_id);
   await page.evaluate((id) => window._game.dunia.bukaMisi(id), sariId);
-  await page.fill('#gw-pertanyaan', 'harga cabai rawit di Bogor minggu ini');
+  await page.fill('#gw-pertanyaan', 'Kapan dungeon muncul di Oola?');
   await tekan(page, true, 'Kirim Sari Kilat');
   await page.waitForFunction(() => window._game.dunia.sheet.nama === 'izin', null, { timeout: 60000 }).catch(() => {});
   const izin = await page.evaluate(() => window._game.dunia.sheet.nama);
@@ -101,7 +103,7 @@ async function hp(browser) {
   await foto(page, 'hp-teruskan');
   await tekan(page, true, 'Teruskan ke Budi');
   cek(/Dari hasil Sari Kilat/.test(await page.textContent('.gw-sheet')), 'form Budi menyebut asal hasil');
-  await page.fill('#gw-tujuan', 'rencana belanja warung dari temuan Sari');
+  await page.fill('#gw-tujuan', 'Siapkan kunjungan rombongan ke Oola');
   await page.fill('#gw-konteks', 'modal 2 juta, buka Senin');
   await foto(page, 'hp-misi-budi');
   await tekan(page, true, 'Kirim Budi');
@@ -112,6 +114,20 @@ async function hp(browser) {
   const teksBudi = await page.textContent('.gw-sheet');
   cek(/Rencana kerja:/.test(teksBudi) && /Rantai: Sari Kilat → Budi|Lanjutan dari 1 hasil/.test(teksBudi), 'hasil Budi: rencana kerja + rantai');
   await foto(page, 'hp-hasil-budi');
+
+  // Budi's approved steps → Maya's guide (chain of three).
+  await tekan(page, true, 'Setujui & simpan');
+  await page.waitForSelector('button:text-is("Teruskan ke Maya")', { timeout: 15000 });
+  await tekan(page, true, 'Teruskan ke Maya');
+  await page.fill('#gw-topik', 'Wisatawan dan pedagang batik di Oola');
+  await tekan(page, true, 'Kirim Maya');
+  await tungguStatus(page, 'maya', 'hasil_siap');
+  const mayaId = await page.evaluate(() => window._game.dunia.party.agenDariSpesies('maya').agen.instance_id);
+  await page.evaluate((id) => window._game.dunia.bukaHasil(id), mayaId);
+  await page.waitForFunction(() => window._game.dunia.sheet.nama === 'hasil');
+  const teksMaya = await page.textContent('.gw-sheet');
+  cek(/Panduan:/.test(teksMaya) && /Rantai: Sari Kilat → Budi → Maya/.test(teksMaya), 'hasil Maya: panduan + rantai 3');
+  await foto(page, 'hp-hasil-maya');
 
   // Buku Warga.
   await page.evaluate(() => window._game.dunia.bukaBukuWarga());

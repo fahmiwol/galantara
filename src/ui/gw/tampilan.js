@@ -521,9 +521,10 @@ export function tampilanHasil({ nama, misi, langkah = 'utama', galat = null, rek
     isiLaporan = kalimat.length ? h('div', { kelas: 'gw-ringkasan' }, kalimat) : null;
   }
 
-  const ditolak = Array.isArray(lap.ditolak) ? lap.ditolak.length : 0;
+  const ditolak = (Array.isArray(lap.ditolak) ? lap.ditolak.length : 0) + (Array.isArray(lap.bagian_dibuang) ? lap.bagian_dibuang.length : 0);
   const teksDitolak = !ditolak ? null
     : jenis === JENIS.PECAH ? `${ditolak} langkah dibuang karena tidak menyebut dasarnya.`
+      : jenis === JENIS.PANDUAN ? `${ditolak} bagian atau klaim dibuang karena rujukannya tidak ada di sumber.`
       : `${ditolak} klaim dibuang karena kutipannya tidak ada di sumber.`;
 
   const statusPil = putus === 'setujui' ? { label: 'Disetujui · tersimpan', glyph: '✓', jenis: 'info' }

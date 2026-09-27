@@ -113,7 +113,8 @@ export function periksaMasukanMisi(masukan = {}) {
 
 /** The mission's title line, whatever its kind. */
 export function judulMisi(misi) {
-  return misi?.pertanyaan ?? misi?.tujuan ?? misi?.topik ?? misi?.laporan?.pertanyaan ?? null;
+  const m = misi?.masukan ?? {};
+  return misi?.pertanyaan ?? misi?.tujuan ?? misi?.topik ?? m.pertanyaan ?? m.tujuan ?? m.topik ?? misi?.laporan?.pertanyaan ?? null;
 }
 
 export class MisiKlien {

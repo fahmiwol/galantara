@@ -49,6 +49,12 @@ export const KARTU = Object.freeze({
   RUJUKAN_BELUM_DISETUJUI: { pesan: 'Hasil yang dirujuk belum kamu setujui. Setujui dulu di Markas, atau lepas rujukannya.', tombol: [T('Buka Markas', 'bukaMarkas', true), T('Lepas rujukan', 'lepasRujukan')] },
   PERSETUJUAN_BELUM_ADA: { pesan: 'Persetujuan alat belum aktif di server ini (segera hadir). Misinya tetap menunggu; kamu juga bisa membatalkannya di Markas.', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
   TIDAK_MENUNGGU: { pesan: 'Misi ini sudah tidak menunggu izinmu (mungkin sudah diputuskan di Kantor).', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+  TUJUAN_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  KONTEKS_TERLALU_PANJANG: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  TOPIK_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  SUMBER_TIDAK_DIPAKAI: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  MISI_AKTIF_PENUH: { pesan: '{pesan}', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+  CARI_BELUM_SIAP: { pesan: '{pesan}', tombol: [T('Ubah misi', 'perbaikiIsian', true), T('Tutup', 'tutup')] },
   AGEN_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
   JULUKAN_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
 

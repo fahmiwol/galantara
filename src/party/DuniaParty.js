@@ -44,7 +44,8 @@ export function teksAntrean(misi) {
 export const HASIL_ADA = new Set(['selesai', 'selesai_tanpa_temuan']);
 
 /** The form fields to refill "Ubah misi" / "Beri misi lagi" with, whatever the kind. */
-export function isianUlang(misi) {
+export function isianUlang(misiAsli) {
+  const misi = { ...(misiAsli?.masukan ?? {}), ...(misiAsli ?? {}) };
   if (misi?.tujuan !== undefined) return { tujuan: misi.tujuan ?? '', konteks: misi.konteks ?? '' };
   if (misi?.topik !== undefined) return { topik: misi.topik ?? '', sumber: misi.sumber ?? [] };
   return { pertanyaan: misi?.pertanyaan ?? '', sumber: misi?.sumber ?? [] };
