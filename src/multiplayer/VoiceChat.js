@@ -7,6 +7,23 @@
 const VOICE_RADIUS = 8;   // unit Three.js — di luar ini tidak dengar
 const STUN = { urls: 'stun:stun.l.google.com:19302' };
 
+/**
+ * Siapa yang memulai panggilan ke seorang pemain. Hanya SATU sisi yang boleh
+ * memanggil, jadi kedua sisi harus membandingkan id yang SAMA: id publik
+ * masing-masing seperti yang dilihat pemain lain (ADR-0023), bukan socket.id
+ * sendiri melawan id publik lawan — perbandingan campuran itu membuat kadang
+ * dua-duanya memanggil (tabrakan offer) dan kadang tidak ada yang memanggil.
+ * Tamu tidak dipanggil: server menolak sinyal voice ke tamu.
+ *
+ * @param {string|null} idSaya
+ * @param {string} idLawan
+ * @param {{ guest?: boolean }} [lawan]
+ */
+export function harusMemanggil(idSaya, idLawan, lawan = {}) {
+  if (!idSaya || !idLawan || idSaya === idLawan || lawan.guest) return false;
+  return idSaya < idLawan;
+}
+
 export class VoiceChat {
   constructor() {
     this._socket  = null;
@@ -15,12 +32,19 @@ export class VoiceChat {
     this._enabled = false;
     this._myPos   = { x: 0, z: 0 };
     this._lastProx = 0;
+    /** @type {() => (string|null)} id publik kita (MultiplayerSocket.id) */
+    this._idSaya  = () => this._socket?.id ?? null;
   }
 
   // ── AKTIFKAN MIKROFON ────────────────────────────────
-  async enable(socket) {
+  /**
+   * @param {object} socket socket.io mentah (untuk sinyal rtc_*)
+   * @param {() => (string|null)} [idSaya] id publik kita; bawaan socket.id (server lama)
+   */
+  async enable(socket, idSaya) {
     if (this._enabled) return true;
     this._socket = socket;
+    if (typeof idSaya === 'function') this._idSaya = idSaya;
 
     try {
       this._stream = await navigator.mediaDevices.getUserMedia({ audio: true, video: false });
@@ -65,8 +89,8 @@ export class VoiceChat {
 
       if (dist < VOICE_RADIUS) {
         if (!this._peers[sid]) {
-          // Hanya satu sisi yang initiate (socket ID lebih kecil = caller)
-          if (this._socket.id < sid) this._callPeer(sid);
+          // Hanya satu sisi yang initiate (id publik lebih kecil = caller)
+          if (harusMemanggil(this._idSaya(), sid, p)) this._callPeer(sid);
         } else {
           // Sesuaikan volume berdasarkan jarak (linear falloff)
           const vol = 1 - dist / VOICE_RADIUS;

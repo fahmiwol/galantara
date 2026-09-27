@@ -1,7 +1,9 @@
 #!/usr/bin/env bash
 # ═══════════════════════════════════════════════════════
 # Deploy multiplayer Galantara ke /www/galantara-server di VPS-2 (trx-alt).
-# Paket hanya index.js, package.json, package-lock.json dari commit di origin.
+# Paket: index.js + modul lokalnya (penjaga.cjs, identitas.cjs), package.json,
+# package-lock.json dari commit di origin. Modul baru yang di-require index.js
+# wajib masuk ISI — dijaga tests/deployAssets.test.mjs.
 # Staging memasang dependensi dan menguji Socket.IO di port 39005 dahulu.
 #
 # ATURAN sakelar: stop galantara-mp, tukar direktori, bangunkan lewat URL
@@ -19,7 +21,7 @@
 set -euo pipefail
 MODE="${1:-}"
 SSH_ALIAS="${GALANTARA_SSH:-trx-alt}"
-ISI=(galantara-server/index.js galantara-server/package.json galantara-server/package-lock.json)
+ISI=(galantara-server/index.js galantara-server/penjaga.cjs galantara-server/identitas.cjs galantara-server/package.json galantara-server/package-lock.json)
 SHA=-; PAKET_REMOTE=-; PULIH=-; KERJA=
 SSH_OPSI=(-o BatchMode=yes -o ConnectTimeout=20)
 gagal() { printf '!! %s\n' "$*" >&2; exit 1; }
@@ -33,7 +35,7 @@ case "$MODE" in
       PULIH=${2#/www/}
       [[ "$PULIH" =~ ^galantara-server\.lama-[0-9]{8}-[0-9]{6}$ ]] || gagal 'Nama direktori backup tidak sah.'
     fi ;;
-  *) sed -n '2,19p' "$0"; exit 2 ;;
+  *) sed -n '2,20p' "$0"; exit 2 ;;
 esac
 
 if [ "$MODE" != pulihkan ]; then
