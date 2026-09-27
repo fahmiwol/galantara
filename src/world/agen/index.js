@@ -5,7 +5,8 @@
 // what makes it read as an AI agent of a given class:
 //
 //   pasangPenandaAgen(mesh)           ✦ foot ring, 1 draw call (or PenandaKerumunan: 1 for all)
-//   pasangKitKelas(mesh, kelas)       class kit v0 (head / back / hand), 1 draw call, shared material
+//   pasangKitKelas(mesh, kelas)       class kit v1 (head / back / hand + chest emblem), 1 draw call, shared material
+//   buatKitPendamping(scene, {maks})  ALL party companions in ≤ 3 draw calls (../pendamping/index.js)
 //   terapkanPose(mesh, pose, detik)   status body language; `pose` comes from tampilkanStatus3D()
 //   LapisanIkonStatus                 status layers 2–3 (28 px icon + edge arrow); normally used
 //                                     through ../markas/index.js pasangLapisanIkon()
@@ -19,7 +20,8 @@ export {
 } from './penanda.js';
 export { POSE, terapkanPose } from './pose.js';
 export {
-  pasangKitKelas, geometriKit, bahanKit, ukuranBenda, kunciKelas, KELAS, WARNA_KIT, RANGKA_NPC,
+  pasangKitKelas, geometriKit, bahanKit, ukuranBenda, kunciKelas, KELAS, ID_KELAS, WARNA_KIT, RANGKA_NPC,
+  bagianKit, bagianKitJauh, EMBLEM,
 } from './kit.js';
 export {
   LapisanIkonStatus, IKON_STATUS, PERLU_TINDAKAN, UKURAN_IKON_PX, MIN_PX_AGEN, TINGGI_AGEN, ANGKUR_Y, warnaIkon, panahTepi,
