@@ -112,6 +112,13 @@ test('Otak is display-only: no inputs, a link to the Kantor, honest health', () 
   assert.match(teksPohon(t), /tidak dikirim ke pihak lain/);
   const hidup = tampilanOtak({ nama: 'Sari', brain: OTAK, statusOtak: [{ provider: 'migancore', model: OTAK.model, hidup: true, dicek: '2026-09-26T15:03:00Z' }] }, {});
   assert.match(teksPohon(hidup), /● hidup · dicek 26 Sep/);
+  // RUNTIME_MODE=demo: the runtime reports only the SIMULASI brain, and every mission runs on
+  // it. The sheet must say so instead of promising the self-hosted brain (found by the M1 e2e).
+  const demo = tampilanOtak({ nama: 'Sari', brain: OTAK, statusOtak: [{ provider: 'simulasi', model: 'simulasi-v1', hidup: true, dicek: '2026-09-26T15:03:00Z', label: 'SIMULASI' }] }, {});
+  assert.match(teksPohon(demo), /SIMULASI/);
+  assert.match(teksPohon(demo), /mode demo/);
+  assert.doesNotMatch(teksPohon(demo), /tidak dikirim ke pihak lain/, 'no self-hosted promise while missions run on the simulation');
+  assert.doesNotMatch(teksPohon(hidup), /mode demo/);
 });
 
 test('Beri misi: question ≤ 300, three https fields, and no password field', () => {

@@ -231,10 +231,17 @@ export function tampilanOtak({ nama, brain, statusOtak = null }, aksi = {}) {
   const l = labelOtak(brain);
   const cek = (statusOtak ?? []).find((o) => o.provider === brain?.provider && (!o.model || !brain?.model || o.model === brain.model))
     ?? (statusOtak ?? []).find((o) => o.provider === brain?.provider) ?? null;
-  const kesehatan = statusOtak === null || !cek
-    ? 'status: belum ada data'
-    : `${cek.hidup ? '● hidup' : '○ tidak menjawab'}${formatWaktu(cek.dicek) ? ` · dicek ${formatWaktu(cek.dicek)}` : ''}`;
-  const jelas = l.jenis === 'sendiri'
+  // Runtime in RUNTIME_MODE=demo reports only the SIMULASI brain and runs every mission on it,
+  // whatever the loadout says. Say that, instead of promising the self-hosted brain.
+  const demo = !cek && l.jenis !== 'simulasi' && (statusOtak ?? []).some((o) => o.label === 'SIMULASI' || o.provider === 'simulasi');
+  const kesehatan = demo
+    ? 'status: mode demo'
+    : statusOtak === null || !cek
+      ? 'status: belum ada data'
+      : `${cek.hidup ? '● hidup' : '○ tidak menjawab'}${formatWaktu(cek.dicek) ? ` · dicek ${formatWaktu(cek.dicek)}` : ''}`;
+  const jelas = demo
+    ? `Server sedang mode demo: setiap misi dikerjakan otak SIMULASI (berlabel), bukan ${namaOtak(brain)}. Hasilnya bukan riset sungguhan dan tidak menambah pengalaman.`
+    : l.jenis === 'sendiri'
     ? 'Otak milik sendiri. Berjalan di server Mighan, tidak dikirim ke pihak lain.'
     : l.jenis === 'cloud'
       ? 'Otak cloud pihak lain (BYOK). Kuncinya disimpan di Kantor (mighan.com), tidak pernah di dunia. Biaya ditagih penyedia itu ke akunmu.'
@@ -248,8 +255,8 @@ export function tampilanOtak({ nama, brain, statusOtak = null }, aksi = {}) {
       brain?.model ? h('div', { kelas: 'gw-meta', teks: `Model: ${brain.model}` }) : null,
       h('p', { teks: jelas }),
       h('div', { kelas: 'gw-baris-lbl' },
-        labelOtakChip(brain),
-        l.jenis === 'sendiri' ? h('span', { kelas: 'gw-lbl gw-lbl-kosong', teks: 'tanpa kunci' }) : null,
+        demo ? h('span', { kelas: 'gw-lbl gw-lbl-simulasi', teks: 'SIMULASI' }) : labelOtakChip(brain),
+        l.jenis === 'sendiri' && !demo ? h('span', { kelas: 'gw-lbl gw-lbl-kosong', teks: 'tanpa kunci' }) : null,
         h('span', { kelas: 'gw-lbl gw-lbl-kosong', teks: kesehatan }),
       ),
     ),
