@@ -39,7 +39,12 @@ test('kemajuan hanya dihitung untuk tantangan yang sedang aktif', () => {
   assert.equal(dc.status().kemajuan, 1);
 });
 
-test('kunci unik mencegah hal yang sama dihitung dua kali', () => {
+test('kunci unik mencegah hal yang sama dihitung dua kali', (t) => {
+  // Needs a challenge with target >= 2: on days whose challenge has target 1 the second
+  // unique key cannot count, and the test used to go red on those calendar days only.
+  let hari = new Date(2026, 8, 10, 12, 0);
+  while (tantanganHariIni(hariIni(hari)).target < 2) hari = new Date(hari.getTime() + 86_400_000);
+  t.mock.timers.enable({ apis: ['Date'], now: hari });
   const dc = new DailyChallenge();
   const aktif = dc.status().tantangan.id;
 
