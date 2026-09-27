@@ -126,5 +126,6 @@ test('gulungan tidak memancarkan bayangan dan tidak hilang di tepi layar', () =>
   assert.equal(markas.gulungan.frustumCulled, false);
   for (let i = 0; i < 18; i++) M.tambahGulungan(`h${i}`);
   const u = ukurPohon(markas.root);
-  assert.ok(u.drawCall <= 12 && u.segitiga <= 1500, JSON.stringify(u));
+  // Markas budget M2 (tests/markas.test.mjs ANGGARAN_MARKAS): 12 DC / 2.000 triangles.
+  assert.ok(u.drawCall <= 12 && u.segitiga <= 2000, JSON.stringify(u));
 });

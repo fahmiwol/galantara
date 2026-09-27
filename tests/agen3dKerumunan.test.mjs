@@ -51,3 +51,15 @@ test('angka deterministik — tabel di LOG bisa diulang', () => {
   assert.deepEqual(K.ukurKerumunan(30, 'kerumunan'), K.ukurKerumunan(30, 'kerumunan'));
   assert.throws(() => K.ukurKerumunan(3, 'acak'), /cara tidak dikenal/);
 });
+
+test('kit pendamping instans: draw call tetap (≤ 3) untuk 4 sampai 70, tanpa kaster; LOD1 memangkas segitiga', () => {
+  for (const n of [4, 30, 70]) {
+    for (const lod of ['dekat', 'campur', 'jauh']) {
+      const r = K.ukurKitPendamping(n, lod);
+      assert.ok(r.drawCall <= 3, `N=${n} ${lod}: ${r.drawCall} DC`);
+      assert.equal(r.kaster, 0);
+      assert.ok(r.terlihat <= r.segitiga);
+    }
+    assert.ok(K.ukurKitPendamping(n, 'jauh').segitiga * 3 < K.ukurKitPendamping(n, 'dekat').segitiga, `N=${n}: LOD1 tidak memangkas`);
+  }
+});

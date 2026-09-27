@@ -152,13 +152,10 @@ test('perabot tidak berdiri di tempat agen: tabung badan agen (Ø0,76 × 1,23 m)
   }
 });
 
-test('rak arsip punya collider penghalang yang menutupinya, dan tidak menyentuh titik kerja', () => {
-  const rak = M.FISIKA_MARKAS.find((d) => d.nama === 'rak_arsip');
-  assert.ok(rak, 'rak arsip tanpa collider — pemain menembusnya');
+test('rak arsip tertutup collider balai (satu volume, ADR-0016), setinggi radio di atasnya', () => {
+  const balai = M.FISIKA_MARKAS.find((d) => d.nama === 'balai');
   const bb = kotakPerabot('rak_arsip', M.PERABOT.rak_arsip);
-  const r = kotakPerabot('radio', M.PERABOT.radio);
-  const [ux, uy, uz] = rak.ukuran; const [lx, ly, lz] = rak.letak;
-  assert.ok(lx - ux / 2 <= bb.min.x && lx + ux / 2 >= bb.max.x && lz - uz / 2 <= bb.min.z + 1e-9 && lz + uz / 2 >= bb.max.z - 1e-9, 'collider tidak menutupi rak');
+  const [ux, uy, uz] = balai.ukuran; const [lx, ly, lz] = balai.letak;
+  assert.ok(lx + ux / 2 >= bb.max.x - 1e-9 && lz - uz / 2 <= bb.min.z && lz + uz / 2 >= bb.max.z, 'collider balai tidak menutupi rak — pemain menembus rak');
   assert.ok(ly + uy / 2 >= M.PERABOT.radio.y + 0.15, 'collider lebih rendah dari radio di atas rak');
-  void r;
 });

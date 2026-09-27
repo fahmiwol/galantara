@@ -54,6 +54,8 @@ export const UNDAK = Object.freeze({ ukuran: [2.4, 0.10, 0.4], letak: [0.5, 0.05
 export const BALAI = Object.freeze({ lebar: 4.4, tinggi: 2.2, dalam: 3.0, x: 0.3, z: -0.7 });
 /** Front wall of the hall, local z. */
 export const Z_DINDING_DEPAN = BALAI.z + BALAI.dalam / 2; // 0,8
+/** Depth of the archive shelf against the east wall (the hall collider covers it). */
+export const RAK_TEBAL = 0.25;
 /** East (+X) side wall of the hall, local x. */
 export const X_DINDING_TIMUR = BALAI.x + BALAI.lebar / 2; // 2,5
 
@@ -121,7 +123,10 @@ export const FISIKA = Object.freeze([
   { bentuk: 'kotak', ukuran: [...ALAS.ukuran], letak: [...ALAS.letak], nama: 'alas' },
   { bentuk: 'kotak', ukuran: [...UNDAK.ukuran], letak: [...UNDAK.letak], nama: 'undak' },
   // The hall starts at the ground: the board, door and window touch it (< 0,1 m).
-  { bentuk: 'kotak', ukuran: [BALAI.lebar, 2.4, BALAI.dalam], letak: [BALAI.x, 1.2, BALAI.z], nama: 'balai' },
+  // Widened 0,25 m east to also cover the archive shelf that stands flush against the
+  // east wall (ADR-0016: close-set things become one volume; a separate shelf box
+  // against the hall box is a 0 m slot that only snags the capsule).
+  { bentuk: 'kotak', ukuran: [BALAI.lebar + RAK_TEBAL, 2.4, BALAI.dalam], letak: [BALAI.x + RAK_TEBAL / 2, 1.2, BALAI.z], nama: 'balai' },
   // Gap between the tower legs is 0,72 m < capsule 0,80: one volume.
   { bentuk: 'kotak', ukuran: [1.0, 3.5, 1.0], letak: [MENARA.x, 1.75, MENARA.z], nama: 'menara' },
   // Desks stand in pairs 0,2 m apart — a gap no 0,80 m capsule fits through, so each
@@ -140,9 +145,6 @@ export const FISIKA = Object.freeze([
     putarY: PAPAN_HASIL.rotasi, nama: 'papan_hasil',
   },
   { bentuk: 'kotak', ukuran: [BANGKU.panjang, 0.72, BANGKU.dalam], letak: [BANGKU.x, Y_ALAS + 0.36, BANGKU.z], nama: 'bangku' },
-  // Archive shelf (1,1 m + radio): a blocker against the east wall; 1,05 m of terrace
-  // stays free beside it.
-  { bentuk: 'kotak', ukuran: [0.25, 1.3, 0.5], letak: [X_DINDING_TIMUR + 0.125, Y_ALAS + 0.65, -0.25], nama: 'rak_arsip' },
   // Roof, canopy, flag and beacon are above head height (≥ 2,05 m > 1,30): none.
 ]);
 

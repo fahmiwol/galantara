@@ -154,7 +154,7 @@ test('Markas: setiap bagian menyatakan collider; penghalang ≥ 0,70 m, pijakan 
   assert.deepEqual(O.peringatan.filter((p) => p.includes('[fisika]')), []);
   const daftar = O.f._kelompok.get(KELOMPOK_OOLA).filter((e) => e.pemilik === 'markas_penjelajah');
   const nama = daftar.map((e) => e.deskriptor.nama).sort();
-  assert.deepEqual(nama, ['alas', 'balai', 'bangku', 'meja_kanan', 'meja_kiri', 'menara', 'papan_hasil', 'rak_arsip', 'undak']);
+  assert.deepEqual(nama, ['alas', 'balai', 'bangku', 'meja_kanan', 'meja_kiri', 'menara', 'papan_hasil', 'undak']);
   const alasAtas = M.Y_ALAS;
   for (const { deskriptor: d } of daftar) {
     const bawah = d.letak[1] - d.ukuran[1] / 2;
