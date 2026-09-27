@@ -35,6 +35,13 @@
       "type": "native",
       "method": "_buildDevHub",
       "pos": { "x": 8, "y": 0, "z": -2.5 }
+    },
+    {
+      "id": "markas_penjelajah",
+      "type": "native",
+      "method": "_buildMarkas",
+      "pos": { "x": -3.0, "y": 0, "z": -12.5 },
+      "rotationY": 0.227
     }
   ],
   "procedural_props": [

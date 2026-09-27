@@ -40,13 +40,12 @@ test('kemajuan hanya dihitung untuk tantangan yang sedang aktif', () => {
 });
 
 test('kunci unik mencegah hal yang sama dihitung dua kali', (t) => {
-  // Needs a challenge with target >= 2: on days whose challenge has target 1 the second
-  // unique key cannot count, and the test used to go red on those calendar days only.
-  let hari = new Date(2026, 8, 10, 12, 0);
-  while (tantanganHariIni(hariIni(hari)).target < 2) hari = new Date(hari.getTime() + 86_400_000);
-  t.mock.timers.enable({ apis: ['Date'], now: hari });
+  // Pin the clock to a day whose challenge needs >= 2 steps (2026-09-14 = jelajah_spot, target 3).
+  // On target-1 days the second count is capped at 1 and this test failed on 2 of every 5 days.
+  t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 8, 14, 12, 0) });
   const dc = new DailyChallenge();
   const aktif = dc.status().tantangan.id;
+  assert.equal(aktif, 'jelajah_spot');
 
   dc.catat(aktif, 1, 'spot:monas');
   dc.catat(aktif, 1, 'spot:monas');   // Spot yang sama, tidak boleh nambah
