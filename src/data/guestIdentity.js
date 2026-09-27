@@ -5,6 +5,11 @@
 const KEY_ID = 'galantara_guest_id';
 const KEY_NAME = 'galantara_guest_name';
 
+/**
+ * Id tamu yang bertahan di browser ini. BUKAN identitas multiplayer: server
+ * tidak mempercayai id dari klien dan memberi id publik sendiri per koneksi
+ * (ADR-0023). Siapa pun bisa menulis nilai apa saja ke localStorage.
+ */
 export function getOrCreateGuestId() {
   try {
     let id = localStorage.getItem(KEY_ID);

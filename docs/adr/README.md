@@ -39,6 +39,7 @@ bukan keputusan, cuma preferensi.
 | [0018](0018-deploy-manual-terverifikasi-revalidasi-cache-dan-gzip.md) | Deploy manual terverifikasi, no-cache + gzip | "Server belum ada" ternyata situs dipindah ke VPS-2 (7 Mei); deploy yang tak terlihat karena cache heuristik — *CI digantikan ADR-0020* |
 | [0019](0019-kontrak-collider-glb-lintas-produk.md) | Kontrak collider GLB `extras.rupa3d.collider` v1 | Proksi yang diukur Rupa3D harus jadi volume yang sama di Galantara |
 | [0020](0020-deploy-otomatis-lewat-kunci-berperintah-paksa.md) | Deploy otomatis lewat kunci ber-perintah-paksa | Push = live dengan backup dan verifikasi, tanpa kunci yang memberi shell |
+| [0023](0023-server-multiplayer-berotoritas-atas-identitas-tamu-dan-gerak.md) | Server multiplayer berotoritas | Klien bisa mengaku pemain lain, mengaku bukan tamu, dan teleport |
 
 ## Format
 

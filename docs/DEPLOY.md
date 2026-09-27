@@ -100,6 +100,26 @@ dan menunggu handshake publik sampai 300 detik.
   di-set di environment PM2 (opsional: `SUPABASE_URL`,
   `SUPABASE_SERVICE_ROLE_KEY`). Itu rahasia, jadi Fahmi yang memasangnya.
 
+### Verifikasi login (chat & voice) — ADR-0023
+
+Server memutuskan sendiri siapa warga dan siapa tamu dari token Supabase di
+jabat tangan. **Tanpa kunci verifikasi, semua koneksi tamu: chat dan voice
+mati.** Log PM2 saat menyala menulis salah satu:
+`🔐 Verifikasi login aktif (HS256|JWKS)` atau `🔓 Verifikasi login MATI`.
+
+Pasang **salah satu** (atau keduanya) di environment PM2 `galantara-mp`:
+
+| Variabel | Isi | Kapan |
+|---|---|---|
+| `SUPABASE_JWKS_URL` | `https://<ref>.supabase.co/auth/v1/.well-known/jwks.json` | Proyek memakai *JWT Signing Keys* (ES256/RS256). Bukan rahasia |
+| `SUPABASE_JWT_SECRET` | *Legacy JWT secret* dari Supabase → Project Settings → JWT | Proyek masih HS256. **Rahasia** — siapa pun yang memegangnya bisa membuat token warga |
+| `SUPABASE_URL` | `https://<ref>.supabase.co` | Disarankan: klaim `iss` token wajib `<SUPABASE_URL>/auth/v1` |
+
+Urutan: pasang variabel → deploy server (`jalankan`) → periksa baris 🔐 di
+`pm2 logs galantara-mp` → login di galantara.io, kirim chat dari dua browser.
+Rincian dan urutan dengan deploy klien:
+[PERBAIKAN-SERVER-2026-09-27](keamanan/PERBAIKAN-SERVER-2026-09-27.md).
+
 ## Memeriksa di live
 
 - `curl -sI https://galantara.io/src/main.js` → `Cache-Control: no-cache`; JS

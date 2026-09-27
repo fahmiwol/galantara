@@ -84,3 +84,28 @@ test('automatic deploy runs only from main, only for shipped paths, and skips gr
   assert.match(workflow, /::notice::Deploy dilewati/);
   assert.match(workflow, /StrictHostKeyChecking=yes/, 'host key must be pinned, not accepted blindly');
 });
+
+test('multiplayer deploy ships every local module the server requires', async () => {
+  // tools/deploy-mp-galantara.sh ships a whitelist (ISI) — not the folder. A new
+  // module required by index.js but missing from ISI would pass every local test
+  // and then crash the staging smoke test (or worse, a hand-copied server).
+  const script = active(await read('tools/deploy-mp-galantara.sh'));
+  const isi = script.match(/^ISI=\(([^)]*)\)/m);
+  assert.ok(isi, 'multiplayer tool must declare ISI=(...)');
+  const shipped = new Set(isi[1].trim().split(/\s+/));
+  for (const f of ['galantara-server/index.js', 'galantara-server/package.json', 'galantara-server/package-lock.json']) {
+    assert.ok(shipped.has(f), `ISI must ship ${f}`);
+  }
+  const seen = new Set();
+  const queue = ['galantara-server/index.js'];
+  while (queue.length) {
+    const file = queue.shift();
+    if (seen.has(file)) continue;
+    seen.add(file);
+    assert.ok(shipped.has(file), `ISI must ship ${file} (required by the server)`);
+    for (const m of (await read(file)).matchAll(/require\(\s*['"](\.{1,2}\/[^'"]+)['"]\s*\)/g)) {
+      queue.push(new URL(m[1], new URL(file, 'https://repo.invalid/')).pathname.slice(1));
+    }
+  }
+  assert.ok(seen.size >= 3, 'index.js plus its local modules');
+});

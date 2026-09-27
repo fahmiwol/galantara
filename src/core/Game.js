@@ -16,7 +16,7 @@ import { HUD       } from '../ui/HUD.js';
 import { LoginModal } from '../ui/LoginModal.js';
 import { Panels    } from '../ui/Panels.js';
 import { G_Auth    } from '../auth/auth.js';
-import { getOrCreateGuestId, getOrCreateGuestName } from '../data/guestIdentity.js';
+import { getOrCreateGuestName } from '../data/guestIdentity.js';
 import {
   ISLAND_R,
   OOLA_SOCKET_ROOM,
@@ -86,6 +86,8 @@ export class Game {
     // State
     this.user         = null;
     this._guestLabel  = null; // nama tampilan tamu (chat echo / filter)
+    /** Alasan tamu dari server yang sudah diumumkan lewat toast (sekali per alasan). */
+    this._alasanTamuDiumumkan = null;
     this._t           = 0; // elapsed seconds
     this._lastNPC     = null;
     /** Room Socket.io aktif (`oola` atau `spot:<id>`). */
@@ -653,7 +655,8 @@ export class Game {
 
     this.mp
       .on('players', (map) => {
-        rp.addAll(map, this.mp._socket?.id);
+        // Kunci kita = id publik dari server (ADR-0023), bukan socket.id.
+        rp.addAll(map, this.mp.id);
       })
       .on('player_join', (data) => {
         rp.add(data);
@@ -671,10 +674,16 @@ export class Game {
         const el = document.getElementById('oc');
         if (el) el.textContent = n;
       })
+      .on('welcome', (w) => this._terapkanStatusServer(w))
+      .on('rejected', (r) => {
+        // Penjelasan server untuk pesan yang tidak diteruskan (tamu, terlalu
+        // cepat, terlalu panjang). Toast memakai textContent.
+        if (typeof r?.message === 'string') this.toast.show(r.message, r.reason === 'banjir' ? 'r' : 'a');
+      })
       .on('chat', ({ socketId, name, msg }) => {
-        // Echo pesan sendiri: server mengirim balik ke seluruh room, termasuk
-        // pengirimnya. socketId memisahkannya dengan pasti — pencocokan nama
-        // salah begitu dua pemain memakai nama yang sama.
+        // Echo pesan sendiri: server lama mengirim balik ke seluruh room,
+        // termasuk pengirimnya (server ADR-0023 tidak). socketId memisahkannya
+        // dengan pasti — pencocokan nama salah begitu dua nama sama.
         if (socketId && socketId === this.mp.id) return;
 
         this.chat.addMessage({ name, msg });
@@ -710,6 +719,11 @@ export class Game {
       this.loginModal.open();
       return false;
     }
+    // Login di klien belum tentu lolos verifikasi server (ADR-0023).
+    if (this.mp.isGuest) {
+      this.toast.show(this.mp.guestMessage || 'Chat belum aktif untuk koneksi ini.', 'a');
+      return false;
+    }
     this.mp.emitChat(teks);
     // Tampilkan pesan sendiri langsung, tidak menunggu echo server.
     this.chat.addMessage({ name: G_Auth.getName(this.user) || 'Aku', msg: teks });
@@ -736,7 +750,6 @@ export class Game {
     this.mp.setSpawnSnapshot(pos.x, pos.z, this.avatar._facing);
     this.mp.connect({
       room:  this._socketRoom,
-      id:    getOrCreateGuestId(),
       name:  this._guestLabel,
       color: 0x9ca3af,
       guest: true,
@@ -748,6 +761,39 @@ export class Game {
       ci.placeholder = 'Login untuk ikut chat…';
     }
     document.getElementById('voice-btn')?.setAttribute('aria-disabled', 'true');
+  }
+
+  /**
+   * Server yang memutuskan kita tamu atau bukan (ADR-0023). Login di klien
+   * belum tentu lolos verifikasi server — mis. selama verifikasi belum
+   * dipasang di server, semua koneksi tamu. Tamu tanpa login sudah diatur
+   * _connectGuestMultiplayer.
+   */
+  _terapkanStatusServer(w) {
+    if (!this.user) return;
+    const ci = document.getElementById('chat-input');
+    const vb = document.getElementById('voice-btn');
+    if (w.guest) {
+      if (ci) {
+        ci.disabled = true;
+        ci.placeholder = 'Chat belum aktif untuk akun ini';
+      }
+      vb?.setAttribute('aria-disabled', 'true');
+      if (this.voice.enabled) {
+        this.voice.disable();
+        vb?.classList.remove('active');
+      }
+      // Sekali per alasan, bukan setiap warp.
+      if (w.reason !== this._alasanTamuDiumumkan) this.toast.show(w.message || 'Chat belum aktif.', 'a');
+      this._alasanTamuDiumumkan = w.reason;
+    } else {
+      if (ci) {
+        ci.disabled = false;
+        ci.placeholder = 'Tulis pesan...';
+      }
+      vb?.removeAttribute('aria-disabled');
+      this._alasanTamuDiumumkan = null;
+    }
   }
 
   // ── AUTH CALLBACKS ────────────────────────────────────
@@ -769,10 +815,11 @@ export class Game {
     this.mp.setSpawnSnapshot(pos.x, pos.z, this.avatar._facing);
     this.mp.connect({
       room:  this._socketRoom,
-      id:    user.id,
       name:  G_Auth.getName(user),
       color: 0x8b5cf6,
       guest: false,
+      // Identitas dibuktikan dengan token, bukan diklaim dengan id (ADR-0023).
+      ambilToken: () => G_Auth.getAccessToken(),
     });
 
     this.chat.setName(G_Auth.getName(user));
@@ -904,17 +951,16 @@ export class Game {
     if (this.user) {
       this.mp.connect({
         room:  this._socketRoom,
-        id:    this.user.id,
         name:  G_Auth.getName(this.user),
         color: 0x8b5cf6,
         guest: false,
+        ambilToken: () => G_Auth.getAccessToken(),
       });
     } else {
       this._guestLabel = getOrCreateGuestName();
       this.chat.setName(this._guestLabel);
       this.mp.connect({
         room:  this._socketRoom,
-        id:    getOrCreateGuestId(),
         name:  this._guestLabel,
         color: 0x9ca3af,
         guest: true,
@@ -1022,8 +1068,12 @@ export class Game {
             this.toast.show('Login dulu untuk voice chat 🎤', 'a');
             return;
           }
+          if (this.mp.isGuest) {
+            this.toast.show(this.mp.guestMessage || 'Voice belum aktif untuk koneksi ini.', 'a');
+            return;
+          }
           if (!this.mp._socket) { this.toast.show('Menyambungkan… coba lagi sebentar.', 'a'); return; }
-          const ok = await this.voice.enable(this.mp._socket);
+          const ok = await this.voice.enable(this.mp._socket, () => this.mp.id);
           if (ok) {
             document.getElementById('voice-btn')?.classList.add('active');
             this.toast.show('🎤 Voice on — ngomong kalau dekat player lain!', 'g');
