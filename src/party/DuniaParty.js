@@ -11,6 +11,7 @@ import { PartyKlien, normalisasiPemilik } from './PartyKlien.js';
 import { MisiKlien, STATUS_AKHIR, JENIS, SEMUA_JENIS, judulMisi } from './MisiKlien.js';
 import { kartuGalat } from './pesanGalat.js';
 import { JejakPemilik } from './JejakPemilik.js';
+import { BukuWarga, entriBuku } from './BukuWarga.js';
 import {
   ruteKerja, posisiMarkas, statusKe3D, statusTerlihat, gulungan, gulunganDibaca, buangGulungan, pasangPenanda, lepasAgen,
 } from './kaitDunia.js';
@@ -18,7 +19,7 @@ import { Sheet } from '../ui/Sheet.js';
 import { PenandaAgen } from '../ui/PenandaAgen.js';
 import { ArahkanSaya } from '../ui/ArahkanSaya.js';
 import {
-  tampilanRekrut, tampilanMarkas, tampilanOtak, tampilanMisi, tampilanHasil, tampilanMasuk, tampilanPersetujuan,
+  tampilanRekrut, tampilanMarkas, tampilanOtak, tampilanMisi, tampilanHasil, tampilanMasuk, tampilanPersetujuan, tampilanJulukan, tampilanBukuWarga,
   tampilanKartuGalat, durasi, namaTempat, namaOtak,
 } from '../ui/gw/tampilan.js';
 import { h, render } from '../ui/gw/pohon.js';
@@ -85,7 +86,9 @@ export class DuniaParty {
     this.doc = doc ?? globalThis.document;
     this.lokal = lokal ?? Boolean(globalThis.window?.G_LOCAL);
     this.api = api ?? buatApiRuntime();
-    this.party = new PartyKlien({ api: this.api, penyimpanan: penyimpanan === undefined ? penyimpananAman() : penyimpanan });
+    const simpanan = penyimpanan === undefined ? penyimpananAman() : penyimpanan;
+    this.party = new PartyKlien({ api: this.api, penyimpanan: simpanan });
+    this.buku = new BukuWarga({ penyimpanan: simpanan });
     this.misi = new MisiKlien({ api: this.api });
     this.sheet = new Sheet(this.doc);
     /** Agent NPCs in the world: species that can be hired (config.js `agen: true`). */
@@ -288,6 +291,36 @@ export class DuniaParty {
     });
   }
 
+  // ── Buku Warga ─────────────────────────────────────────
+
+  /** Hireable species: the runtime's list first, then world NPCs marked `agen` it does not know. */
+  _daftarSpesies() {
+    const ids = [...this.party.spesies.values()].filter((sp) => sp.bisa_direkrut !== false).map((sp) => sp.id);
+    for (const id of this.agenDunia) if (!ids.includes(id)) ids.push(id);
+    return ids.map((id) => this._spesies(id));
+  }
+
+  /** The player talked to an NPC (Game._tryTalkNPC). A hireable species gets its page in the book. */
+  temui(npcId) {
+    if (!this._daftarSpesies().some((sp) => sp.id === npcId)) return false;
+    const baru = this.buku.tandai(npcId);
+    if (baru) this.game.toast?.show(`📖 ${this._spesies(npcId).nama} tercatat di Buku Warga.`, 'g');
+    return baru;
+  }
+
+  bukaBukuWarga() {
+    const entri = entriBuku({
+      spesies: this._daftarSpesies(),
+      ditemui: (id) => this.buku.sudah(id),
+      status: (id) => (this.party.diParty(id) ? 'party' : this.party.agenDariSpesies(id) ? 'markas' : null),
+    });
+    this.sheet.buka('buku', tampilanBukuWarga({ entri }, {
+      ...this._aksiUmum(),
+      kembali: () => this.bukaMarkas(),
+      arahkan: (id) => (this.game.npcs?.get(id) ? (this.sheet.tutup(), this.arahkanKe(id)) : undefined),
+    }));
+  }
+
   // ── Dialog hooks (Panels.js) ───────────────────────────
 
   /** Dialog choice filter: `syarat` on a choice in config.js. */
@@ -401,7 +434,8 @@ export class DuniaParty {
         return { instance_id: id, id: sp.id, nama: sp.nama, julukan: c?.julukan, kelas: sp.kelas_kerja, status: null, brain: null, bisaMisi: false };
       });
     while (anggota.length < this.party.maks) anggota.push(null);
-    return { anggota, maks: this.party.maks, pratinjau: !this.party.masuk && Boolean(this.party.pratinjau), berikut: this._rekrutBerikut() };
+    const diMarkas = this.party.masuk ? this.party.diMarkas().map((a) => this._anggota(a)).filter(Boolean) : [];
+    return { anggota, maks: this.party.maks, pratinjau: !this.party.masuk && Boolean(this.party.pratinjau), berikut: this._rekrutBerikut(), diMarkas };
   }
 
   _aksiMarkas() {
@@ -411,6 +445,10 @@ export class DuniaParty {
       bukaHasil: (iid) => this.bukaHasil(iid),
       bukaOtak: (iid) => this.bukaOtak(iid),
       bukaIzin: (iid) => this.bukaIzin(iid),
+      bukaJulukan: this.party.masuk ? (iid) => this.bukaJulukan(iid) : null,
+      bawa: (iid) => this.bawa(iid),
+      bukaBuku: () => this.bukaBukuWarga(),
+      bukaKantor: () => this.bukaKantor?.(),
       keluarkan: (iid) => this.keluarkan(iid),
       batalMisi: (iid) => this.batalMisi(iid),
       arahkan: (id) => { this.sheet.tutup(); this.arahkanKe(id); },
@@ -788,6 +826,52 @@ export class DuniaParty {
       this.bukaMarkas();
     } catch (err) {
       this._kartuDiSheet('markas', kartuGalat(err));
+    }
+  }
+
+  /** From the Markas box into the party; it starts following at the next sync. */
+  async bawa(instanceId) {
+    const item = this.party.agenDariId(instanceId);
+    const nama = this._namaAgen(item);
+    this._ulang = () => this.bawa(instanceId);
+    try {
+      const r = await this.party.bawa(instanceId);
+      this.game.toast?.show(`${nama} ikut party lagi (${r.jumlah}/${this.party.maks}).`, 'g');
+      this.sheet.umumkan(`${nama} ikut party, ${r.jumlah} dari ${this.party.maks}.`);
+      this.bukaMarkas();
+    } catch (err) {
+      this._kartuDiSheet('markas', kartuGalat(err, { nama }));
+    }
+  }
+
+  bukaJulukan(instanceId, galat = null, isian = undefined) {
+    const item = this.party.agenDariId(instanceId);
+    if (!item) return this.bukaMarkas();
+    const spesies = this._spesies(item.agen.template?.id).nama;
+    const simpan = (nilai) => this.simpanJulukan(instanceId, nilai);
+    this.sheet.buka('julukan', tampilanJulukan({ nama: this._namaAgen(item), spesies, julukan: isian ?? item.agen.julukan ?? null, galat }, {
+      ...this._aksiUmum(),
+      kembali: () => this.bukaMarkas(),
+      simpan,
+      hapus: () => simpan(''),
+      kartu: (aksi, kartu) => {
+        if (aksi === 'perbaikiIsian' || aksi === 'hapusTeks') return this.bukaJulukan(instanceId, null, aksi === 'hapusTeks' ? '' : undefined);
+        return this.aksiKartu(aksi, kartu);
+      },
+    }), { fokus: !galat });
+    return undefined;
+  }
+
+  async simpanJulukan(instanceId, nilai) {
+    const item = this.party.agenDariId(instanceId);
+    const spesies = this._spesies(item?.agen.template?.id).nama;
+    try {
+      const baru = await this.party.setelJulukan(instanceId, nilai);
+      this.game.toast?.show(baru ? `${spesies} sekarang kamu panggil ${baru}.` : `Julukan ${spesies} dihapus.`, 'g');
+      this.bukaMarkas();
+    } catch (err) {
+      // A key-shaped nickname is not put back into the field.
+      this.bukaJulukan(instanceId, kartuGalat(err, { nama: spesies }), err.kode === 'KUNCI_DITEMPEL' ? '' : nilai);
     }
   }
 

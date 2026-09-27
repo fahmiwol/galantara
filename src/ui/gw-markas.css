@@ -37,6 +37,15 @@
 .gw-warga{display:flex;gap:var(--gw-s3);align-items:center;min-height:72px}
 .gw-isi>.gw-warga{background:#fff;border:1px solid var(--gw-garis);border-radius:var(--gw-r-kartu);padding:var(--gw-s3)}
 .gw-warga-teks{display:flex;flex-direction:column;gap:3px;min-width:0}
+.gw-potret-siluet{background:#3a2e22;color:var(--gw-kertas);border-color:#3a2e22}
+.gw-siluet .gw-nama{letter-spacing:.2em}
+.gw-baris-box{display:flex;gap:10px;align-items:center;padding:8px 0;border-top:1px solid var(--gw-garis)}
+.gw-baris-box .gw-potret{width:44px;height:44px;font-size:18px}
+.gw-baris-box .gw-baris-teks{margin-left:auto;flex-direction:column;align-items:flex-end}
+.gw-langkah{margin:6px 0 10px;padding-left:22px}.gw-langkah-item{margin:6px 0}
+.gw-bagian h3{margin:10px 0 2px}
+.gw-baris-rekan{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin:6px 0}
+.gw-rujukan{flex-wrap:wrap}
 .gw-potret{flex:none;width:56px;height:56px;border-radius:50%;display:grid;place-items:center;background:var(--gw-kertas-2);color:var(--gw-tinta);font:900 22px var(--gw-font);border:3px solid var(--st-siaga)}
 .gw-cincin-kerja{border-color:var(--st-kerja)}.gw-cincin-perlu{border-color:var(--st-perlu)}.gw-cincin-gagal{border-color:var(--st-gagal)}.gw-cincin-info{border-color:var(--st-info)}
 .gw-nama{font:900 16px/1.2 var(--gw-font);color:var(--gw-tinta)}

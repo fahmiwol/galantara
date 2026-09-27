@@ -11,12 +11,18 @@
 // ═══════════════════════════════════════════════════════
 
 import { validateParty, emptyParty, memberCount, MAX_SLOTS } from '../../vendor/party-contract/party.js';
+import { validateAgent } from '../../vendor/party-contract/agen.js';
 import { findSecrets, jenisOtak, ID } from '../../vendor/party-contract/umum.js';
 import { GalatRuntime, segmen } from './apiRuntime.js';
 
 export const KUNCI_CACHE = 'galantara_party_v2';
 /** Party the world creates when the player has none yet. The Kantor reads the same one. */
 export const ID_PARTY_BAWAAN = 'party-utama';
+/** Nickname length (packages/party-contract agen.js NICKNAME_MAX; validateAgent is the real check). */
+export const MAKS_JULUKAN = 24;
+const PESAN_KUNCI_JULUKAN = 'Julukan itu terlihat seperti kunci API. Pakai nama biasa; kunci disimpan di Kantor.';
+/** Anchored credential patterns miss a key in the middle of a phrase: check each word too. */
+const adaKunciDi = (teks) => findSecrets([teks, ...teks.split(/[\s"'`<>()[\]{},;|?&=#/]+/).filter(Boolean)]).length > 0;
 
 const galat = (kode, pesan, data = null) => new GalatRuntime({ kode, pesan, data });
 
@@ -194,6 +200,11 @@ export class PartyKlien {
     return MAX_SLOTS;
   }
 
+  /** Hired agents not in the party: the Markas box (design §6b M2). */
+  diMarkas() {
+    return this.roster.filter((r) => this._slotDari(r.agen.instance_id) < 0);
+  }
+
   /** Party slots resolved to roster items (null = "Slot kosong"). */
   anggota() {
     const slots = this.party?.slots ?? Array(MAX_SLOTS).fill(null);
@@ -256,6 +267,59 @@ export class PartyKlien {
       p.slots[kosong] = id;
     });
     return { agen: item.agen, baru: true, jumlah: this.jumlah() };
+  }
+
+  /** Bring an agent from the Markas box into the party (no second hire). */
+  async bawa(instanceId) {
+    this._pastikanMasuk();
+    if (!this.agenDariId(instanceId)) throw galat('AGEN_TIDAK_ADA', 'Agen ini tidak ada di Markas-mu lagi. Muat ulang dulu.');
+    if (this._slotDari(instanceId) >= 0) return { jumlah: this.jumlah() };
+    const penuh = () => galat('PARTY_PENUH', `Party sudah penuh (${MAX_SLOTS}/${MAX_SLOTS}). Keluarkan satu anggota dulu di Markas.`);
+    if (this.jumlah() >= MAX_SLOTS) throw penuh();
+    await this._simpanParty((p) => {
+      if (p.slots.includes(instanceId)) return;
+      const kosong = p.slots.indexOf(null);
+      if (kosong < 0) throw penuh();
+      p.slots[kosong] = instanceId;
+    });
+    return { jumlah: this.jumlah() };
+  }
+
+  /**
+   * Give an agent a nickname ('' removes it). Checked with the shared contract before sending; a
+   * key-shaped nickname is refused outright (it would end up in the preview cache and on screen).
+   * On a version conflict (the Kantor changed the agent) the roster is reloaded and it is tried once more.
+   */
+  async setelJulukan(instanceId, julukan) {
+    this._pastikanMasuk();
+    const bersih = typeof julukan === 'string' ? julukan.trim().replace(/\s+/g, ' ') : '';
+    if (bersih && adaKunciDi(bersih)) throw galat('KUNCI_DITEMPEL', PESAN_KUNCI_JULUKAN);
+    if (bersih.length > MAKS_JULUKAN) throw galat('JULUKAN_TIDAK_SAH', `Julukan maksimal ${MAKS_JULUKAN} huruf (sekarang ${bersih.length}).`);
+    const simpan = async (sisaUlang) => {
+      const item = this.agenDariId(instanceId);
+      if (!item) throw galat('AGEN_TIDAK_ADA', 'Agen ini tidak ada di Markas-mu lagi. Muat ulang dulu.');
+      const agen = structuredClone(item.agen);
+      if (bersih) agen.julukan = bersih;
+      else delete agen.julukan;
+      const vonis = validateAgent(agen);
+      if (!vonis.ok) throw galat('JULUKAN_TIDAK_SAH', vonis.errors[0]?.pesan ?? 'Julukan belum bisa disimpan.', { errors: vonis.errors });
+      try {
+        const r = await this.api.put(`/agen/${segmen('agen', instanceId)}`, { agen, versi: item.versi });
+        item.agen = agen;
+        item.versi = Number(r.versi ?? item.versi + 1);
+      } catch (err) {
+        if (err.kode === 'VERSI_BENTROK' && sisaUlang > 0) {
+          await this._muatRoster();
+          return simpan(sisaUlang - 1);
+        }
+        throw err;
+      }
+      return undefined;
+    };
+    await simpan(1);
+    this._simpanCache();
+    this._umumkan();
+    return bersih || null;
   }
 
   /** Take an agent out of the party. It stays hired (in the Markas roster). */

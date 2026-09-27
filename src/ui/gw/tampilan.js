@@ -11,7 +11,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { h } from './pohon.js';
-import { labelOtak } from '../../party/PartyKlien.js';
+import { labelOtak, MAKS_JULUKAN } from '../../party/PartyKlien.js';
 import { MAKS_PERTANYAAN, MAKS_SUMBER, MAKS_KONTEKS, JENIS, judulMisi } from '../../party/MisiKlien.js';
 
 // ── Words ─────────────────────────────────────────────
@@ -209,9 +209,10 @@ export function tampilanRekrut({ spesies, jumlah, maks, otak = null }, aksi = {}
  *            brain:any, bisaMisi:boolean, durasi?:string|null, sebab?:string|null}>,
  *   maks: number, pratinjau?: boolean,
  *   berikut?: {id:string, nama:string, tempat:string}|null,
+ *   diMarkas?: Array<{instance_id:string, id:string, nama:string, julukan?:string, kelas:string, status:string|null, pengalaman?:any}>,
  * }} d
  */
-export function tampilanMarkas({ anggota, maks, pratinjau = false, berikut = null }, aksi = {}) {
+export function tampilanMarkas({ anggota, maks, pratinjau = false, berikut = null, diMarkas = [] }, aksi = {}) {
   const isi = anggota.filter(Boolean);
   const kosong = maks - isi.length;
   const kartu = isi.map((a) => {
@@ -229,7 +230,7 @@ export function tampilanMarkas({ anggota, maks, pratinjau = false, berikut = nul
         potret(nama, st.jenis),
         h('div', { kelas: 'gw-warga-teks' },
           h('div', { kelas: 'gw-nama' }, nama, tagAi()),
-          h('div', { kelas: 'gw-peran', teks: a.kelas }),
+          h('div', { kelas: 'gw-peran', teks: a.julukan ? `${a.nama} · ${a.kelas}` : a.kelas }),
           pilStatus(st),
           h('div', { kelas: 'gw-otak' }, h('span', { teks: `Otak: ${namaOtak(a.brain)}` }), labelOtakChip(a.brain)),
           teksPengalaman(a.pengalaman) ? h('div', { kelas: 'gw-meta gw-xp', teks: teksPengalaman(a.pengalaman) }) : null,
@@ -238,6 +239,7 @@ export function tampilanMarkas({ anggota, maks, pratinjau = false, berikut = nul
       utama,
       h('div', { kelas: 'gw-baris-teks' },
         tombolTeks('Otak', () => aksi.bukaOtak?.(a.instance_id)),
+        aksi.bukaJulukan ? tombolTeks('Julukan', () => aksi.bukaJulukan(a.instance_id)) : null,
         ['bekerja', 'antre', 'menunggu_persetujuan'].includes(a.status) ? tombolTeks('Batalkan misi', () => aksi.batalMisi?.(a.instance_id)) : null,
         tombolTeks('Keluarkan', () => aksi.keluarkan?.(a.instance_id)),
       ),
@@ -245,6 +247,27 @@ export function tampilanMarkas({ anggota, maks, pratinjau = false, berikut = nul
   });
 
   const arahkan = berikut ? tombol2(`🧭 Arahkan saya ke ${berikut.nama}`, () => aksi.arahkan?.(berikut.id)) : null;
+  // The Markas box: hired, not carried. Bringing one along needs a free slot; nothing is hired twice.
+  const box = diMarkas.length
+    ? h('section', { kelas: 'gw-blok gw-box', attr: { 'aria-label': 'Di Markas, tidak dibawa' } },
+      h('div', { kelas: 'gw-label', teks: `DI MARKAS · TIDAK DIBAWA (${diMarkas.length})` }),
+      diMarkas.map((a) => {
+        const nama = a.julukan || a.nama;
+        const st = statusAgen(a.status);
+        return h('div', { kelas: 'gw-baris-box', attr: { 'aria-label': `${nama}, agen AI di Markas, ${st.label}` } },
+          potret(nama, st.jenis),
+          h('div', { kelas: 'gw-warga-teks' },
+            h('div', { kelas: 'gw-nama' }, nama, tagAi()),
+            h('div', { kelas: 'gw-peran', teks: a.julukan ? `${a.nama} · ${a.kelas}` : a.kelas }),
+            teksPengalaman(a.pengalaman) ? h('div', { kelas: 'gw-meta gw-xp', teks: teksPengalaman(a.pengalaman) }) : null),
+          h('div', { kelas: 'gw-baris-teks' },
+            kosong > 0 ? tombol2('Bawa', () => aksi.bawa?.(a.instance_id)) : h('small', { kelas: 'gw-meta', teks: 'Party penuh' }),
+            aksi.bukaJulukan ? tombolTeks('Julukan', () => aksi.bukaJulukan(a.instance_id)) : null));
+      }))
+    : null;
+  const kantor = aksi.bukaKantor
+    ? h('button', { kelas: 'gw-tautan', attr: { type: 'button' }, teks: 'Kunci API & tagihan: buka Kantor (mighan.com) ↗', on: klik(aksi.bukaKantor) })
+    : h('a', { kelas: 'gw-tautan', attr: { href: aksi.urlKantor, target: '_blank', rel: 'noopener noreferrer' }, teks: 'Kunci API & tagihan: buka Kantor (mighan.com) ↗' });
   return h('div', { kelas: 'gw-isi' },
     kepala(`Markas · Party ${isi.length}/${maks}`, { onTutup: aksi.tutup }),
     pratinjau ? h('p', { kelas: 'gw-meta', teks: 'Pratinjau dari kunjungan terakhir; sedang menyambung ke server.' }) : null,
@@ -262,7 +285,57 @@ export function tampilanMarkas({ anggota, maks, pratinjau = false, berikut = nul
           berikut ? `${kosong} slot kosong · ${berikut.nama} ada di ${berikut.tempat}` : `${kosong} slot kosong`) : null,
         kosong > 0 ? arahkan : null,
       ],
-    h('a', { kelas: 'gw-tautan', attr: { href: aksi.urlKantor, target: '_blank', rel: 'noopener noreferrer' }, teks: 'Kunci API & tagihan: buka Kantor (mighan.com) ↗' }),
+    box,
+    aksi.bukaBuku ? tombol2('📖 Buku Warga', aksi.bukaBuku) : null,
+    kantor,
+  );
+}
+
+/**
+ * Buku Warga: every hireable species; met ones by name, unmet ones as silhouettes (design §10 M2).
+ * Counts come from the list itself, never from a target the data does not have.
+ * @param {{entri: ReturnType<typeof import('../../party/BukuWarga.js').entriBuku>}} d
+ */
+export function tampilanBukuWarga({ entri }, aksi = {}) {
+  const kenal = entri.filter((e) => e.ditemui).length;
+  return h('div', { kelas: 'gw-isi' },
+    kepala('Buku Warga', { onTutup: aksi.tutup, onKembali: aksi.kembali }),
+    h('p', { kelas: 'gw-sub', teks: `Ditemui ${kenal} dari ${entri.length} warga yang bisa direkrut. Ngobrol dengan warga untuk mencatatnya.` }),
+    entri.map((e) => (e.ditemui
+      ? h('article', { kelas: 'gw-kartu gw-buku', attr: { 'aria-label': `${e.nama}, ${e.kelas}` } },
+        h('div', { kelas: 'gw-warga' },
+          potret(e.nama, e.status === 'party' ? 'kerja' : 'siaga'),
+          h('div', { kelas: 'gw-warga-teks' },
+            h('div', { kelas: 'gw-nama' }, e.nama, tagAi()),
+            h('div', { kelas: 'gw-peran', teks: e.kelas }),
+            h('div', { kelas: 'gw-meta', teks: [`Ditemui di ${namaTempat(e.tempat)}`, e.status === 'party' ? 'di party-mu' : e.status === 'markas' ? 'di Markas-mu' : 'bisa direkrut'].join(' · ') }))),
+        !e.status && aksi.arahkan ? tombolTeks(`Arahkan saya ke ${e.nama}`, () => aksi.arahkan(e.id)) : null)
+      : h('article', { kelas: 'gw-kartu gw-buku gw-siluet', attr: { 'aria-label': 'Warga yang belum ditemui' } },
+        h('div', { kelas: 'gw-warga' },
+          h('span', { kelas: 'gw-potret gw-potret-siluet', attr: { 'aria-hidden': 'true' }, teks: '?' }),
+          h('div', { kelas: 'gw-warga-teks' },
+            h('div', { kelas: 'gw-nama', teks: '???' }),
+            h('div', { kelas: 'gw-meta', teks: e.tempat ? `Belum ditemui · kabarnya ada di ${namaTempat(e.tempat)}` : 'Belum ditemui' })))))),
+  );
+}
+
+/**
+ * Julukan: the name this player gives their agent (1–24 characters). A text field, never a key field.
+ * @param {{nama:string, spesies:string, julukan?:string|null, galat?: any}} d
+ */
+export function tampilanJulukan({ nama, spesies, julukan = null, galat = null }, aksi = {}) {
+  return h('div', { kelas: 'gw-isi' },
+    kepala(`Julukan untuk ${spesies}`, { onTutup: aksi.tutup, onKembali: aksi.kembali }),
+    h('p', { kelas: 'gw-sub', teks: `Nama panggilan ${spesies}-mu. Terlihat di Markas, di plakat, dan di Kantor. Spesiesnya tetap ${spesies}.` }),
+    h('form', { kelas: 'gw-form', attr: { novalidate: true }, on: { submit: (e) => { e.preventDefault(); aksi.simpan?.(e.target?.elements?.julukan?.value ?? ''); } } },
+      h('label', { kelas: 'gw-label', attr: { for: 'gw-julukan' }, teks: 'Julukan' }),
+      h('input', { id: 'gw-julukan', kelas: 'gw-input', attr: { type: 'text', name: 'julukan', value: julukan ?? '', maxlength: MAKS_JULUKAN, placeholder: `mis. ${spesies} Kilat`, autocomplete: 'off', spellcheck: 'false' } }),
+      h('div', { kelas: 'gw-meta', teks: `1–${MAKS_JULUKAN} huruf.${julukan ? ` Sekarang: ${nama}.` : ''}` }),
+      galat ? tampilanKartuGalat(galat, aksi) : null,
+      h('button', { kelas: 'gw-cta', attr: { type: 'submit' }, teks: 'Simpan julukan' }),
+      julukan ? tombol2('Hapus julukan', aksi.hapus) : null,
+      tombolTeks('Batal', aksi.kembali ?? aksi.tutup),
+    ),
   );
 }
 

@@ -622,6 +622,7 @@ export class Game {
     this.harian.catat('sapa_warga', 1, `npc:${this._lastNPC?.id ?? 'x'}:${Date.now() >> 16}`);
     const npc = this._lastNPC;
     if (!npc) return;
+    this.dunia?.temui(npc.id); // a hireable species gets its page in the Buku Warga
     this.panels.openDialog(npc);
   }
 
@@ -1001,6 +1002,7 @@ export class Game {
       openProfile:    ()                => this.panels.openProfile(this.user),
       profilAtauMasuk: ()               => (this.user ? this.panels.openProfile(this.user) : this.loginModal.open()),
       openMarkas:     ()                => this.dunia?.bukaMarkas(),
+      openBukuWarga:  ()                => this.dunia?.bukaBukuWarga(),
       openPanel:      (id)              => this.panels.openPanel(id),
       closePanel:     (id)              => this.panels.closePanel(id),
       saveProfile:    ()                => {
