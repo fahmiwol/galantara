@@ -35,7 +35,10 @@ test('papan kosong: tidak ada gulungan dan tidak ada draw call untuknya', () => 
   assert.equal(jumlahTampil(), 0);
   assert.equal(markas.gulungan.visible, false);
   const u = ukurPohon(markas.root);
-  assert.equal(u.drawCall, 9, 'gulungan kosong masih memakan draw call');
+  markas.root.remove(markas.gulungan);
+  const tanpa = ukurPohon(markas.root);
+  markas.root.add(markas.gulungan);
+  assert.equal(u.drawCall, tanpa.drawCall, 'gulungan kosong masih memakan draw call');
 });
 
 test('satu hasil disetujui = satu gulungan; hasil yang sama dua kali tetap satu', () => {

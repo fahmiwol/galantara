@@ -54,6 +54,8 @@ export const UNDAK = Object.freeze({ ukuran: [2.4, 0.10, 0.4], letak: [0.5, 0.05
 export const BALAI = Object.freeze({ lebar: 4.4, tinggi: 2.2, dalam: 3.0, x: 0.3, z: -0.7 });
 /** Front wall of the hall, local z. */
 export const Z_DINDING_DEPAN = BALAI.z + BALAI.dalam / 2; // 0,8
+/** East (+X) side wall of the hall, local x. */
+export const X_DINDING_TIMUR = BALAI.x + BALAI.lebar / 2; // 2,5
 
 export const ATAP = Object.freeze({ lebar: 5.6, dalam: 4.2, naik: 1.45, puncak: 0.28, dasarY: Y_ALAS + 2.28 });
 /** Front edge of the roof overhang (teritis 0,6 m), local z. */
@@ -89,6 +91,29 @@ export const KAPASITAS_GULUNGAN = PAPAN_HASIL.kolom * PAPAN_HASIL.baris;
 
 export const BANGKU = Object.freeze({ x: 2.3, z: 3.6, panjang: 1.8, dalam: 0.45, tinggi: 0.42 });
 
+/**
+ * Office props (perabot.js), SPRINT-02 C butir 4. `y` = the surface the prop stands
+ * on; `arah` turns its +Z face. Chosen so nothing stands where an agent stands:
+ *  - cup + flask at the back-right corner of each desk, away from the lamp post
+ *    (back-left) and the sheet of paper (centre-right);
+ *  - typewriter on desk 2, turned to face the agent who types from behind (arah π);
+ *  - archive shelf against the hall's east (side) wall, facing out, with the radio on
+ *    top of it. Not on the front wall: there it narrowed the 1,2 m walkway behind
+ *    the desks to 0,95 m and the desk work points stopped being reachable on foot
+ *    (tests/markas.test.mjs BFS) — the players' path wins over the prop;
+ *  - calendar in the wall gap between the door and the right window;
+ *  - pandan mat under the "hasil siap" gathering points: the agents that report
+ *    stand ON it, lesehan — the mat is a floor decal (8 mm), not a collider.
+ */
+export const PERABOT = Object.freeze({
+  gelas_termos: Object.freeze(MEJA.x.map((x) => Object.freeze({ x: x + 0.3, y: Y_ALAS + MEJA.ukuran[1], z: MEJA.z - 0.16, arah: 0 }))),
+  mesin_ketik: Object.freeze({ x: MEJA.x[1] + 0.1, y: Y_ALAS + MEJA.ukuran[1], z: MEJA.z + 0.02, arah: Math.PI }),
+  rak_arsip: Object.freeze({ x: X_DINDING_TIMUR + 0.125, y: Y_ALAS, z: -0.25, arah: Math.PI / 2 }),
+  radio: Object.freeze({ x: X_DINDING_TIMUR + 0.14, y: Y_ALAS + 1.1, z: -0.3, arah: Math.PI / 2 + 0.12 }),
+  kalender: Object.freeze({ x: 1.05, y: Y_ALAS + 1.72, z: Z_DINDING_DEPAN + 0.006, arah: 0 }),
+  tikar_pandan: Object.freeze({ x: -1.0, y: Y_ALAS, z: 3.95, arah: 0 }),
+});
+
 // ── Colliders (ADR-0016: game volumes, FULL size, local `letak`) ──────
 // Anything the player must not climb is ≥ 0,70 m above the surface it stands
 // on; the terrace and step are ≤ 0,35 m on purpose (walkable).
@@ -115,6 +140,9 @@ export const FISIKA = Object.freeze([
     putarY: PAPAN_HASIL.rotasi, nama: 'papan_hasil',
   },
   { bentuk: 'kotak', ukuran: [BANGKU.panjang, 0.72, BANGKU.dalam], letak: [BANGKU.x, Y_ALAS + 0.36, BANGKU.z], nama: 'bangku' },
+  // Archive shelf (1,1 m + radio): a blocker against the east wall; 1,05 m of terrace
+  // stays free beside it.
+  { bentuk: 'kotak', ukuran: [0.25, 1.3, 0.5], letak: [X_DINDING_TIMUR + 0.125, Y_ALAS + 0.65, -0.25], nama: 'rak_arsip' },
   // Roof, canopy, flag and beacon are above head height (≥ 2,05 m > 1,30): none.
 ]);
 
