@@ -80,11 +80,11 @@ test('Markas: dibangun deterministik — dua kali bangun, geometri identik byte 
   assert.equal(sidikGeometri(a), sidikGeometri(b));
 });
 
-test('Markas: ≤ 12 draw call, ≤ 1.500 segitiga saat semua slot penuh, tanpa PointLight', () => {
+test('Markas: ≤ 10 draw call, ≤ 1.068 segitiga saat semua slot penuh, tanpa PointLight (SPRINT-01 C, laporan 3D §6.9)', () => {
   const markas = markasPenuh();
   const u = ukurPohon(markas.root);
-  assert.ok(u.drawCall <= 12, `${u.drawCall} draw call > 12`);
-  assert.ok(u.segitiga <= 1500, `${u.segitiga} segitiga > 1.500`);
+  assert.ok(u.drawCall <= 10, `${u.drawCall} draw call > 10`);
+  assert.ok(u.segitiga <= 1068, `${u.segitiga} segitiga > 1.068`);
   assert.equal(u.lampu, 0, 'Markas tidak boleh menambah PointLight (suar = emissive/unlit)');
   assert.ok(u.kaster <= 3, `${u.kaster} kaster bayangan > 3 (laporan 3D §6.3: landmark ≤ 3)`);
   assert.equal(markas.gulungan.count, M.KAPASITAS_GULUNGAN, 'uji anggaran harus mengukur kapasitas penuh');

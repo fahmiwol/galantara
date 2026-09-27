@@ -230,9 +230,14 @@ export class MarkasPenjelajah {
     root.add(this.lampuMeja);
 
     // Scrolls: capacity fixed at build; `count` follows the data.
+    // Scrolls: a hollow tube, open at both ends and drawn double-sided — a rolled
+    // sheet IS hollow, and dropping the two caps halves the cost (24 → 12 triangles,
+    // 18 full slots: 432 → 216), which keeps the Markas within 1.068 (SPRINT-01 C).
+    const bahanGulungan = galantaraMat(0xffffff, 0.9, 0.02);
+    bahanGulungan.side = THREE.DoubleSide;
     this.gulungan = new THREE.InstancedMesh(
-      new THREE.CylinderGeometry(0.042, 0.042, 0.22, 6),
-      galantaraMat(0xffffff, 0.9, 0.02),
+      new THREE.CylinderGeometry(0.042, 0.042, 0.22, 6, 1, true),
+      bahanGulungan,
       KAPASITAS_GULUNGAN,
     );
     for (let k = 0; k < KAPASITAS_GULUNGAN; k++) {
