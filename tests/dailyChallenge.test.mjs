@@ -39,9 +39,12 @@ test('kemajuan hanya dihitung untuk tantangan yang sedang aktif', () => {
   assert.equal(dc.status().kemajuan, 1);
 });
 
-test('kunci unik mencegah hal yang sama dihitung dua kali', () => {
+test('kunci unik mencegah hal yang sama dihitung dua kali', (t) => {
+  // Tanggal dipatok: tantangan hari lain bisa ber-target 1 dan selesai di langkah pertama.
+  t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 8, 14, 12, 0) });
   const dc = new DailyChallenge();
   const aktif = dc.status().tantangan.id;
+  assert.equal(aktif, 'jelajah_spot');
 
   dc.catat(aktif, 1, 'spot:monas');
   dc.catat(aktif, 1, 'spot:monas');   // Spot yang sama, tidak boleh nambah
