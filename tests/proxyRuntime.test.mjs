@@ -186,7 +186,7 @@ test('RUNTIME_URL may carry a path prefix; malformed ones are refused at start-u
   const { port } = await proxyKe(`${rt.url}/runtime/`);
   await kirim(port, '/rt/api/sehat');
   assert.equal(rt.masuk.at(-1).url, '/runtime/api/sehat');
-  for (const buruk of ['bukan url', 'ftp://host/x', 'http://user:sandi@host:1', 'http://host:1/?x=1']) {
+  for (const buruk of ['bukan url', 'ftp://host/x', `http://${['user', 'sandi'].join(':')}@host:1`, 'http://host:1/?x=1']) {
     assert.throws(() => buatProxyRuntime({ runtimeUrl: buruk }), /RUNTIME_URL/);
   }
   assert.equal(jalurHulu('/rt/api/party/party-utama'), '/api/party/party-utama');

@@ -46,8 +46,25 @@ const SECRET_INSIDE = new RegExp(
     .join('|'),
 );
 
+// Brains the operator runs on rented GPUs (ADR-0007): open-weight models deployed by us, paid by the
+// operator, key held on the server. No player vault_ref, and never labelled "milik sendiri":
+// the hardware is not ours. The old gateway called its RunPod Qwen2.5-7B "migancore" (F-274); here
+// it keeps its real name.
+export const OPERATOR_PROVIDERS = new Set(['runpod']);
+
 export function isSelfHosted(provider) {
   return SELF_HOSTED_PROVIDERS.has(String(provider).toLowerCase());
+}
+
+export function isOperatorGpu(provider) {
+  return OPERATOR_PROVIDERS.has(String(provider).toLowerCase());
+}
+
+/** @returns {'sendiri'|'gpu_sewaan'|'cloud'} how a brain is labelled everywhere a player sees it */
+export function jenisOtak(provider) {
+  if (isSelfHosted(provider)) return 'sendiri';
+  if (isOperatorGpu(provider)) return 'gpu_sewaan';
+  return 'cloud';
 }
 
 // Returns { tenant, id } for a well-formed reference, otherwise null.
@@ -117,7 +134,12 @@ function checkBrain(brain, at, owner, errors, warnings) {
   if (!nonEmptyString(brain.provider)) errors.push({ path: `${at}.provider`, pesan: 'Provider otak kosong.' });
   if (!nonEmptyString(brain.model)) errors.push({ path: `${at}.model`, pesan: 'Model otak kosong.' });
   if (brain.vault_ref !== undefined) checkVaultRef(brain.vault_ref, `${at}.vault_ref`, owner, errors);
-  if (nonEmptyString(brain.provider) && !isSelfHosted(brain.provider)) {
+  if (nonEmptyString(brain.provider) && isOperatorGpu(brain.provider)) {
+    if (brain.vault_ref !== undefined) {
+      errors.push({ path: `${at}.vault_ref`, pesan: `Otak "${brain.provider}" dijalankan pengelola; kuncinya di server, bukan di brankasmu. Hapus vault_ref.` });
+    }
+    warnings.push({ path: `${at}.provider`, pesan: `Otak "${brain.provider}" berjalan di GPU sewaan pengelola, bukan di mesin sendiri.` });
+  } else if (nonEmptyString(brain.provider) && !isSelfHosted(brain.provider)) {
     if (brain.vault_ref === undefined) {
       errors.push({
         path: `${at}.vault_ref`,

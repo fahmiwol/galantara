@@ -23,7 +23,9 @@ export class RemotePlayers {
   }
 
   // ── ADD PLAYER ────────────────────────────────────────
-  add({ socketId, name, color, x = 0, z = 0 }) {
+  // `socketId` adalah kunci opaque dari server (id publik, ADR-0023) — bukan
+  // socket.id siapa pun. `guest` = keputusan server; VoiceChat tidak memanggil tamu.
+  add({ socketId, name, color, x = 0, z = 0, guest = false }) {
     if (this._players[socketId]) return;
 
     const group = new THREE.Group();
@@ -67,6 +69,7 @@ export class RemotePlayers {
     // SEKARANG, saat dibuat, bukan disapu lagi nanti waktu dibuang.
     this._players[socketId] = {
       mesh: group, targetX: x, targetZ: z, facing: 0, nameEl, name,
+      guest: guest === true,
       bagian: [body, head, tag],
     };
   }
