@@ -153,21 +153,21 @@ test('Markas: setiap bagian menyatakan collider; penghalang ≥ 0,70 m, pijakan 
   }
   // Setiap meja mesh punya volume yang menutupinya.
   const meja = daftar.filter((e) => e.deskriptor.nama.startsWith('meja_'));
-  for (const x of titikLokal().meja) {
+  for (const x of M.MEJA.x) {
     assert.ok(meja.some(({ deskriptor: d }) => Math.abs(x - d.letak[0]) <= d.ukuran[0] / 2 - 0.49),
       `meja di x=${x} tanpa collider yang menutupinya`);
   }
 });
 
-function titikLokal() {
-  return { meja: [1, 2, 3, 4].map((i) => M.TITIK[`meja_${i}`].x) };
-}
-
 test('Markas: pemain tidak bisa naik ke atas meja, papan, atau bangku (kapsul Rapier sungguhan)', () => {
   const m = O.world.markas;
   const k = buatKarakter(O.f, { x: 0, y: 0, z: 2 });
   try {
-    for (const [nama, lx, lz] of [['meja_1', -2.55, 2.3], ['meja_3', 1.95, 2.3], ['papan', -1.9, 3.75], ['bangku', 2.55, 3.675]]) {
+    const benda = [
+      ['meja_1', M.MEJA.x[0], M.MEJA.z], ['meja_3', M.MEJA.x[2], M.MEJA.z],
+      ['papan', M.PAPAN_HASIL.x, M.PAPAN_HASIL.z], ['bangku', M.BANGKU.x, M.BANGKU.z],
+    ];
+    for (const [nama, lx, lz] of benda) {
       // Datang lurus dari depan (z lokal +1,6 m) menuju pusat benda.
       const awal = pusatDunia(m.letak, m.letak.rotasiY, [lx, 0, lz + 1.6]);
       const tuju = pusatDunia(m.letak, m.letak.rotasiY, [lx, 0, lz]);
@@ -368,6 +368,27 @@ test('Semua titik status Markas: yang berdiri bebas dan terjangkau; kursi punya 
   const jalur = cariJalur(O.f, SPAWN, berdiri);
   const tak = berdiri.filter((t) => !jalur.get(t.id)).map((t) => t.id);
   assert.deepEqual(tak, [], `tidak terjangkau dari titik muncul: ${tak.join(', ')}`);
+});
+
+test('Titik agen di slot berbeda tidak pernah saling tembus (badan NPC Ø0,76)', () => {
+  // Slot i memakai meja_i, hasil_i, tanya_i, gagal_i. Dua agen di slot berbeda
+  // bisa berada di status APA PUN bersamaan, jadi setiap pasangan lintas slot dijaga.
+  const keluarga = ['meja', 'hasil', 'tanya', 'gagal'];
+  const dekat = [];
+  for (let i = 1; i <= 4; i++) {
+    for (let j = i + 1; j <= 4; j++) {
+      for (const f of keluarga) {
+        for (const g of keluarga) {
+          for (const [a, b] of [[`${f}_${i}`, `${g}_${j}`], [`${g}_${i}`, `${f}_${j}`]]) {
+            const ta = M.TITIK[a]; const tb = M.TITIK[b];
+            const d = Math.hypot(ta.x - tb.x, ta.z - tb.z);
+            if (d < 0.9) dekat.push(`${a}~${b} ${d.toFixed(2)} m`);
+          }
+        }
+      }
+    }
+  }
+  assert.deepEqual([...new Set(dekat)], []);
 });
 
 test('Tidak ada titik kerja di bawah atap: kepala agen terlihat dari setiap kamera orbit di depan Markas', () => {

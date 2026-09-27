@@ -96,21 +96,26 @@ test('id hasil wajib, dengan pesan yang bisa ditindaklanjuti', () => {
 });
 
 test('setiap slot gulungan menempel di muka Papan Hasil, sejajar arah papan, tidak saling tumpuk', () => {
-  const papan = markas.mesh.papan;
-  papan.geometry.computeBoundingBox();
+  const P = M.PAPAN_HASIL;
+  const { pusat, normal, atas } = M.papanHasil();
+  const samping = new THREE.Vector3().crossVectors(atas, normal).normalize();
   const m = new THREE.Matrix4(); const p = new THREE.Vector3(); const q = new THREE.Quaternion(); const s = new THREE.Vector3();
-  const atas = new THREE.Vector3(0, Math.cos(0.32), -Math.sin(0.32));
   const titik = [];
   for (let k = 0; k < M.KAPASITAS_GULUNGAN; k++) {
     M.matriksSlotGulungan(k, m).decompose(p, q, s);
-    // Lokal Markas: papan berpusat di x −1,9, lebar 1,5; gulungan setinggi 0,26.
-    assert.ok(Math.abs(p.x - (-1.9)) <= 0.75 - 0.05, `slot ${k} keluar dari lebar papan (x ${p.x.toFixed(2)})`);
-    assert.ok(p.y > M.Y_ALAS + 0.52 && p.y < M.Y_ALAS + 0.52 + Math.cos(0.32), `slot ${k} di luar tinggi papan`);
+    const d = p.clone().sub(pusat);
+    const u = d.dot(samping); const v = d.dot(atas); const n = d.dot(normal);
+    // Gulungan setinggi 0,22 harus utuh di dalam muka papan, sedikit di depannya.
+    assert.ok(Math.abs(u) <= P.lebar / 2 - 0.05, `slot ${k} keluar dari lebar papan (u ${u.toFixed(2)})`);
+    assert.ok(Math.abs(v) + 0.11 <= P.tinggi / 2, `slot ${k} keluar dari tinggi papan (v ${v.toFixed(2)})`);
+    assert.ok(n > 0.02 && n < 0.1, `slot ${k} tidak menempel di muka papan (jarak ${n.toFixed(3)})`);
     const sumbu = new THREE.Vector3(0, 1, 0).applyQuaternion(q);
     assert.ok(sumbu.dot(atas) > 0.999, `slot ${k} tidak sejajar papan`);
-    for (const t of titik) assert.ok(p.distanceTo(t) >= 0.2, `slot ${k} menumpuk slot lain`);
+    for (const t of titik) assert.ok(p.distanceTo(t) >= 0.18, `slot ${k} menumpuk slot lain`);
     titik.push(p.clone());
   }
+  // Muka papan menghadap ke depan-kanan (arah kamera orbit yang paling sering), bukan ke tanah atau ke dinding.
+  assert.ok(normal.z > 0.5 && normal.x > 0.5 && normal.y > 0.1, `normal papan ${normal.toArray().map((x) => x.toFixed(2))}`);
 });
 
 test('gulungan tidak memancarkan bayangan dan tidak hilang di tepi layar', () => {

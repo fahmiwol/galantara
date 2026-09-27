@@ -18,12 +18,13 @@ import { MarkasPenjelajah, titikKeDunia } from './MarkasPenjelajah.js';
 import { KeadaanMarkas } from './keadaan.js';
 import { LETAK_MARKAS, TITIK, MEJA } from './spek.js';
 
-export { MarkasPenjelajah, WARNA_GULUNGAN, rakitStatis, matriksSlotGulungan } from './MarkasPenjelajah.js';
+export { MarkasPenjelajah, WARNA_GULUNGAN, rakitStatis, matriksSlotGulungan, papanHasil } from './MarkasPenjelajah.js';
 export {
   KeadaanMarkas, STATUS_KERJA, WARNA_STATUS, WARNA_UNTUK_STATUS, TAMPILAN_STATUS, PRIORITAS_SUAR,
 } from './keadaan.js';
 export {
   LETAK_MARKAS, KAPASITAS_GULUNGAN, TITIK, FISIKA as FISIKA_MARKAS, Y_ALAS, BAHAN as BAHAN_MARKAS,
+  MEJA, PAPAN_HASIL, BANGKU, UNDAK, ALAS,
 } from './spek.js';
 
 /** Shared state for the viewer's party (one player per client). */

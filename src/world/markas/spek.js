@@ -12,9 +12,12 @@
 //     Measured on paper first: from the default camera (elevation ≈ 50°) a lamp
 //     on the floor is hidden by the 1,6 m tower roof, and the gap between railing
 //     (3,93 m) and roof (4,05 m) is 12 cm. Up top it is also the wayfinding mark.
-//  3. The Papan Hasil is free-standing and slanted, in front of the hall — a board
-//     on the front wall sits under a 0,6 m eave and its upper half disappears from
-//     cameras above ≈ 50°.
+//  3. The Papan Hasil is free-standing, slanted, at the front-LEFT corner, turned 45°
+//     to face the front-right — where the orbit camera usually is (the Markas faces
+//     the island centre, the default camera looks from the south-east). A board on
+//     the front wall sits under a 0,6 m eave and loses its upper half from cameras
+//     above ≈ 50°; a board square in front of the desks hid the agent at desk 1
+//     from frontal cameras (seen in the first Chromium render, 26 Sep).
 //  4. The terrace is 0,4 m deeper at the front (6,6 → 7,0) to fit desks, board and
 //     bench with walkways the 0,80 m capsule can use. Clearance to every other Oola
 //     collider and NPC patrol is checked in tests/markas.test.mjs, not assumed.
@@ -46,7 +49,7 @@ export const BAHAN = Object.freeze({
 
 // ── Parts (local frame) ──────────────────────────────────────────────
 export const ALAS = Object.freeze({ ukuran: [7.0, Y_ALAS, 7.0], letak: [0.3, Y_ALAS / 2, 1.1] });
-export const UNDAK = Object.freeze({ ukuran: [2.0, 0.10, 0.4], letak: [0.3, 0.05, 4.8] });
+export const UNDAK = Object.freeze({ ukuran: [2.4, 0.10, 0.4], letak: [0.5, 0.05, 4.8] });
 
 export const BALAI = Object.freeze({ lebar: 4.4, tinggi: 2.2, dalam: 3.0, x: 0.3, z: -0.7 });
 /** Front wall of the hall, local z. */
@@ -62,22 +65,29 @@ export const PUNCAK_MENARA = Y_ALAS + 3.85 + 0.7; // apex of the tower roof, 4,7
 /** Status beacon: an 8-sided lantern on the tower apex, emissive only (no PointLight, ADR-0008). */
 export const SUAR = Object.freeze({ jari: 0.21, tinggi: 0.38, sisi: 8, y: PUNCAK_MENARA + 0.19 });
 
-/** Four work desks — one per party slot. Top 0,62 m above the terrace. */
+/**
+ * Four work desks — one per party slot. Top 0,62 m above the terrace. Pairs sit
+ * symmetrically about the door (x 0,3) with a 1,2 m walkway between them.
+ */
 export const MEJA = Object.freeze({
   ukuran: [1.0, 0.62, 0.6],
   z: 2.3,
-  x: Object.freeze([-2.55, -1.35, 1.95, 3.15]),
+  x: Object.freeze([-1.9, -0.8, 1.4, 2.5]),
 });
 
-/** Free-standing results board, slanted back so the orbit camera sees its face. */
+/**
+ * Free-standing results board. `rotasi` turns its face from +Z towards the
+ * front-right (+X +Z); `miring` leans the board back so an elevated camera sees
+ * its face; `bawah` = height of its lower edge above the terrace.
+ */
 export const PAPAN_HASIL = Object.freeze({
-  x: -1.9, z: 3.75, lebar: 1.5, tinggi: 1.0, bawah: 0.52, miring: 0.32,
+  x: -2.55, z: 3.7, rotasi: Math.PI / 4, lebar: 1.3, tinggi: 0.9, bawah: 0.45, miring: 0.3,
   /** Scroll slots: 6 columns × 3 rows = the capacity of the InstancedMesh. */
   kolom: 6, baris: 3,
 });
 export const KAPASITAS_GULUNGAN = PAPAN_HASIL.kolom * PAPAN_HASIL.baris;
 
-export const BANGKU = Object.freeze({ x: 2.55, z: 3.675, panjang: 1.8, dalam: 0.45, tinggi: 0.42 });
+export const BANGKU = Object.freeze({ x: 2.3, z: 3.6, panjang: 1.8, dalam: 0.45, tinggi: 0.42 });
 
 // ── Colliders (ADR-0016: game volumes, FULL size, local `letak`) ──────
 // Anything the player must not climb is ≥ 0,70 m above the surface it stands
@@ -100,7 +110,10 @@ export const FISIKA = Object.freeze([
       letak: [(kiri + kanan) / 2, Y_ALAS + 0.36, MEJA.z], nama: i === 0 ? 'meja_kiri' : 'meja_kanan',
     };
   }),
-  { bentuk: 'kotak', ukuran: [PAPAN_HASIL.lebar, 1.4, 0.35], letak: [PAPAN_HASIL.x, Y_ALAS + 0.7, PAPAN_HASIL.z], nama: 'papan_hasil' },
+  {
+    bentuk: 'kotak', ukuran: [PAPAN_HASIL.lebar + 0.14, 1.4, 0.4], letak: [PAPAN_HASIL.x, Y_ALAS + 0.7, PAPAN_HASIL.z],
+    putarY: PAPAN_HASIL.rotasi, nama: 'papan_hasil',
+  },
   { bentuk: 'kotak', ukuran: [BANGKU.panjang, 0.72, BANGKU.dalam], letak: [BANGKU.x, Y_ALAS + 0.36, BANGKU.z], nama: 'bangku' },
   // Roof, canopy, flag and beacon are above head height (≥ 2,05 m > 1,30): none.
 ]);
@@ -116,26 +129,26 @@ export const TITIK = Object.freeze({
   meja_2: { x: MEJA.x[1], z: 1.52, lantai: 'alas', arah: DEPAN },
   meja_3: { x: MEJA.x[2], z: 1.52, lantai: 'alas', arah: DEPAN },
   meja_4: { x: MEJA.x[3], z: 1.52, lantai: 'alas', arah: DEPAN },
-  // Result ready: at the Papan Hasil, facing the plaza.
-  hasil_1: { x: -0.55, z: 3.6, lantai: 'alas', arah: DEPAN },
-  hasil_2: { x: -0.55, z: 4.3, lantai: 'alas', arah: DEPAN },
-  hasil_3: { x: -1.9, z: 4.36, lantai: 'alas', arah: DEPAN },
-  hasil_4: { x: -2.95, z: 4.3, lantai: 'alas', arah: DEPAN },
+  // Result ready: gathered around the Papan Hasil, facing the plaza.
+  hasil_1: { x: -1.75, z: 4.3, lantai: 'alas', arah: DEPAN },
+  hasil_2: { x: -1.2, z: 3.55, lantai: 'alas', arah: DEPAN },
+  hasil_3: { x: -0.75, z: 4.35, lantai: 'alas', arah: DEPAN },
+  hasil_4: { x: -0.25, z: 3.55, lantai: 'alas', arah: DEPAN },
   // Brain waiting: out in front, on the ground, facing the plaza (needs the player).
   tanya_1: { x: -0.75, z: 5.75, lantai: 'tanah', arah: DEPAN },
   tanya_2: { x: 1.35, z: 5.75, lantai: 'tanah', arah: DEPAN },
   tanya_3: { x: -1.75, z: 5.75, lantai: 'tanah', arah: DEPAN },
   tanya_4: { x: 2.35, z: 5.75, lantai: 'tanah', arah: DEPAN },
-  // Failed: on the bench, then on the step.
+  // Failed: on the bench, then on the right half of the step.
   gagal_1: { x: BANGKU.x - 0.45, z: BANGKU.z, lantai: 'kursi', arah: DEPAN, duduk: true, dekat: 'bangku_depan_1' },
   gagal_2: { x: BANGKU.x + 0.45, z: BANGKU.z, lantai: 'kursi', arah: DEPAN, duduk: true, dekat: 'bangku_depan_2' },
-  gagal_3: { x: -0.15, z: 4.8, lantai: 'undak', arah: DEPAN, duduk: true, dekat: 'undak_depan_1' },
-  gagal_4: { x: 0.75, z: 4.8, lantai: 'undak', arah: DEPAN, duduk: true, dekat: 'undak_depan_2' },
+  gagal_3: { x: 0.35, z: 4.8, lantai: 'undak', arah: DEPAN, duduk: true, dekat: 'undak_depan_1' },
+  gagal_4: { x: 1.25, z: 4.8, lantai: 'undak', arah: DEPAN, duduk: true, dekat: 'undak_depan_2' },
   // Approach points for the seats (free, reachable).
   bangku_depan_1: { x: BANGKU.x - 0.45, z: 4.3, lantai: 'alas', arah: DEPAN },
   bangku_depan_2: { x: BANGKU.x + 0.45, z: 4.3, lantai: 'alas', arah: DEPAN },
-  undak_depan_1: { x: -0.15, z: 5.6, lantai: 'tanah', arah: DEPAN },
-  undak_depan_2: { x: 0.75, z: 5.6, lantai: 'tanah', arah: DEPAN },
+  undak_depan_1: { x: 0.35, z: 5.6, lantai: 'tanah', arah: DEPAN },
+  undak_depan_2: { x: 1.25, z: 5.6, lantai: 'tanah', arah: DEPAN },
 });
 
 /** Height of each floor kind, local y. */

@@ -66,9 +66,12 @@ test('hasil_siap → berdiri di Papan Hasil menghadap pelataran', () => {
   const r = M.tampilkanStatus3D('sari', 'hasil_siap');
   assert.equal(r.pose, 'lapor');
   const l = keLokal(r.titik);
-  const papan = M.TITIK.hasil_1; // Papan Hasil stands at local (−1,9; 3,75)
-  assert.ok(Math.hypot(l.x - (-1.9), l.z - 3.75) <= 1.8, `terlalu jauh dari Papan Hasil: ${JSON.stringify(l)}`);
-  assert.ok(Math.abs(l.x - papan.x) < 1e-9 && Math.abs(l.z - papan.z) < 1e-9);
+  const P = M.PAPAN_HASIL;
+  for (let i = 1; i <= 4; i++) {
+    const t = M.TITIK[`hasil_${i}`];
+    assert.ok(Math.hypot(t.x - P.x, t.z - P.z) <= 2.5, `hasil_${i} terlalu jauh dari Papan Hasil`);
+  }
+  assert.ok(Math.abs(l.x - M.TITIK.hasil_1.x) < 1e-9 && Math.abs(l.z - M.TITIK.hasil_1.z) < 1e-9);
   assert.ok(Math.abs(r.titik.arah - markas.letak.rotasiY) < 1e-9, 'tidak menghadap pelataran');
 });
 
@@ -80,10 +83,10 @@ test('gagal → duduk di bangku (dua pertama), lalu di undak; tiap kursi punya t
     assert.equal(r.titik.duduk, true);
     assert.ok(r.titik.dekat && Number.isFinite(r.titik.dekat.x), 'kursi tanpa titik dekat (dunia)');
   });
+  const B = M.BANGKU;
   for (const r of hasil.slice(0, 2)) {
     const l = keLokal(r.titik);
-    // Bangku: pusat (2,55; 3,675), panjang 1,8, dalam 0,45 (spek.js).
-    assert.ok(Math.abs(l.x - 2.55) <= 0.9 && Math.abs(l.z - 3.675) <= 0.225, `bukan di bangku: ${JSON.stringify(l)}`);
+    assert.ok(Math.abs(l.x - B.x) <= B.panjang / 2 && Math.abs(l.z - B.z) <= B.dalam / 2, `bukan di bangku: ${JSON.stringify(l)}`);
     assert.ok(Math.abs(r.titik.y - (M.Y_ALAS + 0.42)) < 1e-9, 'tidak setinggi dudukan bangku');
   }
   // Empat agen gagal = empat tempat duduk berbeda.

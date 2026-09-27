@@ -63,10 +63,12 @@ export function rakitStatis() {
   r.tambah('emas', kotak([0.08, 0.1, ATAP.dalam + 0.1], [BX + ATAP.lebar / 2, ATAP.dasarY, BZ]));
   r.tambah('emas', kotak([0.08, 0.1, ATAP.dalam + 0.1], [BX - ATAP.lebar / 2, ATAP.dasarY, BZ]));
 
-  // ── Door canopy (sengkuap, ADR-0009): 2,30 → 2,05 m over 0,9 m, door only ──
-  const sudut = Math.atan2(0.25, 0.9);
-  r.tambah('atap', kotak([1.8, 0.08, Math.hypot(0.9, 0.25)], [BX, 2.175, zDinding + 0.45], [sudut, 0, 0]));
-  for (const x of [BX - 0.75, BX + 0.75]) r.tambah('kayu', kotak([0.05, 0.28, 0.05], [x, 2.0, zDinding + 0.75]));
+  // ── Door canopy (sengkuap, ADR-0009): 2,30 → 2,10 m over 0,7 m, over the door
+  //    only. Prototype was 1,8 × 0,9: that size hides the agents at the desks beside
+  //    the door from steep side cameras (tests/markas.test.mjs "di bawah atap"). ──
+  const sudut = Math.atan2(0.2, 0.7);
+  r.tambah('atap', kotak([1.4, 0.08, Math.hypot(0.7, 0.2)], [BX, 2.2, zDinding + 0.35], [sudut, 0, 0]));
+  for (const x of [BX - 0.55, BX + 0.55]) r.tambah('kayu', kotak([0.05, 0.26, 0.05], [x, 2.03, zDinding + 0.58]));
 
   // ── Watchtower (asymmetric silhouette) ─────────────
   const { x: MX, z: MZ, tiang, setengah: s } = MENARA;
@@ -92,16 +94,19 @@ export function rakitStatis() {
     r.tambah('kayu', kotak([0.03, 0.2, 0.03], [x - 0.34, Y0 + mh + 0.1, MEJA.z - 0.14]));
   }
 
-  // ── Papan Hasil: slanted board on two legs, framed ─
+  // ── Papan Hasil: slanted board on two legs, framed — built in the board's own
+  //    frame (face = +Z), then turned and placed as one ─
   const P = PAPAN_HASIL;
-  const pusat = pusatPapan();
-  r.tambah('papan', kotak([P.lebar, P.tinggi, 0.04], pusat, [-P.miring, 0, 0]));
-  const atas = new THREE.Vector3(0, Math.cos(P.miring), -Math.sin(P.miring));
+  const kePapan = (geo) => bakeGeometri(geo, { letak: [P.x, 0, P.z], putar: [0, P.rotasi, 0] });
+  const pusat = pusatPapanLokal();
+  r.tambah('papan', kePapan(kotak([P.lebar, P.tinggi, 0.04], pusat, [-P.miring, 0, 0])));
+  const atas = arahAtasPapan();
   for (const v of [-P.tinggi / 2, P.tinggi / 2]) {
-    r.tambah('kayu', kotak([P.lebar + 0.12, 0.07, 0.07], [pusat[0], pusat[1] + atas.y * v, pusat[2] + atas.z * v], [-P.miring, 0, 0]));
+    r.tambah('kayu', kePapan(kotak([P.lebar + 0.12, 0.07, 0.07], [pusat[0], pusat[1] + atas.y * v, pusat[2] + atas.z * v], [-P.miring, 0, 0])));
   }
+  const tinggiKaki = P.bawah + Math.cos(P.miring) * P.tinggi + 0.04;
   for (const dx of [-(P.lebar / 2 + 0.03), P.lebar / 2 + 0.03]) {
-    r.tambah('kayu', kotak([0.07, 1.5, 0.07], [P.x + dx, Y0 + 0.75, P.z]));
+    r.tambah('kayu', kePapan(kotak([0.07, tinggiKaki, 0.07], [dx, Y0 + tinggiKaki / 2, 0])));
   }
 
   // ── Bench (for agents whose mission failed) ─────────
@@ -113,29 +118,52 @@ export function rakitStatis() {
   return r;
 }
 
-/** Centre of the slanted board, local [x, y, z]. */
-export function pusatPapan() {
+/** Centre of the slanted board in the BOARD's frame (face = +Z, origin = footprint centre). */
+function pusatPapanLokal() {
   const P = PAPAN_HASIL;
   const naik = Math.cos(P.miring) * P.tinggi / 2;
   const mundur = Math.sin(P.miring) * P.tinggi / 2;
-  return [P.x, Y_ALAS + P.bawah + naik, P.z + 0.1 - mundur];
+  return [0, Y_ALAS + P.bawah + naik, 0.1 - mundur];
 }
 
-/** Local matrix of scroll slot `k` (0 = top-left) on the slanted board. */
+/** Up-the-board direction in the board's frame (leans back, away from the face). */
+function arahAtasPapan() {
+  return new THREE.Vector3(0, Math.cos(PAPAN_HASIL.miring), -Math.sin(PAPAN_HASIL.miring));
+}
+
+/** Board frame → Markas local frame. */
+function matriksPapan() {
+  const P = PAPAN_HASIL;
+  return new THREE.Matrix4().compose(
+    new THREE.Vector3(P.x, 0, P.z),
+    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), P.rotasi),
+    new THREE.Vector3(1, 1, 1),
+  );
+}
+
+/** Centre of the board face and its outward normal, Markas local frame. */
+export function papanHasil() {
+  const m = matriksPapan();
+  const q = new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), PAPAN_HASIL.rotasi);
+  const normal = new THREE.Vector3(0, Math.sin(PAPAN_HASIL.miring), Math.cos(PAPAN_HASIL.miring)).applyQuaternion(q);
+  return { pusat: new THREE.Vector3(...pusatPapanLokal()).applyMatrix4(m), normal, atas: arahAtasPapan().applyQuaternion(q) };
+}
+
+/** Markas-local matrix of scroll slot `k` (0 = top-left) on the slanted board. */
 export function matriksSlotGulungan(k, m = new THREE.Matrix4()) {
   const P = PAPAN_HASIL;
   const kol = k % P.kolom;
   const baris = Math.floor(k / P.kolom);
-  const [cx, cy, cz] = pusatPapan();
-  const atas = new THREE.Vector3(0, Math.cos(P.miring), -Math.sin(P.miring));
+  const [cx, cy, cz] = pusatPapanLokal();
+  const atas = arahAtasPapan();
   const normal = new THREE.Vector3(0, Math.sin(P.miring), Math.cos(P.miring));
-  const u = (kol - (P.kolom - 1) / 2) * 0.22;
-  const v = ((P.baris - 1) / 2 - baris) * 0.3;
+  const u = (kol - (P.kolom - 1) / 2) * 0.19;
+  const v = ((P.baris - 1) / 2 - baris) * 0.27;
   const pos = new THREE.Vector3(cx + u, cy, cz)
     .addScaledVector(atas, v)
-    .addScaledVector(normal, 0.07);
+    .addScaledVector(normal, 0.06);
   const q = new THREE.Quaternion().setFromUnitVectors(new THREE.Vector3(0, 1, 0), atas);
-  return m.compose(pos, q, new THREE.Vector3(1, 1, 1));
+  return m.compose(pos, q, new THREE.Vector3(1, 1, 1)).premultiply(matriksPapan());
 }
 
 export class MarkasPenjelajah {
@@ -203,7 +231,7 @@ export class MarkasPenjelajah {
 
     // Scrolls: capacity fixed at build; `count` follows the data.
     this.gulungan = new THREE.InstancedMesh(
-      new THREE.CylinderGeometry(0.045, 0.045, 0.26, 6),
+      new THREE.CylinderGeometry(0.042, 0.042, 0.22, 6),
       galantaraMat(0xffffff, 0.9, 0.02),
       KAPASITAS_GULUNGAN,
     );
