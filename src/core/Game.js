@@ -45,6 +45,7 @@ import * as markas3D         from '../world/markas/index.js';
 import * as agen3D           from '../world/agen/index.js';
 import { KontrolSentuh     } from './KontrolSentuh.js';
 import { pecahLangkah      } from './langkah.js';
+import { ModeRingan, terapkanRingan } from './ModeRingan.js';
 import { INTERACT_R        } from '../entities/NPC.js';
 
 /** Kelompok collider Spot yang sedang dipasang — dilepas utuh saat warp. */
@@ -112,6 +113,10 @@ export class Game {
     this._socketRoom = parseInitialSocketRoomFromUrl();
 
     this.renderer.init();
+    // Mode Ringan (SPRINT-02 B8): per-device choice, automatic under 25 FPS for 5 s.
+    let simpanan = null;
+    try { simpanan = window.localStorage; } catch { simpanan = null; }
+    this.ringan = new ModeRingan({ penyimpanan: simpanan, terapkan: (nyala) => terapkanRingan(this.renderer, nyala) });
 
     const scene = this.renderer.scene;
 
@@ -340,8 +345,11 @@ export class Game {
     const dt = Math.min(dtMentah, 0.05);
     this._t += dt;
 
-    // Avatar move
-    this.avatar.update(dt, this.camera);
+    // Avatar move: the real elapsed time in fixed steps, so a slow device does not walk in slow motion.
+    this.avatar.majukan(dtMentah, this.camera);
+    if (this.ringan?.catat(dtMentah)) {
+      this.toast.show('Mode Ringan menyala: layar tersendat, jadi bayangan dimatikan. Matikan lewat menu ☰ → Mode Ringan.', 'a');
+    }
     if (this.avatar.gagalBerdiri) this.toast.show('Tidak ada ruang untuk berdiri di sini 🙏', 'a');
     if (this.avatar.jatuhDariDunia) this.toast.show('Ups, jatuh dari dunia — dikembalikan ke titik muncul', 'a');
     this.lihatCollider?.perbarui();
@@ -382,7 +390,8 @@ export class Game {
     for (const langkah of pecahLangkah(dtMentah)) this.npcs.update(langkah, this._t, kontekNpc);
     // Icons follow the NPCs moved just now (World.animate also updates them, one frame earlier).
     markas3D.perbaruiIkonStatus();
-    this.dunia?.perbarui(dt);
+    // Real time for the party trail: companion spacing is measured in the player's own walking time.
+    this.dunia?.perbarui(Math.min(dtMentah, 0.25));
 
     // Zone check (Oola) — nonaktif saat Spot Bogor agar hint tidak tabrakan
     if (this._spotRuntime) {
@@ -1051,6 +1060,10 @@ export class Game {
       profilAtauMasuk: ()               => (this.user ? this.panels.openProfile(this.user) : this.loginModal.open()),
       openMarkas:     ()                => this.dunia?.bukaMarkas(),
       openBukuWarga:  ()                => this.dunia?.bukaBukuWarga(),
+      alihModeRingan: ()                => {
+        const nyala = this.ringan?.setel(!this.ringan.nyala);
+        this.toast.show(nyala ? 'Mode Ringan menyala: bayangan mati, resolusi 1×.' : 'Mode Ringan mati. Tidak akan menyala sendiri lagi di perangkat ini.', 'g');
+      },
       openPanel:      (id)              => this.panels.openPanel(id),
       closePanel:     (id)              => this.panels.closePanel(id),
       saveProfile:    ()                => {

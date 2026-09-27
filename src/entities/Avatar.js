@@ -9,6 +9,14 @@ import {
   KECEPATAN, BATAS_JATUH, majukanKarakter, teleportKarakter, resetWaktuKarakter,
   nonaktifkanKarakter, aktifkanKarakter, cariTempatBerdiri, ruangBebas, calonMelingkar,
 } from '../fisika/Karakter.js';
+import { pecahLangkah, LANGKAH_MAKS } from '../core/langkah.js';
+
+/**
+ * Real time the player may move in one frame (s). Far above the agents' 0.25 s: at 1–4 FPS (a
+ * low-end phone, a throttled CPU) the player must still walk at 5.4 m/s, not in slow motion.
+ * A hidden tab releases every key (see _bindKeys), so a long pause never becomes a long walk.
+ */
+export const WAKTU_AVATAR_MAKS = 1;
 
 /** Turunnya badan saat duduk: dudukan dingklik 0,38 m dikurangi tenggelamnya
  *  badan chibi ke dalam dudukan. */
@@ -194,6 +202,25 @@ export class Avatar {
     bindDpad('dp-d', 'down');
     bindDpad('dp-l', 'left');
     bindDpad('dp-r', 'right');
+  }
+
+  /**
+   * One frame of real time, walked in fixed steps of at most 0.05 s (collision steps stay small)
+   * instead of the loop's clamped dt: the clamp alone turned a 4 FPS frame into 0.05 s of movement.
+   * One-frame flags (stood up, fell off) are kept if any step raised them.
+   */
+  majukan(dtMentah, camera) {
+    const langkah = pecahLangkah(dtMentah, { langkah: LANGKAH_MAKS, maks: WAKTU_AVATAR_MAKS });
+    if (!langkah.length) return this.update(0, camera);
+    let baru = false, gagal = false, jatuh = false;
+    for (const dt of langkah) {
+      this.update(dt, camera);
+      baru ||= this.baruBerdiri; gagal ||= this.gagalBerdiri; jatuh ||= this.jatuhDariDunia;
+    }
+    this.baruBerdiri = baru;
+    this.gagalBerdiri = gagal;
+    this.jatuhDariDunia = jatuh;
+    return undefined;
   }
 
   // ── UPDATE — called each frame ────────────────────────

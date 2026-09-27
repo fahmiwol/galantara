@@ -325,6 +325,7 @@ export function spotIdFromSocketRoom(room) {
 export const MENU_ITEMS = [
   { icon: '🧭', label: 'Markas (party)', action: 'G_UI.openMarkas()' },
   { icon: '📖', label: 'Buku Warga',     action: 'G_UI.openBukuWarga()' },
+  { icon: '🪶', label: 'Mode Ringan (nyala/mati)', action: 'G_UI.alihModeRingan()' },
   { icon: '🗺', label: 'Peta Spot',      action: "G_UI.openPanel('map-panel')" },
   { icon: '💻', label: 'Developer Hub',  action: "G_UI.openPanel('dev-panel')" },
   { icon: '🪙', label: 'Mighan Coin',    action: "G_UI.openPanel('token-panel')" },
