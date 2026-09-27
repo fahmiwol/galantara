@@ -172,3 +172,18 @@ test('guests and agents outside the party never follow; leaving the party = stro
   assert.equal(k.npcs.get('sari').perilaku.keadaan, 'keliling');
   assert.deepEqual(k.perintah.at(-1), ['sari', 'keliling']);
 });
+
+test('an agent whose status says "on a mission" never follows, even if it happens to be strolling', async () => {
+  const k = siapkan();
+  await k.dp.muat();
+  await k.dp.party.masukDev('usr-ikut3');
+  await k.dp.party.rekrut('sari');
+  const sari = k.dp.party.agenDariSpesies('sari').agen.instance_id;
+  // e.g. reloaded mid-mission on a world without the 3D Markas: the NPC strolls, the runtime says bekerja.
+  k.dp.party.setelStatus(sari, 'bekerja');
+  k.game.npcs.get('sari').perilaku.keadaan = 'keliling';
+  k.dp._jedaIkut = 0;
+  k.dp.perbarui(DT);
+  assert.deepEqual(k.dp.pengikut, []);
+  assert.equal(k.npcs.get('sari').perilaku.keadaan, 'keliling');
+});

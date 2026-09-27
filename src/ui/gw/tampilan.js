@@ -547,7 +547,7 @@ export function tampilanHasil({ nama, misi, langkah = 'utama', galat = null, rek
   if (misi?.status === 'gagal') {
     bawah = galat ? tampilanKartuGalat(galat, aksi) : cta('Tutup', aksi.tutup);
   } else if (putus) {
-    bawah = [galat ? tampilanKartuGalat(galat, aksi) : null, teruskan, cta('Tutup', aksi.tutup)];
+    bawah = [galat ? tampilanKartuGalat(galat, aksi) : null, cta('Tutup', aksi.tutup)];
   } else if (langkah === 'perbaiki') {
     bawah = h('form', { kelas: 'gw-form', on: { submit: (e) => { e.preventDefault(); aksi.perbaiki?.(e.target?.elements?.catatan?.value ?? ''); } } },
       h('label', { kelas: 'gw-label', attr: { for: 'gw-catatan' }, teks: 'Apa yang kurang?' }),
@@ -606,6 +606,7 @@ export function tampilanHasil({ nama, misi, langkah = 'utama', galat = null, rek
           ))
           : h('p', { kelas: 'gw-peringatan', teks: 'Tidak ada sumber. Perlakukan ini sebagai dugaan, bukan fakta.' }),
       ),
+    teruskan,
     bawah,
   );
 }

@@ -308,7 +308,6 @@ export class PartyKlien {
     if (!this.agenDariId(instanceId)) throw galat('AGEN_TIDAK_ADA', 'Agen ini tidak ada di Markas-mu lagi. Muat ulang dulu.');
     if (this._slotDari(instanceId) >= 0) return { jumlah: this.jumlah() };
     const penuh = () => galat('PARTY_PENUH', `Party sudah penuh (${MAX_SLOTS}/${MAX_SLOTS}). Keluarkan satu anggota dulu di Markas.`);
-    if (this.jumlah() >= MAX_SLOTS) throw penuh();
     await this._simpanParty((p) => {
       if (p.slots.includes(instanceId)) return;
       const kosong = p.slots.indexOf(null);
