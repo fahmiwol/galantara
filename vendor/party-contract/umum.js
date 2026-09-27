@@ -24,7 +24,7 @@ const SECRET_KEY =
 
 // Well-known credential prefixes. Not exhaustive; it catches the common paste mistakes.
 const SECRET_VALUE =
-  /^(sk-|sk_live_|sk_test_|rk_live_|AIza|ghp_|gho_|ghs_|github_pat_|glpat-|xox[abprs]-|hf_|r8_|AKIA|ASIA|Bearer\s)|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
+  /^(sk-|sk_live_|sk_test_|rk_live_|AIza|ghp_|gho_|ghs_|github_pat_|glpat-|xox[abprs]-|hf_|r8_|gwk_|AKIA|ASIA|Bearer\s)|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
 
 // The same credentials pasted in the middle of a sentence ("Tolong pakai sk-…"). Length floors keep
 // ordinary words such as "risk-free" or a lone "Bearer" from counting. Mirrors tools/cek-rahasia.mjs.
@@ -40,6 +40,7 @@ const SECRET_INSIDE = new RegExp(
     /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
     /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/,
     /\br8_[A-Za-z0-9]{30,}/,
+    /\bgwk_[A-Za-z0-9_-]{30,}/, // Galantara office token (ADR-0010)
     /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/,
   ]
     .map((re) => re.source)
