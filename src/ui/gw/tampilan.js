@@ -364,6 +364,10 @@ export function tampilanHasil({ nama, misi, langkah = 'utama', galat = null }, a
     misi?.status === 'selesai_tanpa_temuan'
       ? h('p', { kelas: 'gw-sub', teks: `${nama} tidak menemukan jawaban di sumber yang dibaca. Itu hasil yang jujur, bukan kegagalan.` })
       : null,
+    // The runtime's own reason (`alasan {kode, pesan}`, LOG-A A5) is complete and actionable: show it as is.
+    (misi?.status === 'gagal' || misi?.status === 'menunggu_otak') && typeof misi?.alasan?.pesan === 'string' && misi.alasan.pesan
+      ? h('p', { kelas: 'gw-peringatan', teks: misi.alasan.pesan })
+      : null,
     kalimat.length ? h('div', { kelas: 'gw-ringkasan' }, kalimat) : null,
     Array.isArray(lap.ditolak) && lap.ditolak.length
       ? h('p', { kelas: 'gw-meta', teks: `${lap.ditolak.length} klaim dibuang karena kutipannya tidak ada di sumber.` })

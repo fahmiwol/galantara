@@ -153,8 +153,12 @@ export class DuniaParty {
   }
 
   _sebabGagal(misi) {
-    const kode = misi?.error_code ?? misi?.galat?.kode ?? null;
-    const SEBAB = { brain_timeout: 'otak tidak menjawab', vault_revoked: 'kunci dicabut', provider_auth: 'kunci ditolak', provider_quota: 'kuota habis', no_sources: 'tanpa sumber', cancelled: 'dibatalkan' };
+    // Runtime M1 sends `alasan {kode, pesan}` (LOG-A A5); the older names stay for other runtimes.
+    const kode = misi?.alasan?.kode ?? misi?.error_code ?? misi?.galat?.kode ?? null;
+    const SEBAB = {
+      SUMBER_GAGAL: 'sumber tidak bisa dibuka', OTAK_TIDAK_TERBACA: 'jawaban otak tidak terbaca', GALAT_INTERNAL: 'galat di server',
+      brain_timeout: 'otak tidak menjawab', vault_revoked: 'kunci dicabut', provider_auth: 'kunci ditolak', provider_quota: 'kuota habis', no_sources: 'tanpa sumber', cancelled: 'dibatalkan',
+    };
     return SEBAB[kode] ?? null;
   }
 

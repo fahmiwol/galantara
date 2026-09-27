@@ -167,6 +167,13 @@ test('Hasil: source numbers follow the references; zero sources is a warning; ve
   const disetujui = tampilanHasil({ nama: 'Sari', misi: { ...misi, putusan: 'setujui' } }, {});
   assert.equal(cariTombol(disetujui, 'Setujui & simpan'), null);
   assert.match(teksPohon(disetujui), /Disetujui · tersimpan/);
+
+  // Runtime M1 failure: its own reason is shown as is (LOG-A A5), and only for a failed/waiting mission.
+  const pesan = 'Semua sumber gagal diambil: S1 (waktu habis) Periksa alamatnya, lalu beri misi lagi.';
+  const gagal = tampilanHasil({ nama: 'Sari', misi: { ...misi, status: 'gagal', alasan: { kode: 'SUMBER_GAGAL', pesan } } }, {});
+  assert.ok(teksPohon(gagal).includes(pesan));
+  const selesai = tampilanHasil({ nama: 'Sari', misi: { ...misi, alasan: { kode: 'X', pesan: 'basi' } } }, {});
+  assert.ok(!teksPohon(selesai).includes('basi'), 'a stale reason on a finished mission is not shown');
 });
 
 test('every §9.9 failure is a card with a known button; nothing leaks a {placeholder}', () => {
