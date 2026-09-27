@@ -102,6 +102,20 @@ export const G_Auth = {
     await sbClient.auth.signOut();
   },
 
+  // ── TOKEN AKSES (untuk server multiplayer) ──────────
+  // Server multiplayer memverifikasi token ini sendiri (ADR-0023); tanpa token
+  // yang sah, koneksi diperlakukan tamu. getSession() memperbarui token yang
+  // kedaluwarsa, jadi nilai ini segar setiap kali socket menyambung.
+  async getAccessToken() {
+    if (!sbClient) return null;
+    try {
+      const { data } = await sbClient.auth.getSession();
+      return data?.session?.access_token ?? null;
+    } catch {
+      return null;
+    }
+  },
+
   // ── EXTRACT USER NAME ─────────────────────────────
   getName(user) {
     const meta = user.user_metadata || {};

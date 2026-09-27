@@ -71,7 +71,17 @@ export class Chat {
 
     const el = document.createElement('div');
     el.className = 'cm' + (isSelf ? ' me' : '');
-    el.innerHTML = `<span class="cn">${_esc(name)}</span><span class="ct">${_esc(msg)}</span>`;
+    // textContent, bukan innerHTML: nama dan pesan diketik pemain lain. Escape
+    // manual cukup hari ini, tapi satu lupa-escape di masa depan = XSS di
+    // halaman yang memegang sesi login.
+    const cn = document.createElement('span');
+    cn.className = 'cn';
+    cn.textContent = String(name ?? '');
+    const ct = document.createElement('span');
+    ct.className = 'ct';
+    ct.textContent = String(msg ?? '');
+    el.appendChild(cn);
+    el.appendChild(ct);
     this._msgs.appendChild(el);
     this._msgs.scrollTop = this._msgs.scrollHeight;
 
@@ -109,12 +119,4 @@ export class Chat {
   }
 
   setName(name) { this._myName = name; }
-}
-
-function _esc(str) {
-  return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;');
 }
