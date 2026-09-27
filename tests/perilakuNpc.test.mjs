@@ -11,7 +11,7 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  PerilakuNpc, KECEPATAN_MENUJU, KECEPATAN_KELILING, RADIUS_KELILING, JARAK_LAPOR,
+  PerilakuNpc, KECEPATAN_MENUJU, KECEPATAN_KELILING, RADIUS_KELILING, JARAK_LAPOR, JARAK_SAPA,
 } from '../src/entities/PerilakuNpc.js';
 
 /** Deterministic random numbers (mulberry32), same sequence for every run. */
@@ -135,4 +135,31 @@ test('floor height eases along the leg (terrace, then seat) and back to the grou
   p.perintah({ jenis: 'keliling' });
   jalankan(p, 20, 30);
   assert.equal(p.y, 0, 'strolling brings it back down to the ground');
+});
+
+test('a strolling NPC waits, facing the player, while the player is within talk range', () => {
+  const p = new PerilakuNpc({ x: 0, z: 0, rng: acak() });
+  const pemain = { x: 1.3, z: 0.4 };
+  jalankan(p, 10, 30, { posisiPemain: pemain });
+  assert.deepEqual([p.x, p.z], [0, 0], 'it did not walk away');
+  assert.ok(Math.abs(p.arah - Math.atan2(1.3, 0.4)) < 1e-9, 'it faces the player');
+  // Player steps away: strolling resumes.
+  jalankan(p, 10, 30, { posisiPemain: { x: 20, z: 20 } });
+  assert.notDeepEqual([p.x, p.z], [0, 0]);
+  assert.ok(Math.hypot(p.x, p.z) <= RADIUS_KELILING + 1e-9);
+});
+
+test('a nearby player never interrupts walking to work or working', () => {
+  const p = new PerilakuNpc({ x: 0, z: 0, rng: acak() });
+  p.perintah({ jenis: 'menuju', titik: { x: 10, z: 0 } });
+  jalankan(p, 1, 60, { posisiPemain: { x: 0.5, z: 0 } });
+  assert.ok(Math.abs(p.x - KECEPATAN_MENUJU) < 1e-9, `walked on: ${p.x}`);
+});
+
+test('the wait radius is the talk radius (NPC.js INTERACT_R)', async () => {
+  const { readFileSync } = await import('node:fs');
+  const src = readFileSync(new URL('../src/entities/NPC.js', import.meta.url), 'utf8');
+  const m = /export const INTERACT_R = ([\d.]+)/.exec(src);
+  assert.ok(m, 'INTERACT_R is declared in NPC.js');
+  assert.equal(JARAK_SAPA, Number(m[1]));
 });

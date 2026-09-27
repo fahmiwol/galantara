@@ -6,7 +6,8 @@
 //   menuju    walk a route of points at 1.4 m/s, never past the last one
 //   bekerja   stay put at the work point (the mission runs in the runtime, not here)
 //   lapor     walk to the player, stop at arm's length, wave
-// An open dialog freezes the NPC and turns it toward the player.
+// An open dialog freezes the NPC and turns it toward the player; so does a player within talk
+// range while it strolls.
 //
 // Speeds are metres per SECOND and every step uses dt: the old patrol moved 0.04 per FRAME,
 // so on a 30 fps phone NPCs walked at half speed (the same bug fixed for the avatar in 0.9.0).
@@ -16,6 +17,12 @@
 export const KECEPATAN_KELILING = 1.2;
 export const KECEPATAN_MENUJU = 1.4;
 export const RADIUS_KELILING = 3;
+/**
+ * A strolling NPC waits, facing the player, while the player is this close (the talk radius,
+ * NPC.js INTERACT_R). Otherwise it walks off just as a thumb reaches for "Ngobrol".
+ * Walking to work and working are never interrupted.
+ */
+export const JARAK_SAPA = 2.5;
 /** The NPC stops this far from the player when it comes to report. */
 export const JARAK_LAPOR = 1.6;
 
@@ -80,6 +87,10 @@ export class PerilakuNpc {
     this.bergerak = false;
     if (dialogTerbuka) {
       if (posisiPemain) this._hadap(posisiPemain.x, posisiPemain.z);
+      return;
+    }
+    if (this.keadaan === 'keliling' && posisiPemain && Math.hypot(posisiPemain.x - this.x, posisiPemain.z - this.z) <= JARAK_SAPA) {
+      this._hadap(posisiPemain.x, posisiPemain.z);
       return;
     }
     if (this.keadaan === 'keliling') this._keliling(langkah);
