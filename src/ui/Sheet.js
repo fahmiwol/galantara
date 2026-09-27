@@ -10,6 +10,8 @@
 import { render } from './gw/pohon.js';
 
 const BIDANG = new Set(['INPUT', 'TEXTAREA', 'SELECT']);
+/** After the finger lifts, the click follows (up to ~300 ms on some phones); then re-render. */
+export const JEDA_SETELAH_TEKAN_MS = 350;
 
 export class Sheet {
   constructor(doc = globalThis.document) {
@@ -22,6 +24,11 @@ export class Sheet {
     this.terbuka = false;
     /** Name of the open view ('markas', 'rekrut', …) so updates can re-render the right one. */
     this.nama = null;
+    /** A finger/pointer is down inside the sheet: live re-renders wait (see ganti). */
+    this._ditekan = false;
+    /** @type {{nama:string, pohon:any}|null} the re-render that waited */
+    this._tunda = null;
+    this._jedaTunda = null;
   }
 
   _pastikan() {
@@ -38,6 +45,17 @@ export class Sheet {
     this.sheet.setAttribute('aria-modal', 'false');
     this.sheet.setAttribute('aria-labelledby', 'gw-judul');
     this.lapis.append(tirai, this.sheet);
+    // A live re-render between touchstart and touchend swaps the button under the finger, and
+    // the browser drops the click (seen on a phone: "Kembali" in the Otak sheet did nothing
+    // while the brain status arrived). Hold re-renders while pressed; apply after the click.
+    this.sheet.addEventListener('pointerdown', () => { this._ditekan = true; clearTimeout(this._jedaTunda); });
+    const lepas = () => {
+      this._ditekan = false;
+      clearTimeout(this._jedaTunda);
+      this._jedaTunda = setTimeout(() => this._terapkanTunda(), JEDA_SETELAH_TEKAN_MS);
+    };
+    this.sheet.addEventListener('pointerup', lepas);
+    this.sheet.addEventListener('pointercancel', lepas);
     this.lapis.addEventListener('keydown', (e) => {
       if (e.key === 'Escape') {
         e.stopPropagation();
@@ -67,6 +85,7 @@ export class Sheet {
     }
     this._onTutup = onTutup;
     this.nama = nama;
+    this._tunda = null; // a fresh view replaces any update that was waiting
     this.sheet.replaceChildren(this._pegangan(), render(pohon, this.doc));
     this.lapis.classList.add('on');
     this.terbuka = true;
@@ -79,14 +98,25 @@ export class Sheet {
     const aktif = this.doc.activeElement;
     // Never yank a sheet out from under someone typing.
     if (aktif && this.sheet.contains(aktif) && BIDANG.has(aktif.tagName)) return false;
+    if (this._ditekan) {
+      this._tunda = { nama, pohon };
+      return true;
+    }
     this.sheet.replaceChildren(this._pegangan(), render(pohon, this.doc));
     return true;
+  }
+
+  _terapkanTunda() {
+    const t = this._tunda;
+    this._tunda = null;
+    if (t && !this._ditekan) this.ganti(t.nama, t.pohon);
   }
 
   tutup() {
     if (!this.terbuka) return;
     this.lapis.classList.remove('on');
     this.sheet.replaceChildren();
+    this._tunda = null;
     this.terbuka = false;
     this.nama = null;
     const kembali = this._pemicu;
