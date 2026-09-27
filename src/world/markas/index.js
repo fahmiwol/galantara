@@ -12,11 +12,15 @@
 //   tampilkanStatus3D(npcId, status)    → { titik, pose, slot, … } and redraws beacon/lamps
 //   tampilkanStatus(npcId, status)      same function, SPRINT-01 name
 //   tambahGulungan(hasil) / buangGulungan(hasil) / tandaiGulunganDibaca(hasil)
+//   pasangLapisanIkon(kamera, lapisan?) once, then perbaruiIkonStatus() per frame:
+//                                       status layers 2–3 (28 px icon, edge arrow)
+//   terlihatStatus(npcId)               'ikon' | 'panah' | null — toast only on null (ADR-0005)
 // ═══════════════════════════════════════════════════════
 
 import { MarkasPenjelajah, titikKeDunia } from './MarkasPenjelajah.js';
 import { KeadaanMarkas } from './keadaan.js';
 import { LETAK_MARKAS, TITIK, MEJA } from './spek.js';
+import { LapisanIkonStatus } from '../agen/ikonStatus.js';
 
 export { MarkasPenjelajah, WARNA_GULUNGAN, rakitStatis, matriksSlotGulungan, papanHasil } from './MarkasPenjelajah.js';
 export {
@@ -31,6 +35,10 @@ export {
 const keadaan = new KeadaanMarkas();
 /** @type {MarkasPenjelajah|null} the Markas currently mounted in Oola */
 let aktif = null;
+/** @type {LapisanIkonStatus|null} status layers 2–3, once a camera is known */
+let ikon = null;
+/** npcId → what the icon anchors to (NPC mesh or position getter), kept across status changes. */
+const sumberIkon = new Map();
 
 /**
  * Build the Markas into a World (Oola). Registers: the group (and its colliders,
@@ -99,13 +107,20 @@ export function titikKerja() {
  *
  * @param {string} npcId e.g. 'sari' or an agent instance id
  * @param {'siap'|'antre'|'bekerja'|'hasil_siap'|'menunggu_otak'|'gagal'|null} status
- * @param {{ slot?: number }} [opsi] pin the desk to a party slot (0–3)
+ * Layers 2–3: when `opsi.mesh` (the NPC mesh, or a () => {x,y,z} getter) has been
+ * given once for this npcId and pasangLapisanIkon() ran, its 28 px icon / edge
+ * arrow follows the status too.
+ *
+ * @param {{ slot?: number, mesh?: THREE.Object3D | (() => ({x:number,y:number,z:number}|null)) }} [opsi]
+ *   slot: pin the desk to a party slot (0–3); mesh: what the icon hangs on
  * @returns {{ npcId:string, status:string|null, slot:number|null, pose:string,
  *   titik: null | { id:string, x:number, y:number, z:number, arah:number, duduk:boolean, dekat?:object } }}
  */
 export function tampilkanStatus3D(npcId, status, opsi = {}) {
   const r = keadaan.setelStatus(npcId, status, opsi);
   aktif?.tampilkan(keadaan);
+  if (opsi.mesh) sumberIkon.set(r.npcId, opsi.mesh);
+  if (ikon && sumberIkon.has(r.npcId)) ikon.setel(r.npcId, r.status, sumberIkon.get(r.npcId));
   let titik = null;
   if (r.keluarga && r.slot != null) {
     titik = titikMarkas(`${r.keluarga}_${r.slot + 1}`);
@@ -121,6 +136,8 @@ export const tampilkanStatus = tampilkanStatus3D;
 export function lepasAgenMarkas(npcId) {
   const ok = keadaan.lepasAgen(npcId);
   aktif?.tampilkan(keadaan);
+  ikon?.buang(npcId);
+  sumberIkon.delete(npcId);
   return ok;
 }
 
@@ -149,6 +166,36 @@ export function tandaiGulunganDibaca(hasil) {
   return r;
 }
 
+/**
+ * Attach status layers 2–3 to the screen. Call once when the camera and the
+ * overlay element exist (Game: next to ChatBubbleLayer, same #lbl-layer).
+ * Agents that already have a status get their icon immediately.
+ * @param {THREE.PerspectiveCamera} kamera
+ * @param {HTMLElement|string} [lapisan]
+ */
+export function pasangLapisanIkon(kamera, lapisan = 'lbl-layer', opsi) {
+  if (ikon) { ikon.kamera = kamera; return ikon; }
+  ikon = new LapisanIkonStatus(kamera, lapisan, opsi);
+  for (const [npcId, a] of keadaan.agen) {
+    if (sumberIkon.has(npcId)) ikon.setel(npcId, a.status, sumberIkon.get(npcId));
+  }
+  return ikon;
+}
+
+/** Per frame, after NPCs moved (World.animate calls it too; twice is harmless). */
+export function perbaruiIkonStatus(kamera) {
+  ikon?.perbarui(kamera);
+}
+
+/** 'ikon' | 'panah' | null — which channel shows this agent's status now (ADR-0005). */
+export function terlihatStatus(npcId) {
+  return ikon?.terlihat(npcId) ?? null;
+}
+
+export function lapisanIkon() {
+  return ikon;
+}
+
 /** Read-only view of the state (for panels and tests). */
 export function keadaanMarkas() {
   return keadaan;
@@ -159,4 +206,7 @@ export function _resetKeadaanMarkas() {
   keadaan.agen.clear();
   keadaan.gulungan.length = 0;
   aktif?.tampilkan(keadaan);
+  ikon?.hapusSemua();
+  ikon = null;
+  sumberIkon.clear();
 }

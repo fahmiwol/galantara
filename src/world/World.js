@@ -10,7 +10,7 @@ import { InteractionVolume } from '../interaction/InteractionVolume.js';
 import { cincinTepi } from '../fisika/Fisika.js';
 import { ISLAND_R } from '../data/config.js';
 import { UKURAN_KAPSUL } from '../fisika/Karakter.js';
-import { bangunMarkas, lepasMarkas } from './markas/index.js';
+import { bangunMarkas, lepasMarkas, perbaruiIkonStatus } from './markas/index.js';
 
 /** Kelompok collider Oola di dunia fisika — dilepas utuh saat pindah Spot. */
 export const KELOMPOK_OOLA = 'oola';
@@ -588,6 +588,8 @@ export class World {
   // Halo tidak lagi berputar — lihat _buildPurpleTree.
   animate(t) {
     this.markas?.animate(t);
+    // Status icons / edge arrows of the party (no-op until pasangLapisanIkon ran).
+    perbaruiIkonStatus();
     if (this.warpPortal) {
       this.warpPortal.rotation.y = t * 0.8;
       this.warpPortal.material.color.setHSL(0.75 + Math.sin(t) * 0.05, 0.8, 0.5);
