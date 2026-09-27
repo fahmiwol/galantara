@@ -11,6 +11,7 @@ import { cincinTepi } from '../fisika/Fisika.js';
 import { ISLAND_R } from '../data/config.js';
 import { UKURAN_KAPSUL } from '../fisika/Karakter.js';
 import { bangunMarkas, lepasMarkas, perbaruiIkonStatus } from './markas/index.js';
+import { pasangUkurBilaDiminta } from './ukur.js';
 
 /** Kelompok collider Oola di dunia fisika — dilepas utuh saat pindah Spot. */
 export const KELOMPOK_OOLA = 'oola';
@@ -30,6 +31,8 @@ export class World {
    * @param {{ fisika?: import('../fisika/Fisika.js').Fisika }} [opsi]
    */
   constructor(scene, { fisika = null } = {}) {
+    // `?ukur` di URL: panel FPS / draw call / segitiga untuk HP acuan (world/ukur.js).
+    pasangUkurBilaDiminta({ adegan: scene });
     this.scene     = scene;
     /** Dunia fisika. Boleh belum siap — pendaftaran masuk antrean. */
     this.fisika    = fisika;
