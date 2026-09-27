@@ -55,6 +55,7 @@
 
 .gw-lbl{display:inline-block;padding:3px 7px;border-radius:6px;font:900 11px/1.2 var(--gw-font)}
 .gw-lbl-sendiri{background:var(--st-kerja-tint);color:#1f5a23;border:1.5px solid var(--st-kerja)}
+.gw-lbl-gpu{background:var(--st-info-tint);color:#1d3a8f;border:1.5px solid var(--st-info)}
 .gw-lbl-cloud{background:var(--st-perlu-tint);color:#6e4200;border:1.5px solid var(--st-perlu-ikon)}
 .gw-lbl-simulasi{background:var(--st-gagal-tint);color:#7a0e2d;border:1.5px solid var(--st-gagal)}
 .gw-lbl-kosong{background:var(--gw-kertas-2);color:var(--gw-tinta-2)}

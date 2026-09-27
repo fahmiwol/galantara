@@ -8,7 +8,7 @@
 
 import { buatApiRuntime } from './apiRuntime.js';
 import { PartyKlien, normalisasiPemilik } from './PartyKlien.js';
-import { MisiKlien, STATUS_AKHIR } from './MisiKlien.js';
+import { MisiKlien, STATUS_AKHIR, JENIS, SEMUA_JENIS, judulMisi } from './MisiKlien.js';
 import { kartuGalat } from './pesanGalat.js';
 import {
   ruteKerja, posisiMarkas, statusKe3D, statusTerlihat, gulungan, gulunganDibaca, buangGulungan, pasangPenanda, lepasAgen,
@@ -17,7 +17,7 @@ import { Sheet } from '../ui/Sheet.js';
 import { PenandaAgen } from '../ui/PenandaAgen.js';
 import { ArahkanSaya } from '../ui/ArahkanSaya.js';
 import {
-  tampilanRekrut, tampilanMarkas, tampilanOtak, tampilanMisi, tampilanHasil, tampilanMasuk,
+  tampilanRekrut, tampilanMarkas, tampilanOtak, tampilanMisi, tampilanHasil, tampilanMasuk, tampilanPersetujuan,
   tampilanKartuGalat, durasi, namaTempat, namaOtak,
 } from '../ui/gw/tampilan.js';
 import { h, render } from '../ui/gw/pohon.js';
@@ -40,17 +40,27 @@ export function teksAntrean(misi) {
 /** Mission statuses that carry a result the player can read (one scroll each on the Papan Hasil). */
 export const HASIL_ADA = new Set(['selesai', 'selesai_tanpa_temuan']);
 
+/** The form fields to refill "Ubah misi" / "Beri misi lagi" with, whatever the kind. */
+export function isianUlang(misi) {
+  if (misi?.tujuan !== undefined) return { tujuan: misi.tujuan ?? '', konteks: misi.konteks ?? '' };
+  if (misi?.topik !== undefined) return { topik: misi.topik ?? '', sumber: misi.sumber ?? [] };
+  return { pertanyaan: misi?.pertanyaan ?? '', sumber: misi?.sumber ?? [] };
+}
+
 export const STATUS_DARI_MISI = Object.freeze({
   antre: 'antre',
   berjalan: 'bekerja',
   menunggu_otak: 'menunggu_otak',
+  menunggu_persetujuan: 'menunggu_persetujuan',
   selesai: 'hasil_siap',
   selesai_tanpa_temuan: 'hasil_siap',
   gagal: 'gagal',
   dibatalkan: 'siap',
 });
 
-const PERLU_PERHATIAN = new Set(['hasil_siap', 'gagal', 'menunggu_otak']);
+const PERLU_PERHATIAN = new Set(['hasil_siap', 'gagal', 'menunggu_otak', 'menunggu_persetujuan']);
+/** An agent with one of these statuses is busy with a mission (1 active mission per agent, SPRINT-02). */
+export const SEDANG_MISI = new Set(['antre', 'bekerja', 'menunggu_otak', 'menunggu_persetujuan']);
 
 function penyimpananAman() {
   try {
@@ -81,6 +91,10 @@ export class DuniaParty {
     this._misiTerakhir = new Map();
     /** instance_id → GalatRuntime from watching (shown in the Markas) */
     this._galatPantau = new Map();
+    /** mission id → instance_id of every mission seen (names a chain "Sari → Budi") */
+    this._pemilikMisi = new Map();
+    /** instance_id → {id, nama, judul}: the approved result a colleague's next mission builds on */
+    this._rujukan = new Map();
     this._statusOtak = undefined;
     this._tunda = null;
     this._jedaPenanda = 0;
@@ -150,6 +164,15 @@ export class DuniaParty {
     };
   }
 
+  /** The mission kind a species does (its first known skill), or null (no mission yet). */
+  _jenis(spesiesId) {
+    return this._spesies(spesiesId).misi_keahlian.find((j) => SEMUA_JENIS.has(j)) ?? null;
+  }
+
+  _namaAgen(item) {
+    return item?.agen.julukan || this._spesies(item?.agen.template?.id).nama;
+  }
+
   _anggota(item) {
     if (!item || item.hilang) return null;
     const sp = this._spesies(item.agen.template?.id);
@@ -163,7 +186,9 @@ export class DuniaParty {
       kelas: sp.kelas_kerja,
       status,
       brain: item.agen.loadout?.brain ?? null,
-      bisaMisi: sp.misi_keahlian.includes('riset-sumber'),
+      bisaMisi: Boolean(this._jenis(sp.id)),
+      jenis: this._jenis(sp.id),
+      pengalaman: item.pengalaman ?? null,
       durasi: status === 'bekerja' || status === 'antre' ? durasi(misi?.dibuat) : null,
       sebab: status === 'gagal' ? this._sebabGagal(misi) : null,
     };
@@ -219,7 +244,7 @@ export class DuniaParty {
     const id = npc?.id;
     if (syarat === 'belum_di_party') return !this.party.diParty(id);
     if (syarat === 'di_party') return this.party.diParty(id);
-    if (syarat === 'bisa_misi') return this.party.diParty(id) && this._spesies(id).misi_keahlian.includes('riset-sumber');
+    if (syarat === 'bisa_misi') return this.party.diParty(id) && Boolean(this._jenis(id));
     return true;
   }
 
@@ -334,6 +359,7 @@ export class DuniaParty {
       bukaMisi: (iid) => this.bukaMisi(iid),
       bukaHasil: (iid) => this.bukaHasil(iid),
       bukaOtak: (iid) => this.bukaOtak(iid),
+      bukaIzin: (iid) => this.bukaIzin(iid),
       keluarkan: (iid) => this.keluarkan(iid),
       batalMisi: (iid) => this.batalMisi(iid),
       arahkan: (id) => { this.sheet.tutup(); this.arahkanKe(id); },
@@ -375,15 +401,23 @@ export class DuniaParty {
   bukaMisi(instanceId, isian = {}, galat = null) {
     const item = this.party.agenDariId(instanceId);
     if (!item) return this.bukaMarkas();
-    const nama = item.agen.julukan || this._spesies(item.agen.template?.id).nama;
+    const spId = item.agen.template?.id;
+    const nama = this._namaAgen(item);
+    const jenis = this._jenis(spId) ?? JENIS.RISET;
+    const rujukan = this._rujukan.get(instanceId) ?? null;
     this._isianTerakhir = isian;
-    this.sheet.buka('misi', tampilanMisi({ nama, brain: item.agen.loadout?.brain, isian, galat }, {
+    this.sheet.buka('misi', tampilanMisi({
+      nama, brain: item.agen.loadout?.brain, jenis, isian, galat, rujukan,
+      equipment: this._spesies(spId).equipment_dasar.map((e) => e.id).filter((id) => id !== 'tanya-pemilik'),
+    }, {
       ...this._aksiUmum(),
       kembali: () => this.bukaMarkas(),
       kirim: (masukan) => this.kirimMisi(instanceId, masukan),
+      lepasRujukan: rujukan ? () => { this._rujukan.delete(instanceId); this.bukaMisi(instanceId, this._isianTerakhir); } : null,
       kartu: (aksi, kartu) => {
         if (aksi === 'hapusTeks') return this.bukaMisi(instanceId, {});
         if (aksi === 'perbaikiIsian') return this.bukaMisi(instanceId, this._isianTerakhir);
+        if (aksi === 'lepasRujukan') { this._rujukan.delete(instanceId); return this.bukaMisi(instanceId, this._isianTerakhir); }
         return this.aksiKartu(aksi, kartu);
       },
     }), { fokus: !galat });
@@ -394,12 +428,23 @@ export class DuniaParty {
   async kirimMisi(instanceId, masukan) {
     const item = this.party.agenDariId(instanceId);
     const sp = this._spesies(item?.agen.template?.id);
-    const nama = item?.agen.julukan || sp.nama;
+    const nama = this._namaAgen(item);
+    const rujukan = this._rujukan.get(instanceId) ?? null;
+    const isi = { jenis: this._jenis(sp.id) ?? JENIS.RISET, ...masukan };
+    if (rujukan) isi.rujuk_misi = rujukan.id;
     this._isianTerakhir = masukan;
     this._ulang = () => this.kirimMisi(instanceId, masukan);
     try {
-      const misi = await this.misi.mulai(instanceId, masukan);
-      this._misiTerakhir.set(instanceId, { ...misi, instance_id: instanceId, pertanyaan: masukan.pertanyaan, dibuat: misi.dibuat ?? new Date().toISOString() });
+      const misi = await this.misi.mulai(instanceId, isi);
+      this._rujukan.delete(instanceId);
+      this._pemilikMisi.set(misi.id, instanceId);
+      const judul = { pertanyaan: isi.pertanyaan, tujuan: isi.tujuan, topik: isi.topik };
+      for (const k of Object.keys(judul)) if (judul[k] === undefined) delete judul[k];
+      this._misiTerakhir.set(instanceId, {
+        ...misi, instance_id: instanceId, jenis: isi.jenis, ...judul,
+        ...(rujukan ? { rujuk_misi: rujukan.id } : {}),
+        dibuat: misi.dibuat ?? new Date().toISOString(),
+      });
       this.party.setelStatus(instanceId, STATUS_DARI_MISI[misi.status] ?? 'antre');
       this.sheet.tutup();
       const antrean = teksAntrean(misi);
@@ -436,7 +481,8 @@ export class DuniaParty {
   _gerakkan(spId, st, r, { hanyaDariKeliling = false } = {}) {
     const npcs = this.game.npcs;
     if (!npcs) return;
-    if (st === 'antre' || st === 'bekerja') {
+    if (st === 'antre' || st === 'bekerja' || st === 'menunggu_persetujuan') {
+      // Waiting for approval is still mid-mission: the agent stays at its desk.
       if (!hanyaDariKeliling || npcs.get(spId)?.perilaku.keadaan === 'keliling') this._keTempatKerja(spId, r.rute);
     } else if (r.rute) {
       npcs.perintah(spId, { jenis: 'menuju', titik: r.rute, lalu: 'bekerja' });
@@ -488,6 +534,10 @@ export class DuniaParty {
     if (st === 'hasil_siap') {
       if (!tampak) this.game.toast?.show(`Hasil ${nama} siap. Periksa dulu sebelum disimpan.`, 'g');
       this.sheet.umumkan(`${nama}: hasil siap.`);
+    } else if (st === 'menunggu_persetujuan') {
+      // A decision only the player can make: always said, even when the world shows an icon.
+      this.game.toast?.show(`${nama} minta izin memakai alat berbiaya. Buka Markas → Periksa izin.`, 'a');
+      this.sheet.umumkan(`${nama}: menunggu izinmu.`);
     } else if (st === 'gagal') {
       if (!tampak) this.game.toast?.show(`Misi ${nama} gagal. Buka Markas untuk sebab dan langkahnya.`, 'a');
       this.sheet.umumkan(`${nama}: misi gagal.`);
@@ -500,13 +550,14 @@ export class DuniaParty {
     for (const a of this.party.anggota()) {
       if (!a || a.hilang) continue;
       const sp = this._spesies(a.agen.template?.id);
-      if (!sp.misi_keahlian.includes('riset-sumber')) continue;
+      if (!this._jenis(sp.id)) continue;
       let daftar = [];
       try {
         daftar = await this.misi.daftar(a.agen.instance_id);
       } catch {
         return; // missions not reachable now; the Markas still works
       }
+      for (const m of daftar) if (m?.id) this._pemilikMisi.set(m.id, a.agen.instance_id);
       const terbaru = daftar[0];
       if (!terbaru) continue;
       this._misiTerakhir.set(a.agen.instance_id, terbaru);
@@ -541,11 +592,12 @@ export class DuniaParty {
       return;
     }
     if (HASIL_ADA.has(misi.status)) gulunganDibaca(misi); // opened: its scroll turns from gold to paper
+    this._pemilikMisi.set(misi.id, instanceId);
     const brain = item.agen.loadout?.brain;
     const galatMisi = galat ?? (misi.status === 'gagal'
-      ? kartuGalat(misi.error_code ?? misi.galat?.kode ?? 'GALAT_SERVER', { nama, otak: namaOtak(brain), topik: misi.pertanyaan, selfHosted: brain && ['migancore', 'ollama', 'local'].includes(brain.provider), pesan: misi.galat?.pesan })
+      ? kartuGalat(misi.error_code ?? misi.galat?.kode ?? 'GALAT_SERVER', { nama, otak: namaOtak(brain), topik: judulMisi(misi), selfHosted: brain && ['migancore', 'ollama', 'local'].includes(brain.provider), pesan: misi.galat?.pesan })
       : null);
-    this.sheet.buka('hasil', tampilanHasil({ nama, misi, langkah, galat: galatMisi }, {
+    this.sheet.buka('hasil', tampilanHasil({ nama, misi, langkah, galat: galatMisi, rekan: this._rekan(instanceId), rantaiNama: this._namaRantai(misi) }, {
       ...this._aksiUmum(),
       setujui: () => this.putuskan(instanceId, 'setujui'),
       mintaPerbaiki: () => this.bukaHasil(instanceId, 'perbaiki'),
@@ -553,12 +605,88 @@ export class DuniaParty {
       buangPasti: () => this.putuskan(instanceId, 'buang'),
       kembaliKeHasil: () => this.bukaHasil(instanceId),
       perbaiki: (catatan) => this.putuskan(instanceId, 'perbaiki', catatan),
+      teruskan: (tujuanIid) => this.teruskan(instanceId, tujuanIid),
       kartu: (aksi, kartu) => {
-        if (aksi === 'beriMisi' || aksi === 'ubahMisi') return this.bukaMisi(instanceId, { pertanyaan: misi.pertanyaan ?? '' });
+        if (aksi === 'beriMisi' || aksi === 'ubahMisi') return this.bukaMisi(instanceId, isianUlang(misi));
         if (aksi === 'lihatOtak') return this.bukaOtak(instanceId);
         return this.aksiKartu(aksi, kartu);
       },
     }));
+  }
+
+  /** Party members a result can be passed on to: everyone else with a mission kind (busy ones flagged). */
+  _rekan(instanceId) {
+    if (!this.party.masuk) return [];
+    return this.party.anggota()
+      .filter((a) => a && !a.hilang && a.agen.instance_id !== instanceId)
+      .map((a) => ({ instance_id: a.agen.instance_id, nama: this._namaAgen(a), jenis: this._jenis(a.agen.template?.id), sibuk: SEDANG_MISI.has(a.status_kerja) }))
+      .filter((r) => r.jenis);
+  }
+
+  /** "Sari → Budi" for a chain whose missions this world has seen; null when any link is unknown. */
+  _namaRantai(misi) {
+    const rantai = Array.isArray(misi?.rantai) ? misi.rantai : null;
+    if (!rantai || rantai.length < 2) return null;
+    const nama = rantai.map((id) => this._namaAgen(this.party.agenDariId(this._pemilikMisi.get(id))));
+    return rantai.every((id) => this.party.agenDariId(this._pemilikMisi.get(id))) ? nama : null;
+  }
+
+  /**
+   * "Teruskan ke Budi": the next mission of a colleague builds on this approved result (rujuk_misi).
+   * The runtime reads the result's findings and sources as DATA; the form only shows where it comes from.
+   */
+  teruskan(dariIid, keIid) {
+    const misi = this._misiTerakhir.get(dariIid);
+    const dari = this.party.agenDariId(dariIid);
+    const ke = this.party.agenDariId(keIid);
+    if (!misi?.id || !dari || !ke) return this.bukaMarkas();
+    const judul = judulMisi(misi);
+    this._rujukan.set(keIid, { id: misi.id, nama: this._namaAgen(dari), judul });
+    const jenis = this._jenis(ke.agen.template?.id);
+    const isian = jenis === JENIS.PANDUAN ? { topik: judul ?? '' } : {};
+    return this.bukaMisi(keIid, isian);
+  }
+
+  /** Persetujuan sheet: a paid tool waits for the player's yes (SPRINT-02 `menunggu_persetujuan`). */
+  async bukaIzin(instanceId, galat = null) {
+    const item = this.party.agenDariId(instanceId);
+    if (!item) return this.bukaMarkas();
+    const nama = this._namaAgen(item);
+    let misi = this._misiTerakhir.get(instanceId);
+    if (misi?.id && !misi.persetujuan) {
+      try {
+        misi = await this.misi.ambil(misi.id);
+        this._misiTerakhir.set(instanceId, misi);
+      } catch (err) {
+        this._kartuDiSheet('izin', kartuGalat(err, { nama }));
+        return undefined;
+      }
+    }
+    if (!misi?.id) return this._kartuDiSheet('izin', kartuGalat({ kode: 'MISI_TIDAK_ADA' }, { nama }));
+    this.sheet.buka('izin', tampilanPersetujuan({ nama, misi, galat }, {
+      ...this._aksiUmum(),
+      kembali: () => this.bukaMarkas(),
+      setujui: () => this.putuskanIzin(instanceId, true),
+      tolak: () => this.putuskanIzin(instanceId, false),
+    }));
+    return undefined;
+  }
+
+  async putuskanIzin(instanceId, setuju) {
+    const item = this.party.agenDariId(instanceId);
+    const nama = this._namaAgen(item);
+    const misi = this._misiTerakhir.get(instanceId);
+    if (!misi?.id) return;
+    try {
+      const baru = await this.misi.putuskanIzin(misi.id, setuju);
+      const status = baru?.status ?? (setuju ? 'berjalan' : 'dibatalkan');
+      this.sheet.tutup();
+      this._kabarMisi(instanceId, { jenis: 'status', misi: { ...misi, ...(baru ?? {}), status } });
+      this.game.toast?.show(setuju ? `${nama} lanjut bekerja dengan izinmu.` : `Ditolak. Misi ${nama} dibatalkan; tidak ada panggilan ke alat itu.`, setuju ? 'g' : 'a');
+      if (setuju && !STATUS_AKHIR.has(status)) this._pantau(instanceId, misi.id);
+    } catch (err) {
+      this.bukaIzin(instanceId, kartuGalat(err, { nama }));
+    }
   }
 
   async putuskan(instanceId, putusan, catatan) {

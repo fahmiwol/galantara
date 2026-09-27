@@ -11,7 +11,7 @@
 // ═══════════════════════════════════════════════════════
 
 import { validateParty, emptyParty, memberCount, MAX_SLOTS } from '../../vendor/party-contract/party.js';
-import { findSecrets, isSelfHosted, ID } from '../../vendor/party-contract/umum.js';
+import { findSecrets, jenisOtak, ID } from '../../vendor/party-contract/umum.js';
 import { GalatRuntime, segmen } from './apiRuntime.js';
 
 export const KUNCI_CACHE = 'galantara_party_v2';
@@ -34,14 +34,22 @@ export function normalisasiPemilik(id) {
   return ID.test(bersih) ? bersih : null;
 }
 
-/** Label shown next to a brain. Never omitted: a cloud brain is always named as such. */
+/**
+ * Label shown next to a brain (ADR-0007): "Milik sendiri", "GPU sewaan · <model>" (the operator's
+ * rented GPU, never called MiganCore) or "Cloud pihak lain". Never omitted: a brain that is not the
+ * player's own is always named as such. SIMULASI (demo/tests) keeps its own label.
+ */
 export function labelOtak(brain) {
   const provider = String(brain?.provider ?? '');
   if (!provider) return { teks: 'Belum ada otak', jenis: 'kosong' };
   if (provider.toLowerCase() === 'simulasi') return { teks: 'SIMULASI', jenis: 'simulasi' };
-  return isSelfHosted(provider)
-    ? { teks: 'Milik sendiri', jenis: 'sendiri' }
-    : { teks: 'Cloud pihak lain', jenis: 'cloud' };
+  const jenis = jenisOtak(provider);
+  if (jenis === 'sendiri') return { teks: 'Milik sendiri', jenis: 'sendiri' };
+  if (jenis === 'gpu_sewaan') {
+    const model = typeof brain?.model === 'string' && brain.model.trim() ? brain.model.trim() : null;
+    return { teks: model ? `GPU sewaan · ${model}` : 'GPU sewaan', jenis: 'gpu' };
+  }
+  return { teks: 'Cloud pihak lain', jenis: 'cloud' };
 }
 
 function itemRoster(mentah) {
@@ -51,6 +59,8 @@ function itemRoster(mentah) {
     agen,
     versi: Number(mentah.version ?? mentah.versi ?? 0),
     status_kerja: mentah.status_kerja ?? agen.status_kerja ?? null,
+    // Beside the agent like status_kerja (SPRINT-02): only from verified, approved missions.
+    pengalaman: mentah.pengalaman && typeof mentah.pengalaman === 'object' ? mentah.pengalaman : null,
   };
 }
 

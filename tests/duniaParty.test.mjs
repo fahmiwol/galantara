@@ -138,7 +138,7 @@ test('missions not live on this runtime yet: an honest card, the agent stays in 
 
 test('mission status maps onto the one agent state machine', () => {
   assert.deepEqual(STATUS_DARI_MISI, {
-    antre: 'antre', berjalan: 'bekerja', menunggu_otak: 'menunggu_otak', selesai: 'hasil_siap',
+    antre: 'antre', berjalan: 'bekerja', menunggu_otak: 'menunggu_otak', menunggu_persetujuan: 'menunggu_persetujuan', selesai: 'hasil_siap',
     selesai_tanpa_temuan: 'hasil_siap', gagal: 'gagal', dibatalkan: 'siap',
   });
 });
