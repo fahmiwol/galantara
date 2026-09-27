@@ -187,3 +187,119 @@ test('an agent whose status says "on a mission" never follows, even if it happen
   assert.deepEqual(k.dp.pengikut, []);
   assert.equal(k.npcs.get('sari').perilaku.keadaan, 'keliling');
 });
+
+// ── Integration (stream E): the instanced companion kit draws the party (PERMINTAAN B2-P1, C2-1, C2-2) ──
+
+/** A kit that records what B asks of it (same surface as src/world/pendamping KitPendamping). */
+function kitPalsu() {
+  const isi = new Map();
+  const log = [];
+  return {
+    isi, log,
+    tambah(id, kelas, { warna } = {}) { log.push(['tambah', id]); isi.set(id, { kelas: String(kelas).split(' ')[0].toLowerCase(), warna, pos: null }); return true; },
+    pindah(id, x, y, z, arah, o) { const d = isi.get(id); if (!d) return false; d.pos = { x, y, z, arah, ...o }; return true; },
+    lepas(id) { log.push(['lepas', id]); return isi.delete(id); },
+    kelas(id) { return isi.get(id)?.kelas ?? null; },
+    perbarui(kam) { log.push(['perbarui', kam ?? null]); return { dekat: isi.size, jauh: 0 }; },
+    mesh: {},
+  };
+}
+
+function siapkanDenganKit() {
+  const k = siapkan();
+  const kit = kitPalsu();
+  const disembunyikan = new Set();
+  const warna = { sari: 0x9c8ac0, budi: 0x7c9a92, maya: 0xd9a066 };
+  const role = { sari: 'Penjejak Intelijen', budi: 'Operator Lapangan', maya: 'Pemandu Ekspedisi' };
+  const getAsli = k.game.npcs.get;
+  k.game.npcs.get = (id) => {
+    const n = getAsli(id);
+    n.data.role ??= role[id]; n.data.color ??= warna[id];
+    n.mesh.position ??= { y: 0.07 }; n.mesh.rotation ??= { x: 0 };
+    return n;
+  };
+  k.game.npcs.setelPendamping = (id, ya) => { if (ya) disembunyikan.add(id); else disembunyikan.delete(id); return true; };
+  k.game.kitPendamping = kit;
+  k.game.camera = { cam: { nama: 'kamera' } };
+  return { ...k, kit, disembunyikan };
+}
+
+test('the kit draws every companion (class + NPC colour), and their world meshes are hidden', async () => {
+  const k = siapkanDenganKit();
+  await k.dp.muat();
+  await k.dp.party.masukDev('usr-kit');
+  for (const sp of ['sari', 'budi', 'maya']) await k.dp.party.rekrut(sp);
+  for (let i = 0; i < 60; i++) { k.game.avatar.pos.x += 5.4 * DT; k.dp.perbarui(DT); }
+  assert.deepEqual([...k.kit.isi.keys()], ['sari', 'budi', 'maya']);
+  assert.deepEqual([...k.disembunyikan].sort(), ['budi', 'maya', 'sari'], 'a companion is never drawn twice');
+  assert.equal(k.kit.isi.get('budi').kelas, 'operator');
+  assert.equal(k.kit.isi.get('maya').warna, 0xd9a066, 'the companion wears the recruited NPC colour');
+  // Once per frame, with the camera (LOD from on-screen size), after the moves.
+  const bingkai = k.kit.log.filter(([j]) => j === 'perbarui');
+  assert.equal(bingkai.length, 60);
+  assert.equal(bingkai.at(-1)[1], k.game.camera.cam);
+  // The kit stands where the NPC entity walked this frame, the bob lifts only the figure.
+  const sari = k.npcs.get('sari');
+  sari.x = 3.25; sari.z = -1.5; sari.perilaku.y = 0.4; sari.perilaku.arah = 1.2; sari.mesh.position.y = 0.45;
+  k.dp.perbarui(DT);
+  const p = k.kit.isi.get('sari').pos;
+  assert.deepEqual([p.x, p.y, p.z, p.arah], [3.25, 0.4, -1.5, 1.2]);
+  assert.ok(Math.abs(p.angkat - 0.05) < 1e-9, `angkat ${p.angkat}`);
+});
+
+test('a companion sent on a mission leaves the kit at once and gets its own mesh back', async () => {
+  const k = siapkanDenganKit();
+  await k.dp.muat();
+  await k.dp.party.masukDev('usr-kit2');
+  for (const sp of ['sari', 'budi']) await k.dp.party.rekrut(sp);
+  for (let i = 0; i < 30; i++) { k.game.avatar.pos.x += 5.4 * DT; k.dp.perbarui(DT); }
+  assert.ok(k.disembunyikan.has('budi'));
+  const budi = k.dp.party.agenDariSpesies('budi').agen.instance_id;
+  await k.dp.kirimMisi(budi, { tujuan: 'rencana' });
+  k.dp.perbarui(DT); // the very next frame, not half a second later
+  assert.equal(k.kit.kelas('budi'), null, 'Budi is no longer drawn by the kit');
+  assert.equal(k.disembunyikan.has('budi'), false, 'Budi walks to his desk as the world NPC');
+  assert.deepEqual([...k.kit.isi.keys()], ['sari']);
+  // Back from the mission (siap): into the kit again.
+  k.dp.party.setelStatus(budi, 'siap');
+  k.game.npcs.get('budi').perilaku.keadaan = 'keliling';
+  k.dp._jedaIkut = 0;
+  k.dp.perbarui(DT);
+  assert.deepEqual([...k.kit.isi.keys()], ['sari', 'budi']);
+  assert.ok(k.disembunyikan.has('budi'));
+});
+
+test('in a Spot (world NPCs hidden) the kit draws nothing; leaving the party frees the mesh', async () => {
+  const k = siapkanDenganKit();
+  await k.dp.muat();
+  await k.dp.party.masukDev('usr-kit3');
+  await k.dp.party.rekrut('sari');
+  k.dp.perbarui(DT);
+  k.kit.mesh = { dekat: { visible: true }, jauh: { visible: true }, tanah: { visible: true } };
+  k.game.npcs.terlihat = false;
+  const sebelum = k.kit.log.length;
+  k.dp.perbarui(DT);
+  assert.ok(Object.values(k.kit.mesh).every((m) => m.visible === false));
+  assert.equal(k.kit.log.slice(sebelum).filter(([j]) => j === 'perbarui').length, 0);
+  k.game.npcs.terlihat = true;
+  await k.dp.party.keluarkan(k.dp.party.agenDariSpesies('sari').agen.instance_id);
+  k.dp._jedaIkut = 0;
+  k.dp.perbarui(DT);
+  assert.equal(k.kit.kelas('sari'), null);
+  assert.equal(k.disembunyikan.has('sari'), false);
+});
+
+test('NPCManager.setelPendamping hides only that mesh and survives a Spot round trip', () => {
+  const m = Object.create(NPCManager.prototype);
+  m._terlihat = true;
+  const npc = (id) => ({ data: { id }, mesh: { visible: true }, pendamping: false });
+  m.npcs = [npc('sari'), npc('dewi')];
+  assert.equal(m.setelPendamping('sari', true), true);
+  assert.deepEqual(m.npcs.map((n) => n.mesh.visible), [false, true]);
+  m.setHubVisible(false);
+  m.setHubVisible(true);
+  assert.deepEqual(m.npcs.map((n) => n.mesh.visible), [false, true], 'back in Oola the companion stays hidden');
+  m.setelPendamping('sari', false);
+  assert.equal(m.npcs[0].mesh.visible, true);
+  assert.equal(m.setelPendamping('tidak-ada', true), false);
+});

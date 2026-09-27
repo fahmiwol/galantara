@@ -43,6 +43,7 @@ import { sambungDunia3D    } from '../party/sambungDunia3D.js';
 import { ambilKodeHandoff  } from './kodeHandoff.js';
 import * as markas3D         from '../world/markas/index.js';
 import * as agen3D           from '../world/agen/index.js';
+import { buatKitPendamping } from '../world/pendamping/index.js';
 import { KontrolSentuh     } from './KontrolSentuh.js';
 import { pecahLangkah      } from './langkah.js';
 import { ModeRingan, terapkanRingan } from './ModeRingan.js';
@@ -212,6 +213,10 @@ export class Game {
       meshDari: (id) => this.npcs?.get(id)?.mesh,
       kurangiGerak: () => Boolean(gerakHalus?.matches),
     });
+
+    // The party walking behind the player: one instanced kit, ≤ 3 draw calls for all companions
+    // (stream C, LOG-C §8). DuniaParty fills it and hides the NPC meshes it stands in for.
+    this.kitPendamping = buatKitPendamping(scene, { maks: 4 });
 
     // Galantara World M1: party, Markas, missions (runtime at /rt/api), and touch paths to talk.
     this.dunia = new DuniaParty(this, { kodeMasuk: this._handoffMasuk?.kode ?? null }).init();

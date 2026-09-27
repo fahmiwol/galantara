@@ -38,7 +38,7 @@ export const ANGKUR_Y = 1.3;
 export const TEPI_PANAH_PX = 26;
 
 /** Statuses that need the player: these, and only these, get the edge arrow. */
-export const PERLU_TINDAKAN = Object.freeze(['hasil_siap', 'menunggu_otak', 'gagal']);
+export const PERLU_TINDAKAN = Object.freeze(['hasil_siap', 'menunggu_otak', 'gagal', 'menunggu_persetujuan']);
 
 const hex = (n) => `#${n.toString(16).padStart(6, '0').toUpperCase()}`;
 
@@ -63,6 +63,11 @@ export const IKON_STATUS = Object.freeze({
   menunggu_otak: Object.freeze({
     bentuk: 'balon-tanya', label: 'Menunggu otak · butuh kamu',
     svg: '<path d="M4 4h16v12H11l-5 4v-4H4z" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round"/><path d="M9.8 8.2a2.3 2.3 0 1 1 3.3 2.1c-.7.4-1.1.8-1.1 1.6" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="14" r="1.1" fill="currentColor"/>',
+  }),
+  menunggu_persetujuan: Object.freeze({
+    // A stack of coins with a question: "may I spend?" (M2, paid tool waiting for approval).
+    bentuk: 'koin-tanya', label: 'Menunggu izinmu · alat berbiaya',
+    svg: '<ellipse cx="9" cy="17" rx="6" ry="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M3 17v-4c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6M3 13V9c0 1.4 2.7 2.6 6 2.6s6-1.2 6-2.6" fill="none" stroke="currentColor" stroke-width="2"/><ellipse cx="9" cy="9" rx="6" ry="2.6" fill="none" stroke="currentColor" stroke-width="2"/><path d="M17.6 4.2a2 2 0 1 1 2.9 1.8c-.6.3-.9.7-.9 1.4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><circle cx="19.6" cy="10" r="1" fill="currentColor"/>',
   }),
   gagal: Object.freeze({
     bentuk: 'segitiga-seru', label: 'Gagal',

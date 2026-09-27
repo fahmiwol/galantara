@@ -47,3 +47,43 @@ test('kontrol: angka Oola+party benar-benar memuat Markas dan party (bukan lulus
   assert.equal(besar.total.drawCall, r.total.drawCall);
   void ukurPohon;
 });
+
+// ── Integration (stream E, PERMINTAAN C2-1): the same budget with EVERY world NPC counted ──
+// NPC.js builds all of them; agents wear the ✦ ring + class kit (Game.js, sambungDunia3D). While
+// the three hireable agents walk behind the player as the party, NPCManager.setelPendamping hides
+// their own meshes (the kit draws them), so the party is not paid for twice.
+
+async function npcDunia() {
+  const { NPCManager } = await import('../src/entities/NPC.js');
+  const agen = await import('../src/world/agen/index.js');
+  const adegan = new THREE.Scene();
+  const m = new NPCManager(adegan).build();
+  for (const n of m.npcs) {
+    if (!n.data.agen) continue;
+    agen.pasangPenandaAgen(n.mesh);
+    agen.pasangKitKelas(n.mesh, n.data.role);
+  }
+  return { m, adegan, agenIds: m.npcs.filter((n) => n.data.agen).map((n) => n.data.id) };
+}
+
+test('Oola + Markas penuh + party 4 + semua NPC dunia (agen party disembunyikan): ≤ 150 draw call, ≤ 20.000 segitiga', async () => {
+  const r = await K.ukurOolaParty(4);
+  const { m, adegan, agenIds } = await npcDunia();
+  assert.ok(agenIds.length >= 3, `agen dunia: ${agenIds}`);
+  for (const id of agenIds) m.setelPendamping(id, true);
+  const npc = ukurPohon(adegan);
+  const total = r.total.drawCall + npc.drawCall;
+  assert.ok(total <= ANGGARAN.drawCall, `${total} draw call (Oola+party ${r.total.drawCall} + NPC ${npc.drawCall}) > ${ANGGARAN.drawCall}`);
+  assert.ok(r.total.segitiga + npc.segitiga <= ANGGARAN.segitiga, `${r.total.segitiga + npc.segitiga} segitiga`);
+  assert.equal(npc.kaster, 0, 'NPC dunia menambah pass bayangan');
+});
+
+test('kontrol: tanpa menyembunyikan NPC pendamping, angka yang sama melewati 150 (NPC benar-benar terhitung)', async () => {
+  const r = await K.ukurOolaParty(4);
+  const { adegan, m } = await npcDunia();
+  const semua = ukurPohon(adegan);
+  assert.ok(r.total.drawCall + semua.drawCall > ANGGARAN.drawCall, `${r.total.drawCall + semua.drawCall}: kontrol tidak membuktikan apa pun`);
+  // Each hidden companion NPC saves its whole mesh (body, head, blob shadow, ✦ ring, class kit).
+  m.setelPendamping('sari', true);
+  assert.ok(ukurPohon(adegan).drawCall <= semua.drawCall - 4);
+});

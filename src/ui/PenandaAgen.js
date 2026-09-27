@@ -23,6 +23,7 @@ const PENANDA_STATUS = {
   bekerja: { glyph: '⋯', teks: 'bekerja', jenis: 'kerja' },
   hasil_siap: { glyph: '!', teks: 'Hasil siap', jenis: 'perlu' },
   menunggu_otak: { glyph: '!', teks: 'otak belum menjawab', jenis: 'perlu' },
+  menunggu_persetujuan: { glyph: '!', teks: 'menunggu izinmu', jenis: 'perlu' },
   gagal: { glyph: '✕', teks: 'misi gagal', jenis: 'gagal' },
 };
 
@@ -69,7 +70,8 @@ export class PenandaAgen {
   _posisi(id, tinggi) {
     return () => {
       const npc = this.npcs?.get(id);
-      if (!npc || !this.npcs.terlihat) return null;
+      // A companion is drawn by the instanced kit without a label (LOG-C §8): no plaque, no marker.
+      if (!npc || !this.npcs.terlihat || npc.pendamping) return null;
       const t = typeof tinggi === 'function' ? tinggi() : tinggi;
       // Follow the floor the NPC stands on (the Markas terrace is above the ground).
       return { x: npc.x, y: t + (Number.isFinite(npc.perilaku?.y) ? npc.perilaku.y : 0), z: npc.z };

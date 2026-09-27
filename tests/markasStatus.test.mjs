@@ -42,7 +42,7 @@ function warnaLampu(i) { const c = new THREE.Color(); markas.lampuMeja.getColorA
 const kodeWarna = (token) => new THREE.Color(M.WARNA_STATUS[token]).getHexString();
 
 test('setiap status_kerja kontrak runtime punya tepat satu tampilan', () => {
-  assert.deepEqual(M.STATUS_KERJA, ['siap', 'antre', 'bekerja', 'hasil_siap', 'menunggu_otak', 'gagal']);
+  assert.deepEqual(M.STATUS_KERJA, ['siap', 'antre', 'bekerja', 'hasil_siap', 'menunggu_otak', 'gagal', 'menunggu_persetujuan']);
   for (const s of M.STATUS_KERJA) {
     const t = M.TAMPILAN_STATUS[s];
     assert.ok(t, `${s} tanpa tampilan`);
@@ -100,6 +100,18 @@ test('menunggu_otak → keluar ke depan Markas, di tanah, menghadap pemain', () 
   const l = keLokal(r.titik);
   assert.ok(l.z > 5.0, `masih di pelataran (z lokal ${l.z.toFixed(2)})`);
   assert.equal(r.titik.y, 0);
+});
+
+test('menunggu_persetujuan (M2) → tetap di mejanya sendiri, pose tanya, suar & lampu "perlu" (PERMINTAAN B2-P2)', () => {
+  const kerja = M.tampilkanStatus3D('sari', 'bekerja');
+  const izin = M.tampilkanStatus3D('sari', 'menunggu_persetujuan');
+  assert.equal(izin.slot, kerja.slot, 'agen berganti meja saat menunggu izin');
+  assert.deepEqual(izin.titik, kerja.titik);
+  assert.equal(izin.pose, 'tanya');
+  assert.equal(warnaSuar(), M.WARNA_STATUS.perlu);
+  assert.equal(warnaLampu(izin.slot), kodeWarna('perlu'));
+  M.tampilkanStatus3D('budi', 'gagal');
+  assert.equal(M.keadaanMarkas().statusSuar(), 'menunggu_persetujuan', 'keputusan pemain kalah dari misi gagal');
 });
 
 test('siap → tidak ada titik Markas (mengikuti pemain / berkeliling), dan mejanya dilepas', () => {

@@ -191,6 +191,51 @@ export class DuniaParty {
       this._selaraskanIkut();
     }
     this.pengikut.forEach((spId, i) => g.npcs?.setelTitikIkut?.(spId, this.jejak.titikPendamping(i + 1)));
+    this._gambarPendamping();
+  }
+
+  /**
+   * Stream C's instanced kit draws every companion (≤ 3 draw calls for the whole party, LOG-C §8).
+   * The NPC entity still walks the trail (PerilakuNpc 'ikut'); the kit copies where it stands and
+   * how it bobs this frame. Only in Oola: in a Spot the world NPCs are hidden, and so is the party.
+   */
+  _gambarPendamping() {
+    const g = this.game;
+    const kit = g.kitPendamping;
+    if (!kit || !g.npcs) return;
+    if (g.npcs.terlihat !== false) {
+      for (const spId of this.pengikut) {
+        const npc = g.npcs.get(spId);
+        if (!npc || !kit.kelas(spId)) continue;
+        const p = npc.perilaku;
+        const lantai = Number.isFinite(p?.y) ? p.y : 0;
+        const angkat = Math.max(0, (npc.mesh?.position?.y ?? lantai) - lantai);
+        kit.pindah(spId, npc.x, lantai, npc.z, p?.arah ?? 0, { condong: npc.mesh?.rotation?.x ?? 0, angkat });
+      }
+      kit.perbarui(g.camera?.cam ?? null);
+    } else if (kit.mesh) {
+      for (const m of Object.values(kit.mesh)) m.visible = false;
+    }
+  }
+
+  /** A new companion: into the kit, its world mesh (and label) out. A kit that refuses keeps the NPC. */
+  _masukKit(spId) {
+    const g = this.game;
+    const kit = g.kitPendamping;
+    if (!kit) return;
+    const data = g.npcs.get(spId)?.data;
+    let ok = false;
+    try {
+      ok = kit.tambah(spId, data?.role ?? '', { warna: data?.color });
+    } catch (err) {
+      console.warn(`[party] kit pendamping menolak ${spId}`, err);
+    }
+    if (ok) g.npcs.setelPendamping?.(spId, true);
+  }
+
+  _keluarKit(spId) {
+    this.game.kitPendamping?.lepas(spId);
+    this.game.npcs?.setelPendamping?.(spId, false);
   }
 
   /**
@@ -212,8 +257,10 @@ export class DuniaParty {
         if (k === 'keliling' || k === 'ikut') ikut.push(spId);
       }
     }
+    for (const spId of ikut) if (!this.pengikut.includes(spId)) this._masukKit(spId);
     for (const spId of this.pengikut) {
       if (ikut.includes(spId)) continue;
+      this._keluarKit(spId);
       const npc = npcs.get(spId);
       npcs.setelTitikIkut?.(spId, null);
       if (npc?.perilaku?.keadaan === 'ikut') npcs.perintah(spId, { jenis: 'keliling', jangkar: { x: npc.x, z: npc.z } });
@@ -576,6 +623,8 @@ export class DuniaParty {
 
   _keTempatKerja(spesiesId, rute = null) {
     this.game.npcs?.perintah(spesiesId, { jenis: 'menuju', titik: rute ?? ruteKerja(spesiesId), lalu: 'bekerja' });
+    // Leaves the line on the next frame: its own mesh walks to the desk, not the kit's figure.
+    this._jedaIkut = 0;
   }
 
   /** Tell the 3D world the status; the pose it names is held by the NPC once it has arrived. */
