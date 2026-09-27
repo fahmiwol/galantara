@@ -92,14 +92,16 @@ test('LOD1: kepala segilima tidak menembus topi/caping (sinar dari pusat kepala)
   for (const k of ['penjejak', 'operator']) {
     const topi = bagianKitJauh(k).filter((b) => b.benda === 'topi' || b.benda === 'caping').map((b) => new THREE.Mesh(b.geo, bahan));
     for (const m of [mKepala, ...topi]) m.updateMatrixWorld(true);
-    // ≤ 86°: the caping is open at its 2 cm apex (as in LOD0, where a knob covers it).
-    for (let e = 50; e <= 86; e += 6) {
+    // 20°–86°: low rays catch a head ring poking through the crown's side; ≤ 86°: the caping is open at its 2 cm apex (as in LOD0, where a knob covers it).
+    for (let e = 20; e <= 86; e += 6) {
       for (let a = 5; a < 360; a += 12) { // off the seams: a ray exactly on an edge can slip between two triangles
         const el = (e * Math.PI) / 180; const az = (a * Math.PI) / 180;
         ray.set(pusat, new THREE.Vector3(Math.cos(el) * Math.sin(az), Math.sin(el), Math.cos(el) * Math.cos(az)));
         const h = ray.intersectObject(mKepala)[0];
         const t = ray.intersectObjects(topi)[0];
-        assert.ok(h && t, `${k}: sinar ${e}°/${a}° tidak mengenai ${h ? "topi" : "kepala"}`);
+        assert.ok(h, `${k}: sinar ${e}°/${a}° tidak mengenai kepala`);
+        // Below ≈ 50° a ray may leave under the brim: then there is no hat to pierce.
+        if (!t) { assert.ok(e < 50, `${k}: sinar ${e}°/${a}° tidak mengenai topi`); continue; }
         assert.ok(t.distance >= h.distance - 1e-4, `${k}: kepala menembus di ${e}°/${a}° (topi ${t.distance.toFixed(3)} < kepala ${h.distance.toFixed(3)})`);
       }
     }
