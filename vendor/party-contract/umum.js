@@ -27,25 +27,32 @@ const SECRET_VALUE =
   /^(sk-|sk_live_|sk_test_|rk_live_|AIza|ghp_|gho_|ghs_|github_pat_|glpat-|xox[abprs]-|hf_|r8_|gwk_|AKIA|ASIA|Bearer\s)|-----BEGIN [A-Z ]*PRIVATE KEY-----/;
 
 // The same credentials pasted in the middle of a sentence ("Tolong pakai sk-…"). Length floors keep
-// ordinary words such as "risk-free" or a lone "Bearer" from counting. Mirrors tools/cek-rahasia.mjs.
-const SECRET_INSIDE = new RegExp(
-  [
-    /\bsk-(?:ant-|or-|proj-)?[A-Za-z0-9_-]{20,}/,
-    /\b[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/,
-    /\bAIza[0-9A-Za-z_-]{30,}/,
-    /\b(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{30,}/,
-    /\bgithub_pat_[A-Za-z0-9_]{40,}/,
-    /\bglpat-[A-Za-z0-9_-]{20,}/,
-    /\bhf_[A-Za-z0-9]{30,}/,
-    /\bxox[abprs]-[A-Za-z0-9-]{10,}/,
-    /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/,
-    /\br8_[A-Za-z0-9]{30,}/,
-    /\bgwk_[A-Za-z0-9_-]{30,}/, // Galantara office token (ADR-0010)
-    /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/,
-  ]
-    .map((re) => re.source)
-    .join('|'),
-);
+// ordinary words such as "risk-free" or a lone "Bearer" from counting. This is the ONE list: the
+// runtime builds its patterns from it (services/runtime/src/rahasia.js) and the Kantor web reaches it
+// through findSecrets. tools/cek-rahasia.mjs keeps its own superset for repository files.
+//
+// A leading \b stays only where the prefix is also an ordinary word fragment ("task-…", "ASIA…",
+// "Bearer"). Distinctive prefixes match glued to anything: 'x' + token has no word boundary and
+// slipped through every layer (Codex C01). A plain sk- key glued to a word is caught by its shape
+// instead (40+ characters mixing upper, lower and digits), which kebab-case words and hex hashes lack.
+export const POLA_RAHASIA = Object.freeze([
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?(?:-----END [A-Z ]*PRIVATE KEY-----|$)/,
+  /\bsk-[A-Za-z0-9_-]{20,}/,
+  /sk-(?:ant|or|proj)-[A-Za-z0-9_-]{20,}/,
+  /sk-(?=[A-Za-z0-9]*[A-Z])(?=[A-Za-z0-9]*[a-z])(?=[A-Za-z0-9]*\d)[A-Za-z0-9]{40,}/,
+  /[rs]k_(?:live|test)_[A-Za-z0-9]{16,}/,
+  /AIza[0-9A-Za-z_-]{30,}/,
+  /(?:ghp|gho|ghs|ghu|ghr)_[A-Za-z0-9]{30,}/,
+  /github_pat_[A-Za-z0-9_]{40,}/,
+  /glpat-[A-Za-z0-9_-]{20,}/,
+  /hf_[A-Za-z0-9]{30,}/,
+  /xox[abprs]-[A-Za-z0-9-]{10,}/,
+  /\b(?:AKIA|ASIA)[0-9A-Z]{16}\b/,
+  /r8_[A-Za-z0-9]{30,}/,
+  /gwk_[A-Za-z0-9_-]{30,}/, // Galantara office token (ADR-0010)
+  /\bBearer\s+[A-Za-z0-9._~+/=-]{16,}/,
+]);
+const SECRET_INSIDE = new RegExp(POLA_RAHASIA.map((re) => re.source).join('|'));
 
 // Brains the operator runs on rented GPUs (ADR-0007): open-weight models deployed by us, paid by the
 // operator, key held on the server. No player vault_ref, and never labelled "milik sendiri":
