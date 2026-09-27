@@ -554,6 +554,11 @@ export class DuniaParty {
         dibuat: misi.dibuat ?? new Date().toISOString(),
       });
       this.party.setelStatus(instanceId, STATUS_DARI_MISI[misi.status] ?? 'antre');
+      if (misi.status === 'menunggu_persetujuan') {
+        // The runtime stopped before a paid tool right away: ask now, while the player is here.
+        this._pantau(instanceId, misi.id);
+        return this.bukaIzin(instanceId);
+      }
       this.sheet.tutup();
       const antrean = teksAntrean(misi);
       this.game.toast?.show(`${nama} berangkat ke meja kerja di Markas.${antrean ? ` ${antrean}.` : ''} Kamu bisa lanjut jalan-jalan.`, 'g');

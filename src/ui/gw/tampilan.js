@@ -77,7 +77,7 @@ export function teksPengalaman(p) {
  */
 export function teksBiaya(b) {
   const rp = (n) => `± Rp ${Math.round(n).toLocaleString('id-ID')}`;
-  if (Number.isFinite(b) && b >= 0) return b === 0 ? 'gratis (server milik sendiri)' : rp(b);
+  if (Number.isFinite(b) && b >= 0) return b === 0 ? 'gratis' : rp(b);
   if (typeof b === 'string' && b.trim()) return b.trim();
   if (b && typeof b === 'object') {
     const bagian = [];
@@ -625,7 +625,9 @@ export function tampilanPersetujuan({ nama, misi, galat = null }, aksi = {}) {
     h('div', { kelas: 'gw-blok' },
       h('div', { kelas: 'gw-chip' }, h('b', { teks: 'Alat' }), h('small', { teks: alat })),
       h('div', { kelas: 'gw-chip' }, h('b', { teks: 'Perkiraan biaya' }), h('small', { teks: teksBiaya(izin.biaya_perkiraan) })),
+      izin.penyedia?.label ? h('div', { kelas: 'gw-chip' }, h('b', { teks: 'Penyedia' }), h('small', { teks: String(izin.penyedia.label) })) : null,
       izin.alasan ? h('div', { kelas: 'gw-chip' }, h('b', { teks: 'Alasan' }), h('small', { teks: String(izin.alasan) })) : null,
+      izin.biaya_catatan ? h('p', { kelas: 'gw-meta', teks: String(izin.biaya_catatan) }) : null,
     ),
     h('p', { kelas: 'gw-meta', teks: 'Sampai kamu memutuskan, tidak ada satu panggilan pun ke alat ini. Tolak = misinya dibatalkan.' }),
     galat ? tampilanKartuGalat(galat, aksi) : null,

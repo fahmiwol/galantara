@@ -297,7 +297,7 @@ test('approval route not on this runtime yet: an honest "segera hadir" card', as
 test('cost estimate words come from data only', () => {
   assert.equal(teksBiaya(null), 'belum ada perkiraan dari server');
   assert.equal(teksBiaya({ rupiah: null }), 'belum ada perkiraan dari server');
-  assert.equal(teksBiaya(0), 'gratis (server milik sendiri)');
+  assert.equal(teksBiaya(0), 'gratis');
   assert.equal(teksBiaya(2500), '± Rp 2.500');
   assert.equal(teksBiaya({ rupiah: 0, panggilan: 1 }), 'gratis · 1 panggilan');
   const v = tampilanPersetujuan({ nama: 'Sari', misi: { id: 'm_1', pertanyaan: 'x', persetujuan: { alat: 'cari-web' } } }, {});
