@@ -133,8 +133,8 @@ test('Beri misi: question ≤ 300, three https fields, and no password field', (
   const form = cariSemua(t, (n) => n.tag === 'form')[0];
   const elements = { pertanyaan: { value: 'harga cabai' }, sumber1: { value: 'https://a.id' }, sumber2: { value: ' ' }, sumber3: { value: '' } };
   form.props.on.submit({ preventDefault() {}, target: { elements } });
-  assert.deepEqual(dikirim, [{ pertanyaan: 'harga cabai', sumber: ['https://a.id'] }]);
-  assert.deepEqual(bacaFormMisi(null), { pertanyaan: '', sumber: [] });
+  assert.deepEqual(dikirim, [{ jenis: 'riset-sumber', pertanyaan: 'harga cabai', sumber: ['https://a.id'] }]);
+  assert.deepEqual(bacaFormMisi(null), { jenis: 'riset-sumber', pertanyaan: '', sumber: [] });
 });
 
 test('Hasil: source numbers follow the references; zero sources is a warning; verdict buttons', () => {

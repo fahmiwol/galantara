@@ -48,8 +48,23 @@ export class NPCManager {
   setHubVisible(visible) {
     this._terlihat = visible;
     this.npcs.forEach((npc) => {
-      npc.mesh.visible = visible;
+      npc.mesh.visible = visible && !npc.pendamping;
     });
+  }
+
+  /**
+   * While an agent walks behind the player it is drawn by the instanced companion kit
+   * (src/world/pendamping, LOG-C §8): its own mesh (with the ✦ ring and class kit on it) is
+   * hidden, so the same agent is never drawn twice. The entity keeps moving (PerilakuNpc
+   * 'ikut'), so taps and positions still work. Back at the Markas = its mesh again.
+   * @returns {boolean} false for an unknown id
+   */
+  setelPendamping(id, ya) {
+    const npc = this.get(id);
+    if (!npc) return false;
+    npc.pendamping = Boolean(ya);
+    npc.mesh.visible = this._terlihat && !npc.pendamping;
+    return true;
   }
 
   get terlihat() { return this._terlihat; }
@@ -95,6 +110,8 @@ export class NPCManager {
         x: data.x,
         z: data.z,
         bayangan,
+        /** true while the companion kit draws this NPC (its mesh is hidden) */
+        pendamping: false,
         /** 3D pose name for the current status (C's agen/pose.js), held once the NPC has arrived */
         pose: null,
         _poseMulai: null,
@@ -114,6 +131,12 @@ export class NPCManager {
     if (!npc || npc.pose === pose) return;
     npc.pose = pose ?? null;
     npc._poseMulai = null;
+  }
+
+  /** A companion's spot on the owner's trail this frame (null = none). */
+  setelTitikIkut(id, titik) {
+    const npc = this.get(id);
+    if (npc) npc.perilaku.titikIkut = titik ?? null;
   }
 
   /** Command one NPC's behaviour (see PerilakuNpc.perintah). */
@@ -178,6 +201,9 @@ export class NPCManager {
     let closestDist = Infinity;
 
     this.npcs.forEach(npc => {
+      // A companion walking behind the player is always "near": offering it for talk would hide
+      // every other NPC and zone from the prompt. It is still reachable by tapping it, or the Markas.
+      if (npc.perilaku?.keadaan === 'ikut') return;
       const dx = avatarPos.x - npc.x;
       const dz = avatarPos.z - npc.z;
       const dist = Math.sqrt(dx * dx + dz * dz);

@@ -8,12 +8,12 @@
 // Markas view, so warping to a Spot and back redraws the same thing.
 //
 // Status vocabulary = runtime `status_kerja` (SPRINT-01 API contract):
-//   siap | antre | bekerja | hasil_siap | menunggu_otak | gagal
+//   siap | antre | bekerja | hasil_siap | menunggu_otak | gagal | menunggu_persetujuan (M2)
 // ═══════════════════════════════════════════════════════
 
 import { KAPASITAS_GULUNGAN, MEJA } from './spek.js';
 
-export const STATUS_KERJA = Object.freeze(['siap', 'antre', 'bekerja', 'hasil_siap', 'menunggu_otak', 'gagal']);
+export const STATUS_KERJA = Object.freeze(['siap', 'antre', 'bekerja', 'hasil_siap', 'menunggu_otak', 'gagal', 'menunggu_persetujuan']);
 
 /**
  * Status colours — dark-surface values of Desain §9.6 (`--st-*-g`, = DNA-VISUAL-MIGHAN
@@ -26,7 +26,7 @@ export const WARNA_STATUS = Object.freeze({
 
 /** Which colour token each status uses (Desain §9.4). `siap` has no lamp: the world stays calm. */
 export const WARNA_UNTUK_STATUS = Object.freeze({
-  antre: 'siaga', bekerja: 'kerja', hasil_siap: 'perlu', menunggu_otak: 'perlu', gagal: 'gagal',
+  antre: 'siaga', bekerja: 'kerja', hasil_siap: 'perlu', menunggu_otak: 'perlu', gagal: 'gagal', menunggu_persetujuan: 'perlu',
 });
 
 /**
@@ -41,6 +41,9 @@ export const TAMPILAN_STATUS = Object.freeze({
   hasil_siap:    Object.freeze({ keluarga: 'hasil', pose: 'lapor' }),
   menunggu_otak: Object.freeze({ keluarga: 'tanya', pose: 'tanya' }),
   gagal:         Object.freeze({ keluarga: 'gagal', pose: 'lesu' }),
+  // M2 (PERMINTAAN B2-P2): a paid tool waits for the player's yes. Still mid-mission, so the agent
+  // stays at its own desk (same slot), turned to the plaza asking; icon + edge arrow say why.
+  menunggu_persetujuan: Object.freeze({ keluarga: 'meja', pose: 'tanya' }),
 });
 
 /**
@@ -48,7 +51,7 @@ export const TAMPILAN_STATUS = Object.freeze({
  * Laporan 3D §6.9 ("menunggu > gagal > … > bekerja > mati"), mapped onto the
  * runtime statuses.
  */
-export const PRIORITAS_SUAR = Object.freeze(['hasil_siap', 'menunggu_otak', 'gagal', 'bekerja', 'antre']);
+export const PRIORITAS_SUAR = Object.freeze(['hasil_siap', 'menunggu_persetujuan', 'menunggu_otak', 'gagal', 'bekerja', 'antre']);
 
 const JUMLAH_SLOT = MEJA.x.length;
 

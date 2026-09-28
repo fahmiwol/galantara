@@ -41,11 +41,19 @@ export const WARNA_KIT = Object.freeze({
   kaca: 0xCFE3EA,           // pale lens
 });
 
+/**
+ * `emblem` = the badge shape of Desain §9.5 (lingkaran · persegi · segitiga) with
+ * its glyph (kaca pembesar · kunci pas · kompas). Shape carries the meaning, colour
+ * only reinforces it (WCAG 1.4.1), the same rule as the status icons.
+ */
 export const KELAS = Object.freeze({
-  penjejak: Object.freeze({ nama: 'Penjejak Intelijen', warnaKelas: WARNA_KIT.ungu_senja_tua, slot: ['kepala', 'tangan'] }),
-  operator: Object.freeze({ nama: 'Operator Lapangan', warnaKelas: WARNA_KIT.nila, slot: ['kepala', 'tangan'] }),
-  pemandu: Object.freeze({ nama: 'Pemandu Ekspedisi', warnaKelas: WARNA_KIT.bata, slot: ['punggung', 'tangan'] }),
+  penjejak: Object.freeze({ nama: 'Penjejak Intelijen', warnaKelas: WARNA_KIT.ungu_senja_tua, slot: ['kepala', 'tangan'], emblem: Object.freeze({ bentuk: 'lingkaran', glyph: 'kaca_pembesar' }) }),
+  operator: Object.freeze({ nama: 'Operator Lapangan', warnaKelas: WARNA_KIT.nila, slot: ['kepala', 'tangan'], emblem: Object.freeze({ bentuk: 'persegi', glyph: 'kunci_pas' }) }),
+  pemandu: Object.freeze({ nama: 'Pemandu Ekspedisi', warnaKelas: WARNA_KIT.bata, slot: ['punggung', 'tangan'], emblem: Object.freeze({ bentuk: 'segitiga', glyph: 'kompas' }) }),
 });
+
+/** Stable class index (instanced kits tag vertices with it). Order = KELAS order. */
+export const ID_KELAS = Object.freeze(Object.fromEntries(Object.keys(KELAS).map((k, i) => [k, i])));
 
 /** 'penjejak', 'Penjejak Intelijen', 'PENJEJAK' … → 'penjejak'. */
 export function kunciKelas(kelas) {
@@ -65,7 +73,71 @@ const kotak = (u, letak, putar) => B(new THREE.BoxGeometry(u[0], u[1], u[2]), { 
  * { geo, warna, benda } — `benda` names the item so the ≥ 0,3 m rule can be
  * checked per item, not per triangle soup.
  */
-function bagianKit(k, r) {
+export function bagianKit(k, r = RANGKA_NPC) {
+  return [...bagianBenda(k, r), ...bagianEmblem(k, r)];
+}
+
+/**
+ * Class emblem (kit v1): a paper badge on the chest, tipped back to lie on the
+ * body ball, with the class glyph on it. It is the CLOSE-UP identity (portrait,
+ * ≥ 48 px, the sheet) — the silhouette items carry the class from afar, so the
+ * emblem is exempt from the ≥ 0,3 m rule and never drawn on LOD1.
+ *
+ * Built flat in XY (+Z = its face), then placed where the body surface's normal
+ * points forward-up at chest height: it faces the orbit camera, which is always
+ * above the figure.
+ */
+export const EMBLEM = Object.freeze({ tinggi: 0.25, jari: 0.1, angkat: 0.012 });
+
+function bagianEmblem(k, r) {
+  const { badanR: br, badanSkalaY: sy } = r;
+  const y = EMBLEM.tinggi;
+  // Point on the body ellipsoid (radii br, br·sy, br) straight in front, at height y.
+  const z = br * Math.sqrt(Math.max(0, 1 - (y / (br * sy)) ** 2));
+  const n = new THREE.Vector3(0, y / (sy * sy), z).normalize(); // ellipsoid gradient
+  const tip = -Math.atan2(n.y, n.z); // turns the +Z face up onto the normal
+  const di = (geo, dz = 0) => B(geo, { letak: [0, y + n.y * (EMBLEM.angkat + dz), z + n.z * (EMBLEM.angkat + dz)], putar: [tip, 0, 0] });
+  const R = EMBLEM.jari;
+  const muka = (titik) => bidangPoligon(titik, { duaSisi: false });
+  const bulat = (jari, sisi) => {
+    const t = [];
+    for (let i = 0; i < sisi; i++) { const a = (Math.PI * 2 * i) / sisi; t.push([Math.cos(a) * jari, Math.sin(a) * jari]); }
+    return t;
+  };
+  const cincin = (dalam, luar, sisi, mulai, sapu, dx, dy) => B(new THREE.RingGeometry(dalam, luar, sisi, 1, mulai, sapu), { letak: [dx, dy, 0] });
+  const warna = KELAS[k].warnaKelas;
+  const e = KELAS[k].emblem;
+  const alas = {
+    lingkaran: () => muka(bulat(R, 10)),
+    persegi: () => muka([[-R * 0.88, -R * 0.88], [R * 0.88, -R * 0.88], [R * 0.88, R * 0.88], [-R * 0.88, R * 0.88]]),
+    segitiga: () => muka([[-R * 1.05, -R * 0.62], [R * 1.05, -R * 0.62], [0, R * 1.12]]),
+  }[e.bentuk]();
+  let glyph;
+  if (e.glyph === 'kaca_pembesar') {
+    glyph = [
+      { geo: cincin(R * 0.3, R * 0.5, 8, 0, Math.PI * 2, -R * 0.12, R * 0.12) },
+      { geo: B(muka([[-0.013, -R * 0.45], [0.013, -R * 0.45], [0.013, 0], [-0.013, 0]]), { letak: [R * 0.2, -R * 0.2, 0], putar: [0, 0, Math.PI / 4] }) },
+    ];
+  } else if (e.glyph === 'kunci_pas') {
+    glyph = [
+      { geo: B(muka([[-0.014, -R * 0.62], [0.014, -R * 0.62], [0.014, R * 0.2], [-0.014, R * 0.2]]), { putar: [0, 0, -Math.PI / 4] }) },
+      // open jaw: a C whose gap faces the upper right
+      { geo: cincin(R * 0.15, R * 0.34, 6, Math.PI * 0.55, Math.PI * 1.4, R * 0.28, R * 0.28) },
+    ];
+  } else {
+    // compass needle: north half in the class colour, south half dark ink
+    glyph = [
+      { geo: muka([[-R * 0.22, 0], [R * 0.22, 0], [0, R * 0.7]]) },
+      { geo: muka([[R * 0.22, 0], [-R * 0.22, 0], [0, -R * 0.5]]), warna: 0x2A1F14 },
+    ];
+  }
+  return [
+    { benda: 'emblem', warna: WARNA_KIT.kertas, geo: di(alas) },
+    ...glyph.map((g) => ({ benda: 'emblem', warna: g.warna ?? warna, geo: di(g.geo, 0.004) })),
+  ];
+}
+
+function bagianBenda(k, r) {
   const { kepalaY: ky, kepalaR: kr, badanR: br } = r;
   const W = WARNA_KIT;
   const sisi = br + 0.12; // hand position: outside the body ball
@@ -124,6 +196,82 @@ function bagianKit(k, r) {
       ];
     }
     default: throw new Error(`kit ${k} belum dibuat`);
+  }
+}
+
+/**
+ * LOD1 class marks (20–48 px on screen, laporan 3D §6.8): the same silhouette
+ * signs as the full kit, cut to the fewest triangles that keep the shape — the
+ * brim disc of the topi rimba, the caping cone, the ransel hump plus the upright
+ * tongkat. Hand items and the emblem are dropped: at this size they are 1–3 px.
+ * Fitted to the NPC body like the full kit. Tested for silhouette against LOD0
+ * (tests/pendampingLod.test.mjs), not eyeballed.
+ */
+/**
+ * A pentagon inscribed in a circle is narrower than the circle; LOD1 widens its
+ * 5-sided body and head by this factor to keep the same area (π r² = 5/2 · sin 72° · R²),
+ * so the silhouette keeps its weight — and the LOD1 hat must clear that wider head.
+ */
+export const LEBAR_SEGILIMA = Math.sqrt(Math.PI / (2.5 * Math.sin((2 * Math.PI) / 5)));
+
+export function bagianKitJauh(kelas, r = RANGKA_NPC) {
+  const k = kunciKelas(kelas);
+  const { kepalaY: ky, kepalaR: kr, badanR: br } = r;
+  const W = WARNA_KIT;
+  const sisi = br + 0.12;
+  // One-sided quad facing +Z (a board or a lens seen from the front).
+  const petak = (l, t, letak, putar) => B(bidangPoligon([[-l / 2, -t / 2], [l / 2, -t / 2], [l / 2, t / 2], [-l / 2, t / 2]], { duaSisi: false }), { letak, putar });
+  switch (k) {
+    case 'penjejak': {
+      const alas = ky + kr * 0.45;
+      // The LOD1 head is a pentagon ball of radius kr·LEBAR_SEGILIMA (see above):
+      // the crown clears its circumscribed radius, so no vertex pokes through.
+      const krJauh = kr * LEBAR_SEGILIMA;
+      const jari = (Math.sqrt(krJauh * krJauh - (kr * 0.45) ** 2) + 0.02) / Math.cos(Math.PI / 5);
+      const puncak = Math.max(alas + 0.22, ky + krJauh + 0.015);
+      // Pentagon lid on the crown: 3 triangles (fan), vertices on the crown's top ring.
+      const tutup = [];
+      // (sin a, −cos a) in XY lands on (sin a, ·, cos a) after the −π/2 tilt: the same
+      // corners as CylinderGeometry's top ring, so there is no gap at the rim.
+      for (let i = 0; i < 5; i++) { const a = (Math.PI * 2 * i) / 5; tutup.push([Math.sin(a) * (jari - 0.05), -Math.cos(a) * (jari - 0.05)]); }
+      return [
+        { benda: 'topi', warna: W.ungu_senja_tua, geo: silinder(jari - 0.01, 0.5, 0.1, 5, [0, alas - 0.03, 0], null, { terbuka: true }) },
+        { benda: 'topi', warna: W.ungu_senja_tua, geo: silinder(jari - 0.05, jari, puncak - alas, 5, [0, (alas + puncak) / 2, 0], null, { terbuka: true }) },
+        { benda: 'topi', warna: W.ungu_senja_tua, geo: B(bidangPoligon(tutup, { duaSisi: false }), { letak: [0, puncak, 0], putar: [-Math.PI / 2, 0, 0] }) },
+        { benda: 'kaca_pembesar', warna: W.kuningan, geo: petak(0.3, 0.3, [sisi + 0.06, 0.46, 0.1], [0, 0.4, -0.5]) },
+      ];
+    }
+    case 'operator': {
+      const alas = ky + kr * 0.55;
+      return [
+        { benda: 'caping', warna: W.nila, geo: silinder(0.02, 0.52, 0.3, 6, [0, alas + 0.15, 0], null, { terbuka: true }) },
+        { benda: 'papan_klip', warna: W.kayu, geo: petak(0.27, 0.35, [-(sisi + 0.05), 0.36, 0.1], [0, 0, 0.12]) },
+      ];
+    }
+    case 'pemandu': {
+      const z = -(br * 0.78 + 0.16);
+      const puncak = 0.94;
+      // Ransel without its bottom face (never seen): 10 triangles.
+      const ransel = B(new THREE.BoxGeometry(0.46, 0.64, 0.3), { letak: [0, puncak - 0.32, z] });
+      const pos = ransel.attributes.position;
+      const simpan = [];
+      for (let t = 0; t < pos.count; t += 3) {
+        let bawah = true;
+        for (let i = 0; i < 3; i++) if (pos.getY(t + i) > puncak - 0.64 + 1e-6) bawah = false;
+        if (!bawah) for (let i = 0; i < 9; i++) simpan.push(pos.array[t * 3 + i]);
+      }
+      const tanpaAlas = new THREE.BufferGeometry();
+      tanpaAlas.setAttribute('position', new THREE.Float32BufferAttribute(simpan, 3));
+      tanpaAlas.computeVertexNormals();
+      ransel.dispose();
+      return [
+        { benda: 'ransel', warna: W.bata, geo: tanpaAlas },
+        // rolled mat across the top: a 3-sided open prism, 1,0 m — the wide bar seen from the front
+        { benda: 'ransel', warna: W.kertas, geo: silinder(0.075, 0.075, 1.0, 3, [0, puncak + 0.075, z], [0, 0, Math.PI / 2], { terbuka: true }) },
+        { benda: 'tongkat', warna: W.bambu, geo: silinder(0.04, 0.04, 1.15, 3, [sisi + 0.04, 0.575, 0.06], null, { terbuka: true }) },
+      ];
+    }
+    default: throw new Error(`kit jauh ${k} belum dibuat`);
   }
 }
 

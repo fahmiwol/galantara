@@ -237,3 +237,44 @@ export function pasangUkurBilaDiminta({ adegan, lokasi = globalThis.location, do
   _aktif = { pengukur, panel, lepas: () => { lepasTangkap(); lepasBungkus(); panel?.lepas(); _aktif = null; } };
   return _aktif;
 }
+
+// ── `?ukur&party=N`: measure the worst case B will produce ─────────────
+// SPRINT-02 C butir 5: "Oola ≤ 150 DC with party 4 + full Markas, measured with ?ukur".
+// Until stream B drives the companion kit from the real party, this puts N (1–4)
+// companions from the instanced kit in front of the Markas (the `tanya_*` points,
+// on the ground, facing the plaza) and fills the Markas (4 desks working, every
+// scroll slot). Measurement page only: nothing happens without `?ukur`.
+
+/** N from `?ukur&party=N`, clamped to 0–4 (the party cap). 0 without `?ukur`. */
+export function jumlahPartyUkur(lokasi = globalThis.location) {
+  if (!dimintaUkur(lokasi)) return 0;
+  try {
+    const n = Number.parseInt(new URLSearchParams(lokasi?.search ?? '').get('party') ?? '', 10);
+    return Number.isFinite(n) ? Math.max(0, Math.min(4, n)) : 0;
+  } catch {
+    return 0;
+  }
+}
+
+/**
+ * @param {{ scene: THREE.Scene }} world
+ * @param {{ buatKitPendamping: Function }} P  pendamping module
+ * @param {object} M  markas module (index.js)
+ * @returns {import('./pendamping/index.js').KitPendamping|null}
+ */
+export function pasangPartyUkur(world, P, M, lokasi = globalThis.location) {
+  const n = jumlahPartyUkur(lokasi);
+  if (!n || world._partyUkur) return world._partyUkur ?? null;
+  const kelas = ['penjejak', 'operator', 'pemandu', 'penjejak'];
+  const kit = P.buatKitPendamping(world.scene, { maks: 4 });
+  for (let i = 0; i < n; i++) {
+    const t = M.titikMarkas(`tanya_${i + 1}`);
+    kit.tambah(`ukur_${i + 1}`, kelas[i]);
+    kit.pindah(`ukur_${i + 1}`, t.x, t.y, t.z, t.arah);
+  }
+  kit.perbarui();
+  for (let i = 0; i < M.KAPASITAS_GULUNGAN; i++) M.tambahGulungan(`ukur_hasil_${i}`);
+  for (let i = 0; i < 4; i++) M.tampilkanStatus3D(`ukur_meja_${i + 1}`, 'bekerja', { slot: i });
+  world._partyUkur = kit;
+  return kit;
+}

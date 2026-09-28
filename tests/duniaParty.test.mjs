@@ -138,7 +138,7 @@ test('missions not live on this runtime yet: an honest card, the agent stays in 
 
 test('mission status maps onto the one agent state machine', () => {
   assert.deepEqual(STATUS_DARI_MISI, {
-    antre: 'antre', berjalan: 'bekerja', menunggu_otak: 'menunggu_otak', selesai: 'hasil_siap',
+    antre: 'antre', berjalan: 'bekerja', menunggu_otak: 'menunggu_otak', menunggu_persetujuan: 'menunggu_persetujuan', selesai: 'hasil_siap',
     selesai_tanpa_temuan: 'hasil_siap', gagal: 'gagal', dibatalkan: 'siap',
   });
 });
@@ -268,4 +268,17 @@ test('the name plaque climbs over the 3D status icon and follows the floor the a
   ikon = true;
   assert.ok(Math.abs(pos().y - (TINGGI_PLAKAT_DI_ATAS_IKON + 0.2)) < 1e-9, 'above the icon, on the terrace');
   assert.ok(pos().y > rendah);
+});
+
+test('a companion drawn by the kit has no plaque or marker (LOG-C §8), a desk agent keeps its own', async () => {
+  const { PenandaAgen } = await import('../src/ui/PenandaAgen.js');
+  const ucap = new Map();
+  const bubble = { ucap: (k, _t, pos) => ucap.set(k, pos), buang() {}, ada: (k) => ucap.has(k) };
+  const npc = { x: 1, z: 2, perilaku: { y: 0 }, pendamping: true };
+  const p = new PenandaAgen({ bubble, npcs: { terlihat: true, get: () => npc }, daftar: () => [{ id: 'sari', nama: 'Sari', bisaDirekrut: false, diParty: true, status: 'hasil_siap' }] });
+  p.perbarui();
+  assert.equal(ucap.get('plakat:sari')(), null);
+  assert.equal(ucap.get('status:sari')(), null);
+  npc.pendamping = false;
+  assert.ok(ucap.get('plakat:sari')(), 'back at the Markas: the plaque returns');
 });

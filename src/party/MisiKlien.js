@@ -16,15 +16,22 @@ import { findSecrets } from '../../vendor/party-contract/umum.js';
 import { GalatRuntime, segmen } from './apiRuntime.js';
 
 export const JENIS_MISI = 'riset-sumber';
+/** Mission kinds (SPRINT-02 contract): one per class. The runtime refuses a kind outside the agent's skills. */
+export const JENIS = Object.freeze({ RISET: 'riset-sumber', PECAH: 'pecah-tugas', PANDUAN: 'susun-panduan' });
+export const SEMUA_JENIS = new Set(Object.values(JENIS));
 export const MAKS_PERTANYAAN = 300;
+export const MAKS_KONTEKS = 1500;
 export const MAKS_SUMBER = 3;
 export const STATUS_AKHIR = new Set(['selesai', 'selesai_tanpa_temuan', 'gagal', 'dibatalkan']);
+/** Waiting for the player (a paid tool asked for approval): not final, and not the mission's own time. */
+export const STATUS_MENUNGGU_IZIN = 'menunggu_persetujuan';
 export const PUTUSAN = new Set(['setujui', 'perbaiki', 'buang']);
 
 export const PESAN_MISI = Object.freeze({
   KUNCI_DITEMPEL: 'Sepertinya kamu menempelkan kunci API. Jangan tulis kunci di misi. Simpan di Kantor.',
   MISI_BELUM_ADA: 'Misi belum aktif di server ini. Agenmu tetap di party; misinya menyusul.',
   WAKTU_MISI_HABIS: 'Misi belum selesai setelah 10 menit. Agenmu mungkin masih bekerja di server; cek lagi nanti.',
+  PERSETUJUAN_BELUM_ADA: 'Persetujuan alat belum aktif di server ini. Misinya tetap menunggu; coba lagi nanti.',
 });
 
 const galat = (kode, pesan, data = null) => new GalatRuntime({ kode, pesan, data });
@@ -39,22 +46,9 @@ export function adaKunci(...teks) {
   return findSecrets(bagian.filter(Boolean)).length > 0;
 }
 
-/**
- * @param {{pertanyaan?: string, sumber?: string[]}} masukan
- * @returns {{pertanyaan: string, sumber: string[]}} the cleaned input
- * @throws {GalatRuntime} KUNCI_DITEMPEL or MASUKAN_TIDAK_SAH, before any request
- */
-export function periksaMasukanMisi({ pertanyaan, sumber = [] } = {}) {
-  const tanya = typeof pertanyaan === 'string' ? pertanyaan.trim() : '';
-  const alamat = (Array.isArray(sumber) ? sumber : [])
-    .map((s) => (typeof s === 'string' ? s.trim() : ''))
-    .filter(Boolean);
-  // Keys first: a key must never be echoed back in a validation message either.
-  if (adaKunci(tanya, ...alamat)) throw galat('KUNCI_DITEMPEL', PESAN_MISI.KUNCI_DITEMPEL);
-  if (!tanya) throw galat('MASUKAN_TIDAK_SAH', 'Tulis dulu pertanyaan untuk misinya.');
-  if (tanya.length > MAKS_PERTANYAAN) {
-    throw galat('MASUKAN_TIDAK_SAH', `Pertanyaan terlalu panjang (${tanya.length} huruf). Maksimal ${MAKS_PERTANYAAN}.`);
-  }
+const bersihkan = (v) => (typeof v === 'string' ? v.trim() : '');
+
+function periksaSumber(alamat) {
   if (alamat.length > MAKS_SUMBER) throw galat('MASUKAN_TIDAK_SAH', `Maksimal ${MAKS_SUMBER} alamat sumber.`);
   alamat.forEach((a, i) => {
     let u = null;
@@ -66,7 +60,61 @@ export function periksaMasukanMisi({ pertanyaan, sumber = [] } = {}) {
       throw galat('MASUKAN_TIDAK_SAH', `Sumber ${i + 1} memuat nama pengguna atau kata sandi. Hapus bagian itu.`);
     }
   });
-  return { pertanyaan: tanya, sumber: alamat };
+}
+
+function wajib(teks, nama, maks) {
+  if (!teks) throw galat('MASUKAN_TIDAK_SAH', `Tulis dulu ${nama} untuk misinya.`);
+  if (teks.length > maks) {
+    throw galat('MASUKAN_TIDAK_SAH', `${nama[0].toUpperCase()}${nama.slice(1)} terlalu panjang (${teks.length} huruf). Maksimal ${maks}.`);
+  }
+}
+
+/**
+ * Check a mission form before anything leaves the browser. One shape per kind (SPRINT-02):
+ *   riset-sumber   pertanyaan (≤ 300), sumber (≤ 3 https)
+ *   pecah-tugas    tujuan (≤ 300), konteks? (≤ 1.500)
+ *   susun-panduan  topik (≤ 300), sumber (≤ 3 https; at least one unless it builds on a result)
+ * `rujuk_misi` (a result of the player's own, approved) may come with any kind.
+ * @param {{jenis?: string, pertanyaan?: string, tujuan?: string, konteks?: string, topik?: string,
+ *   sumber?: string[], rujuk_misi?: string|null}} masukan
+ * @returns {Record<string, any>} the request body fields (without instance_id)
+ * @throws {GalatRuntime} KUNCI_DITEMPEL or MASUKAN_TIDAK_SAH, before any request
+ */
+export function periksaMasukanMisi(masukan = {}) {
+  const jenis = masukan.jenis ?? JENIS.RISET;
+  if (!SEMUA_JENIS.has(jenis)) throw galat('MASUKAN_TIDAK_SAH', 'Jenis misi tidak dikenal. Muat ulang halaman, lalu coba lagi.');
+  const alamat = (Array.isArray(masukan.sumber) ? masukan.sumber : []).map(bersihkan).filter(Boolean);
+  const teks = { pertanyaan: bersihkan(masukan.pertanyaan), tujuan: bersihkan(masukan.tujuan), konteks: bersihkan(masukan.konteks), topik: bersihkan(masukan.topik) };
+  // Keys first, in every field the kind sends: a key must never be echoed back in a validation message either.
+  const dikirim = jenis === JENIS.PECAH ? [teks.tujuan, teks.konteks] : jenis === JENIS.PANDUAN ? [teks.topik, ...alamat] : [teks.pertanyaan, ...alamat];
+  if (adaKunci(...dikirim)) throw galat('KUNCI_DITEMPEL', PESAN_MISI.KUNCI_DITEMPEL);
+  const rujuk = masukan.rujuk_misi ? segmen('misi', masukan.rujuk_misi) : null;
+  const isi = { jenis };
+  if (jenis === JENIS.PECAH) {
+    wajib(teks.tujuan, 'tujuan', MAKS_PERTANYAAN);
+    if (teks.konteks.length > MAKS_KONTEKS) throw galat('MASUKAN_TIDAK_SAH', `Konteks terlalu panjang (${teks.konteks.length} huruf). Maksimal ${MAKS_KONTEKS}.`);
+    isi.tujuan = teks.tujuan;
+    if (teks.konteks) isi.konteks = teks.konteks;
+  } else if (jenis === JENIS.PANDUAN) {
+    wajib(teks.topik, 'topik', MAKS_PERTANYAAN);
+    periksaSumber(alamat);
+    if (!alamat.length && !rujuk) throw galat('MASUKAN_TIDAK_SAH', 'Panduan butuh bahan: isi minimal satu sumber https, atau teruskan dari hasil rekan.');
+    isi.topik = teks.topik;
+    isi.sumber = alamat;
+  } else {
+    wajib(teks.pertanyaan, 'pertanyaan', MAKS_PERTANYAAN);
+    periksaSumber(alamat);
+    isi.pertanyaan = teks.pertanyaan;
+    isi.sumber = alamat;
+  }
+  if (rujuk) isi.rujuk_misi = rujuk;
+  return isi;
+}
+
+/** The mission's title line, whatever its kind. */
+export function judulMisi(misi) {
+  const m = misi?.masukan ?? {};
+  return misi?.pertanyaan ?? misi?.tujuan ?? misi?.topik ?? m.pertanyaan ?? m.tujuan ?? m.topik ?? misi?.laporan?.pertanyaan ?? null;
 }
 
 export class MisiKlien {
@@ -107,19 +155,30 @@ export class MisiKlien {
     return Boolean(this.dokumen?.hidden);
   }
 
-  /** POST /api/misi. Returns {id, status, posisi, eta_detik}. */
+  /** POST /api/misi. `masukan.jenis` picks the kind (default riset-sumber). Returns {id, status, posisi, eta_detik}. */
   async mulai(instanceId, masukan) {
     const bersih = periksaMasukanMisi(masukan);
     try {
-      const r = await this.api.post('/misi', {
-        instance_id: segmen('agen', instanceId),
-        jenis: JENIS_MISI,
-        pertanyaan: bersih.pertanyaan,
-        sumber: bersih.sumber,
-      });
+      const r = await this.api.post('/misi', { instance_id: segmen('agen', instanceId), ...bersih });
       return r.misi;
     } catch (err) {
-      if (err.kode === 'TIDAK_ADA') throw galat('MISI_BELUM_ADA', PESAN_MISI.MISI_BELUM_ADA);
+      if (err.kode === 'TIDAK_ADA' && !bersih.rujuk_misi) throw galat('MISI_BELUM_ADA', PESAN_MISI.MISI_BELUM_ADA);
+      if (err.kode === 'TIDAK_ADA') throw galat('RUJUKAN_TIDAK_ADA', 'Hasil yang dirujuk tidak ditemukan lagi. Lepas rujukannya, lalu kirim ulang.');
+      throw err;
+    }
+  }
+
+  /**
+   * POST /api/misi/:id/persetujuan: let a paid tool run (true) or cancel the mission (false).
+   * @returns {Promise<any>} the mission as the runtime answers it (may be null)
+   */
+  async putuskanIzin(misiId, setuju) {
+    if (typeof setuju !== 'boolean') throw galat('PERSETUJUAN_TIDAK_SAH', 'Pilih setujui atau tolak.');
+    try {
+      const r = await this.api.post(`/misi/${segmen('misi', misiId)}/persetujuan`, { setuju });
+      return r.misi ?? null;
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') throw galat('PERSETUJUAN_BELUM_ADA', PESAN_MISI.PERSETUJUAN_BELUM_ADA);
       throw err;
     }
   }
@@ -262,6 +321,8 @@ export class MisiKlien {
       p.hentikan();
       return;
     }
+    // Waiting for the player's approval is not the mission taking long: the clock restarts.
+    if (misi?.status === STATUS_MENUNGGU_IZIN) p.mulai = this.jam.sekarang();
     if (this.jam.sekarang() - p.mulai >= this.batasMs) {
       p.hentikan();
       this._beri(p, { jenis: 'habis', galat: galat('WAKTU_MISI_HABIS', PESAN_MISI.WAKTU_MISI_HABIS) });

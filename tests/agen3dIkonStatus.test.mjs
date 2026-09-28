@@ -66,7 +66,7 @@ test('setiap status_kerja → tempat di Markas (lapis 1) dan ikon berbentuk send
   const lap = new I.LapisanIkonStatus(kamera(), d.lapisan, { dokumen: d });
   const bentuk = new Set();
   const tanpaWarna = new Set();
-  for (const status of ['antre', 'bekerja', 'hasil_siap', 'menunggu_otak', 'gagal']) {
+  for (const status of ['antre', 'bekerja', 'hasil_siap', 'menunggu_otak', 'gagal', 'menunggu_persetujuan']) {
     const r = M.tampilkanStatus3D(`a_${status}`, status);
     assert.ok(r.titik && Number.isFinite(r.titik.x), `${status}: tanpa titik Markas`);
     assert.ok(r.pose, `${status}: tanpa pose`);
@@ -79,8 +79,8 @@ test('setiap status_kerja → tempat di Markas (lapis 1) dan ikon berbentuk send
     M.lepasAgenMarkas(`a_${status}`);
     assert.equal(lap.buang(`a_${status}`), true);
   }
-  assert.equal(bentuk.size, 5, 'dua status berbagi bentuk');
-  assert.equal(tanpaWarna.size, 5, 'tanpa warna, dua ikon tidak terbedakan');
+  assert.equal(bentuk.size, 6, 'dua status berbagi bentuk');
+  assert.equal(tanpaWarna.size, 6, 'tanpa warna, dua ikon tidak terbedakan');
   // `siap` = no icon: the world stays calm (✦ is enough).
   assert.equal(lap.setel('x', 'siap', di(0, 1.3, 0)), null);
   assert.equal(d.lapisan.children.filter((c) => !c._dibuang && c.classList.contains('on')).length, 0);
@@ -159,6 +159,15 @@ test('lapis 3: di luar layar → panah tepi hanya untuk status yang butuh pemain
   const nyala = d.lapisan.children.filter((c2) => c2.classList.contains('on'));
   assert.equal(nyala.length, 3);
   assert.ok(nyala.every((e) => e.className.includes('gw-panah-status')));
+});
+
+test('menunggu_persetujuan (M2) di luar layar → panah tepi, seperti hasil_siap (PERMINTAAN B2-P2)', () => {
+  const d = dokumen(1280, 720);
+  const lap = new I.LapisanIkonStatus(kamera(1280, 720), d.lapisan, { dokumen: d });
+  lap.setel('izin', 'menunggu_persetujuan', di(40, 1.6, 0));
+  assert.equal(lap.terlihat('izin'), 'panah', 'menunggu izin harus memanggil pemain');
+  lap.setel('izin', 'menunggu_persetujuan', di(0, 1.3, -6));
+  assert.equal(lap.terlihat('izin'), 'ikon');
 });
 
 test('panah ke semua arah tetap di tepi, sudutnya searah agen', () => {

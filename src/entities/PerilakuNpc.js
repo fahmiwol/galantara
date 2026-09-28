@@ -6,6 +6,8 @@
 //   menuju    walk a route of points at 1.4 m/s, never past the last one
 //   bekerja   stay put at the work point (the mission runs in the runtime, not here)
 //   lapor     walk to the player, stop at arm's length, wave
+//   ikut      a party companion: walk to the spot on the owner's trail it is given each frame
+//             (party/JejakPemilik.js), catching up faster than the owner walks, snapping after a jump
 // An open dialog freezes the NPC and turns it toward the player; so does a player within talk
 // range while it strolls.
 //
@@ -25,6 +27,12 @@ export const RADIUS_KELILING = 3;
 export const JARAK_SAPA = 2.5;
 /** The NPC stops this far from the player when it comes to report. */
 export const JARAK_LAPOR = 1.6;
+/** A companion closes the gap to its trail spot in about this long (s), up to KECEPATAN_IKUT_MAKS. */
+export const WAKTU_SUSUL = 0.3;
+/** Faster than the player (5.4 m/s), so a companion never falls behind for good. */
+export const KECEPATAN_IKUT_MAKS = 7.5;
+/** Further than this from its spot (a warp, back from another Spot): appear there instead of running. */
+export const JARAK_LONCAT_IKUT = 25;
 
 const DIAM_MIN = 2, DIAM_ACAK = 3;
 
@@ -38,7 +46,7 @@ export class PerilakuNpc {
     this.arah = arah;
     this.rng = rng;
     this.jangkar = { x, z };
-    /** @type {'keliling'|'menuju'|'bekerja'|'lapor'} */
+    /** @type {'keliling'|'menuju'|'bekerja'|'lapor'|'ikut'} */
     this.keadaan = 'keliling';
     this.bergerak = false;
     /** True while standing in front of the player after walking over to report. */
@@ -48,13 +56,16 @@ export class PerilakuNpc {
     this._rute = [];
     this._lalu = 'bekerja';
     this._arahAkhir = null;
+    /** @type {{x:number, z:number}|null} this companion's spot on the owner's trail (set every frame) */
+    this.titikIkut = null;
   }
 
   /**
    * @param {{jenis:'keliling', jangkar?:{x:number,z:number}}
    *   | {jenis:'menuju', titik:{x:number,z:number,y?:number,arah?:number}|Array<{x:number,z:number,y?:number,arah?:number}>, lalu?:'bekerja'|'keliling'}
    *   | {jenis:'bekerja'}
-   *   | {jenis:'lapor'}} p
+   *   | {jenis:'lapor'}
+   *   | {jenis:'ikut'}} p
    */
   perintah(p) {
     this.melambai = false;
@@ -70,6 +81,11 @@ export class PerilakuNpc {
       this.keadaan = 'bekerja';
     } else if (p.jenis === 'lapor') {
       this.keadaan = 'lapor';
+    } else if (p.jenis === 'ikut') {
+      this.keadaan = 'ikut';
+      this._tujuan = null;
+      this._rute = [];
+      this.y = 0;
     } else {
       if (p.jangkar && Number.isFinite(p.jangkar.x) && Number.isFinite(p.jangkar.z)) this.jangkar = { x: p.jangkar.x, z: p.jangkar.z };
       this.keadaan = 'keliling';
@@ -96,6 +112,7 @@ export class PerilakuNpc {
     if (this.keadaan === 'keliling') this._keliling(langkah);
     else if (this.keadaan === 'menuju') this._menuju(langkah);
     else if (this.keadaan === 'lapor') this._lapor(langkah, posisiPemain);
+    else if (this.keadaan === 'ikut') this._ikut(langkah, posisiPemain);
     // bekerja: stay put.
   }
 
@@ -164,6 +181,25 @@ export class PerilakuNpc {
         this._diam = DIAM_MIN;
       }
     }
+  }
+
+  _ikut(dt, pemain) {
+    const t = this.titikIkut;
+    if (!t || !Number.isFinite(t.x) || !Number.isFinite(t.z)) return;
+    const jarak = Math.hypot(t.x - this.x, t.z - this.z);
+    if (jarak > JARAK_LONCAT_IKUT) {
+      this.x = t.x;
+      this.z = t.z;
+      if (pemain) this._hadap(pemain.x, pemain.z);
+      return;
+    }
+    // Ease in over the last metres, but never slower than a walk, so it actually arrives.
+    const v = Math.min(KECEPATAN_IKUT_MAKS, Math.max(KECEPATAN_MENUJU, jarak / WAKTU_SUSUL));
+    if (jarak < 0.02) {
+      if (pemain) this._hadap(pemain.x, pemain.z);
+      return;
+    }
+    this._langkah(t.x, t.z, v, dt);
   }
 
   _lapor(dt, pemain) {

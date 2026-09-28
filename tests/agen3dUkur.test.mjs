@@ -151,3 +151,14 @@ test('dengan ?ukur: panel dipasang, teks dan baris salin memakai format Indonesi
     assert.equal(anak[1].style.minHeight, '44px');
   } finally { a?.lepas(); }
 });
+
+test('?ukur&party=N: hanya dengan ?ukur, dijepit 0–4, angka rusak = 0', async () => {
+  const U = await import('../src/world/ukur.js');
+  const l = (search) => ({ search });
+  assert.equal(U.jumlahPartyUkur(l('?party=4')), 0, 'party tanpa ?ukur tidak boleh memasang apa pun');
+  assert.equal(U.jumlahPartyUkur(l('?ukur&party=4')), 4);
+  assert.equal(U.jumlahPartyUkur(l('?ukur&party=9')), 4);
+  assert.equal(U.jumlahPartyUkur(l('?ukur&party=-2')), 0);
+  assert.equal(U.jumlahPartyUkur(l('?ukur&party=abc')), 0);
+  assert.equal(U.jumlahPartyUkur(l('?ukur')), 0);
+});

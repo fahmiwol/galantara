@@ -13,7 +13,11 @@ export const GA_ID = 'G-WNDQL8J455';
 // ── KANTOR (mighan.com) ──────────────────────────────
 // Keys, billing and brain changes live there, never in the world (ADR-0002).
 const DI_LOKAL = typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname);
-export const KANTOR_URL = DI_LOKAL ? 'http://localhost:3200/dashboard' : 'https://mighan.com/dashboard';
+/** Kantor origin (dev: the mighan-web dev server). */
+export const KANTOR_BASIS = DI_LOKAL ? 'http://localhost:3200' : 'https://mighan.com';
+export const KANTOR_URL = `${KANTOR_BASIS}/dashboard`;
+/** Where "Buka Kantor" lands with a handoff code (the Kantor redeems `?mighan=` there, D2-5). */
+export const KANTOR_HANDOFF_URL = `${KANTOR_BASIS}/dashboard/kantor`;
 
 // ── CAMERA ───────────────────────────────────────────
 // JANGAN DIUBAH — sudah dikonfirmasi di PRD
@@ -320,6 +324,8 @@ export function spotIdFromSocketRoom(room) {
 // ── HAMBURGER MENU ITEMS ──────────────────────────────
 export const MENU_ITEMS = [
   { icon: '🧭', label: 'Markas (party)', action: 'G_UI.openMarkas()' },
+  { icon: '📖', label: 'Buku Warga',     action: 'G_UI.openBukuWarga()' },
+  { icon: '🪶', label: 'Mode Ringan (nyala/mati)', action: 'G_UI.alihModeRingan()' },
   { icon: '🗺', label: 'Peta Spot',      action: "G_UI.openPanel('map-panel')" },
   { icon: '💻', label: 'Developer Hub',  action: "G_UI.openPanel('dev-panel')" },
   { icon: '🪙', label: 'Mighan Coin',    action: "G_UI.openPanel('token-panel')" },

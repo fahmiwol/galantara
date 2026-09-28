@@ -8,6 +8,8 @@
 //   suar        — status beacon on the tower apex (1 mesh, unlit, no PointLight)
 //   lampu meja  — one low lamp per desk = per party slot (InstancedMesh × 4)
 //   gulungan    — one scroll per approved result on the Papan Hasil (InstancedMesh × 18)
+//   perabot     — office props that appear once, merged (1 mesh, perabot.js)
+//   gelas       — cup + flask on each desk whose party slot is taken (InstancedMesh × 4)
 //
 // References are collected at build time (ADR-0002); nothing here walks the scene.
 // The view holds no game state: it redraws from KeadaanMarkas (keadaan.js), so a
@@ -18,12 +20,13 @@ import { galantaraMat } from '../../data/styleTokens.js';
 import { InteractionVolume } from '../../interaction/InteractionVolume.js';
 import { pusatDunia } from '../../fisika/bentuk.js';
 import {
-  PerakitBahan, kotak, limasTertutup, bidangPoligon, bakeGeometri,
+  PerakitBahan, kotak, limasTertutup, bidangPoligon, bakeGeometri, gabungGeometri,
 } from '../geometri.js';
 import {
   BAHAN, Y_ALAS, ALAS, UNDAK, BALAI, ATAP, MENARA, PUNCAK_MENARA, SUAR, MEJA, PAPAN_HASIL,
-  BANGKU, FISIKA, TITIK, TINGGI_LANTAI, INTERAKSI, KAPASITAS_GULUNGAN, LETAK_MARKAS,
+  BANGKU, FISIKA, TITIK, TINGGI_LANTAI, INTERAKSI, KAPASITAS_GULUNGAN, LETAK_MARKAS, PERABOT,
 } from './spek.js';
+import { geometriPerabot, bahanPerabot } from './perabot.js';
 import { WARNA_STATUS, WARNA_UNTUK_STATUS } from './keadaan.js';
 
 /** Scroll colours: unread = gold (catches the eye), read = paper. */
@@ -131,6 +134,29 @@ function arahAtasPapan() {
   return new THREE.Vector3(0, Math.cos(PAPAN_HASIL.miring), -Math.sin(PAPAN_HASIL.miring));
 }
 
+/** Markas-local matrix of a prop placement ({x, y, z, arah}). */
+export function matriksPerabot(t, m = new THREE.Matrix4()) {
+  return m.compose(
+    new THREE.Vector3(t.x, t.y, t.z),
+    new THREE.Quaternion().setFromAxisAngle(new THREE.Vector3(0, 1, 0), t.arah),
+    new THREE.Vector3(1, 1, 1),
+  );
+}
+
+/** The props that appear once, merged into one geometry in the Markas frame. */
+export function rakitPerabot() {
+  const bagian = [];
+  for (const jenis of ['mesin_ketik', 'rak_arsip', 'radio', 'kalender', 'tikar_pandan']) {
+    const g = geometriPerabot(jenis).clone();
+    g.applyMatrix4(matriksPerabot(PERABOT[jenis]));
+    bagian.push(g);
+  }
+  const hasil = gabungGeometri(bagian);
+  for (const g of bagian) g.dispose();
+  hasil.name = 'perabot_markas';
+  return hasil;
+}
+
 /** Board frame → Markas local frame. */
 function matriksPapan() {
   const P = PAPAN_HASIL;
@@ -180,6 +206,9 @@ export class MarkasPenjelajah {
     this.suar = null;
     this.lampuMeja = null;
     this.gulungan = null;
+    /** Props that appear once (one merged mesh) and cup + flask per taken desk (instanced). */
+    this.perabot = null;
+    this.gelas = null;
     /** Pieces per material before merging (what the draw calls would have been). */
     this.bagianSebelumGabung = null;
     this._keadaanSuar = null;
@@ -250,6 +279,24 @@ export class MarkasPenjelajah {
     this.gulungan.visible = false;
     root.add(this.gulungan);
 
+    // Office props (SPRINT-02 C butir 4): one merged mesh + one InstancedMesh, one material.
+    this.perabot = new THREE.Mesh(rakitPerabot(), bahanPerabot());
+    this.perabot.name = `${this.id}_perabot`;
+    this.perabot.castShadow = false; // all < 0,5 m but the shelf; ≤ 3 casters (§6.3)
+    this.perabot.receiveShadow = true;
+    root.add(this.perabot);
+    this.gelas = new THREE.InstancedMesh(geometriPerabot('gelas_termos'), bahanPerabot(), PERABOT.gelas_termos.length);
+    this.gelas.name = `${this.id}_gelas_termos`;
+    this.gelas.instanceMatrix.needsUpdate = true;
+    this.gelas.castShadow = false;
+    this.gelas.receiveShadow = true;
+    this.gelas.frustumCulled = false;
+    // Always "visible": with count 0 r128 issues no draw at all (renderInstances returns
+    // early), and the budget reserves its one draw call — so a status change never
+    // ADDS a draw call (tests/markasStatus.test.mjs).
+    this.gelas.count = 0;
+    root.add(this.gelas);
+
     root.userData.fisika = FISIKA.map((d) => ({ ...d, ukuran: [...d.ukuran], letak: [...d.letak] }));
     root.userData.archetype = 'markas_penjelajah';
     this.root = root;
@@ -298,6 +345,7 @@ export class MarkasPenjelajah {
     }
 
     const c = new THREE.Color();
+    const m = new THREE.Matrix4();
     for (let i = 0; i < MEJA.x.length; i++) {
       const s = keadaan.statusSlot(i);
       this.lampuMeja.setColorAt(i, c.setHex(s ? WARNA_STATUS[WARNA_UNTUK_STATUS[s]] : WARNA_STATUS.mati));
@@ -311,6 +359,14 @@ export class MarkasPenjelajah {
     this.gulungan.count = tampil.length;
     this.gulungan.visible = tampil.length > 0;
     this.gulungan.instanceColor.needsUpdate = true;
+
+    // A cup + flask on each desk whose slot is taken: packed into the first instances.
+    let n = 0;
+    for (let i = 0; i < PERABOT.gelas_termos.length; i++) {
+      if (keadaan.statusSlot(i)) this.gelas.setMatrixAt(n++, matriksPerabot(PERABOT.gelas_termos[i], m));
+    }
+    this.gelas.count = n;
+    this.gelas.instanceMatrix.needsUpdate = true;
   }
 
   /** One short pulse after a beacon change; otherwise still. */

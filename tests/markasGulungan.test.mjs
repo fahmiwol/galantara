@@ -35,7 +35,10 @@ test('papan kosong: tidak ada gulungan dan tidak ada draw call untuknya', () => 
   assert.equal(jumlahTampil(), 0);
   assert.equal(markas.gulungan.visible, false);
   const u = ukurPohon(markas.root);
-  assert.equal(u.drawCall, 9, 'gulungan kosong masih memakan draw call');
+  markas.root.remove(markas.gulungan);
+  const tanpa = ukurPohon(markas.root);
+  markas.root.add(markas.gulungan);
+  assert.equal(u.drawCall, tanpa.drawCall, 'gulungan kosong masih memakan draw call');
 });
 
 test('satu hasil disetujui = satu gulungan; hasil yang sama dua kali tetap satu', () => {
@@ -123,5 +126,6 @@ test('gulungan tidak memancarkan bayangan dan tidak hilang di tepi layar', () =>
   assert.equal(markas.gulungan.frustumCulled, false);
   for (let i = 0; i < 18; i++) M.tambahGulungan(`h${i}`);
   const u = ukurPohon(markas.root);
-  assert.ok(u.drawCall <= 12 && u.segitiga <= 1500, JSON.stringify(u));
+  // Markas budget M2 (tests/markas.test.mjs ANGGARAN_MARKAS): 12 DC / 2.000 triangles.
+  assert.ok(u.drawCall <= 12 && u.segitiga <= 2000, JSON.stringify(u));
 });

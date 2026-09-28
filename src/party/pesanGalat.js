@@ -9,7 +9,7 @@
 /** Actions a card button may ask for. DuniaParty implements each one. */
 export const AKSI_KARTU = new Set([
   'tutup', 'masuk', 'bukaMarkas', 'muatUlang', 'cobaLagi', 'cobaSambung', 'simpanLagi', 'bukaKantor',
-  'hapusTeks', 'perbaikiIsian', 'ubahMisi', 'cekLagi', 'lihatOtak', 'beriMisi',
+  'hapusTeks', 'perbaikiIsian', 'ubahMisi', 'cekLagi', 'lihatOtak', 'beriMisi', 'lepasRujukan',
 ]);
 
 const T = (label, aksi, utama = false) => ({ label, aksi, utama });
@@ -19,6 +19,8 @@ export const KARTU = Object.freeze({
   // ── Account & party ──
   BELUM_MASUK: { judul: 'Masuk dulu, ya', pesan: 'Party disimpan di akunmu, supaya {nama} tetap ada besok.', tombol: [T('Masuk', 'masuk', true), T('Lanjut jalan-jalan', 'tutup')] },
   MASUK_BELUM_ADA: { pesan: 'Masuk dari dunia belum tersedia di server ini. Jalur masuk akun untuk party menyusul.', tombol: [T('Lanjut jalan-jalan', 'tutup', true)] },
+  UNDANGAN_DITOLAK: { judul: 'Kode tidak berlaku', pesan: 'Kodenya salah ketik, sudah dipakai, atau kedaluwarsa. Periksa lagi di kolom atas, atau minta kode baru ke tim Galantara.', tombol: [T('Lanjut jalan-jalan', 'tutup')] },
+  KODE_UNDANGAN_KOSONG: { pesan: 'Ketik kode undangan dari tim Galantara dulu, bentuknya XXXXX-XXXXX-XXXXX.', tombol: [T('Lanjut jalan-jalan', 'tutup')] },
   PARTY_PENUH: { pesan: 'Party sudah penuh (4/4). Keluarkan satu anggota dulu di Markas.', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
   VERSI_BENTROK: { pesan: 'Party baru saja diubah di tempat lain (dunia atau Kantor). Muat ulang dulu, lalu ulangi.', tombol: [T('Muat ulang', 'muatUlang', true)] },
   PARTY_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Muat ulang', 'muatUlang', true), T('Tutup', 'tutup')] },
@@ -40,6 +42,23 @@ export const KARTU = Object.freeze({
   MISI_BELUM_ADA: { pesan: 'Misi belum aktif di server ini. {nama} tetap di party-mu; misinya menyusul.', tombol: [T('Tutup', 'tutup', true)] },
   WAKTU_MISI_HABIS: { pesan: 'Misi belum selesai setelah 10 menit. {nama} mungkin masih bekerja di server; cek lagi nanti.', tombol: [T('Cek lagi', 'cekLagi', true), T('Tutup', 'tutup')] },
   MISI_TIDAK_ADA: { pesan: 'Misi ini tidak ditemukan lagi di server. Buka Markas untuk melihat keadaan terbaru.', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+
+  // ── Party at work (SPRINT-02): kinds, passing results on, paid tools ──
+  MISI_BUKAN_KEAHLIAN: { pesan: '{pesan}', tombol: [T('Buka Markas', 'bukaMarkas', true), T('Tutup', 'tutup')] },
+  AGEN_SIBUK: { pesan: '{pesan}', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+  RANTAI_TERLALU_PANJANG: { pesan: 'Rantai hasil ini sudah 4 misi. Lepas rujukannya dan mulai misi baru.', tombol: [T('Lepas rujukan', 'lepasRujukan', true), T('Tutup', 'tutup')] },
+  RUJUKAN_TIDAK_ADA: { pesan: 'Hasil yang dirujuk tidak ditemukan lagi. Lepas rujukannya, lalu kirim ulang.', tombol: [T('Lepas rujukan', 'lepasRujukan', true)] },
+  RUJUKAN_BELUM_DISETUJUI: { pesan: 'Hasil yang dirujuk belum kamu setujui. Setujui dulu di Markas, atau lepas rujukannya.', tombol: [T('Buka Markas', 'bukaMarkas', true), T('Lepas rujukan', 'lepasRujukan')] },
+  PERSETUJUAN_BELUM_ADA: { pesan: 'Persetujuan alat belum aktif di server ini (segera hadir). Misinya tetap menunggu; kamu juga bisa membatalkannya di Markas.', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+  TIDAK_MENUNGGU: { pesan: 'Misi ini sudah tidak menunggu izinmu (mungkin sudah diputuskan di Kantor).', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+  TUJUAN_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  KONTEKS_TERLALU_PANJANG: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  TOPIK_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  SUMBER_TIDAK_DIPAKAI: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  MISI_AKTIF_PENUH: { pesan: '{pesan}', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
+  CARI_BELUM_SIAP: { pesan: '{pesan}', tombol: [T('Ubah misi', 'perbaikiIsian', true), T('Tutup', 'tutup')] },
+  AGEN_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
+  JULUKAN_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Perbaiki', 'perbaikiIsian', true)] },
 
   // ── Mission failures (error_code, design §9.3) ──
   OTAK_MATI: { pesan: '{otak} sedang tidak menjawab{dicek}. Coba lagi sebentar lagi, atau ganti otak di Kantor.', tombol: [T('Cek lagi', 'cekLagi', true), T('Lihat otak', 'lihatOtak')] },
