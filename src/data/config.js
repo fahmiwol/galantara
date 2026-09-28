@@ -10,6 +10,15 @@ export const SUPABASE_ANON = 'sb_publishable_mNNDWsQCCcE2KG5JZX2P6A_tDKdj86o';
 // ── ANALYTICS ────────────────────────────────────────
 export const GA_ID = 'G-WNDQL8J455';
 
+// ── KANTOR (mighan.com) ──────────────────────────────
+// Keys, billing and brain changes live there, never in the world (ADR-0002).
+const DI_LOKAL = typeof location !== 'undefined' && ['localhost', '127.0.0.1'].includes(location.hostname);
+/** Kantor origin (dev: the mighan-web dev server). */
+export const KANTOR_BASIS = DI_LOKAL ? 'http://localhost:3200' : 'https://mighan.com';
+export const KANTOR_URL = `${KANTOR_BASIS}/dashboard`;
+/** Where "Buka Kantor" lands with a handoff code (the Kantor redeems `?mighan=` there, D2-5). */
+export const KANTOR_HANDOFF_URL = `${KANTOR_BASIS}/dashboard/kantor`;
+
 // ── CAMERA ───────────────────────────────────────────
 // JANGAN DIUBAH — sudah dikonfirmasi di PRD
 export const PHI_MIN    = Math.PI * 0.18;  // ~32° — batas atas
@@ -34,6 +43,16 @@ export const AV_PRESETS = [
 ];
 
 // ── NPC DEFINITIONS ──────────────────────────────────
+// `agen: true` = a species that can be hired (runtime konten/spesies.json has the truth).
+// Dialog choices may carry `aksi` ('rekrut' | 'misi' | 'markas', handled by DuniaParty) and
+// `syarat` ('belum_di_party' | 'di_party' | 'bisa_misi'). No promises of rewards, fees or
+// items that do not exist (AGENTS.md §7: no decorative numbers).
+const PILIHAN_AGEN = [
+  { text: 'Ayo, gabung party-ku!', aksi: 'rekrut', syarat: 'belum_di_party', next: -1 },
+  { text: 'Ada misi untukmu', aksi: 'misi', syarat: 'bisa_misi', next: -1 },
+  { text: 'Buka Markas', aksi: 'markas', syarat: 'di_party', next: -1 },
+];
+
 export const NPCS = [
   {
     id: 'guide',
@@ -63,14 +82,16 @@ export const NPCS = [
   {
     id: 'budi',
     name: 'Budi',
-    role: 'Warga Oola',
+    role: 'Operator Lapangan',
+    agen: true,
     color: 0x06B6D4,
     x: -3, z: 5,
     idleMsg: 'Nama saya Budi 👋',
     dialog: [
       {
-        msg: 'Halo! Saya Budi, sudah tinggal di Oola sejak platform ini dibuka. Tempat yang nyaman untuk nongkrong virtual!',
+        msg: 'Halo! Saya Budi, sudah tinggal di Oola sejak platform ini dibuka. Saya suka memecah pekerjaan besar jadi langkah-langkah kecil.',
         choices: [
+          ...PILIHAN_AGEN,
           { text: 'Kamu sering ke Spot mana?', next: 1 },
           { text: 'Senang berkenalan, Budi!', next: -1 },
         ],
@@ -84,20 +105,22 @@ export const NPCS = [
   {
     id: 'maya',
     name: 'Maya',
-    role: 'Travel Guide',
+    role: 'Pemandu Ekspedisi',
+    agen: true,
     color: 0xEC4899,
     x: 5, z: 3,
     idleMsg: 'Mau ke Spot mana? 🗺',
     dialog: [
       {
-        msg: 'Halo! Saya Maya, travel guide resmi Galantara. Mau kurekomendasikan Spot terbaik minggu ini?',
+        msg: 'Halo! Saya Maya, pemandu Galantara. Saya hafal jalan ke setiap Spot. Mau kuberi saran tujuan?',
         choices: [
-          { text: 'Mau dong, rekomendasiin!', next: 1 },
+          ...PILIHAN_AGEN,
+          { text: 'Mau dong, kasih saran!', next: 1 },
           { text: 'Nanti aja, lagi jalan-jalan dulu.', next: -1 },
         ],
       },
       {
-        msg: '🏖 Kuta Beach Bali lagi trending! Banyak merchant lokal, ada performer live setiap malam. Travel fee cuma 5 Perak untuk tourist dari luar Bali. Worth it!',
+        msg: '🏖 Coba mampir ke Kuta Beach Bali: pantai, kerajinan lokal, dan senja yang cantik. Ke sana lewat Warp Portal, ya.',
         choices: [{ text: 'Oke, nanti aku coba!', next: -1 }],
       },
     ],
@@ -105,21 +128,26 @@ export const NPCS = [
   {
     id: 'sari',
     name: 'Sari',
-    role: 'Dungeon Scout',
+    role: 'Penjejak Intelijen',
+    agen: true,
     color: 0x8B5CF6,
     x: -5, z: -3,
-    idleMsg: 'Ada dungeon baru! 🌀',
+    idleMsg: 'Butuh sumber? Aku bantu cari 🔎',
     dialog: [
       {
-        msg: '⚠️ Psst! Aku dapat info dari dalam — ada dungeon tersembunyi yang akan muncul dalam waktu dekat. Kalau timer muncul di atas layar, jangan sampai ketinggalan!',
+        msg: 'Hai! Aku Sari, penjejak di Oola. Aku menyusuri sumber, memilah mana yang bisa dipercaya, lalu merangkumnya lengkap dengan daftar sumbernya.',
         choices: [
-          { text: 'Dungeon itu apa?', next: 1 },
-          { text: 'Siap, aku pantau!', next: -1 },
+          ...PILIHAN_AGEN,
+          { text: 'Kamu bisa apa saja?', next: 1 },
+          { text: 'Nanti dulu', next: -1 },
         ],
       },
       {
-        msg: 'Dungeon adalah event mendadak — muncul tiba-tiba, cuma bertahan beberapa menit. Di dalamnya ada tantangan dan reward eksklusif. Bisa dapat Berlian atau item langka!',
-        choices: [{ text: 'Mantap! Siap berburu dungeon!', next: -1 }],
+        msg: 'Beri aku satu pertanyaan dan, kalau ada, sampai tiga alamat web. Aku baca sumbernya, mencatat kutipan persis, lalu menulis ringkasan. Klaim yang kutipannya tidak ada di sumber kubuang. Kamu yang memutuskan hasilnya disimpan atau tidak.',
+        choices: [
+          ...PILIHAN_AGEN,
+          { text: 'Oke, makasih!', next: -1 },
+        ],
       },
     ],
   },
@@ -295,6 +323,9 @@ export function spotIdFromSocketRoom(room) {
 
 // ── HAMBURGER MENU ITEMS ──────────────────────────────
 export const MENU_ITEMS = [
+  { icon: '🧭', label: 'Markas (party)', action: 'G_UI.openMarkas()' },
+  { icon: '📖', label: 'Buku Warga',     action: 'G_UI.openBukuWarga()' },
+  { icon: '🪶', label: 'Mode Ringan (nyala/mati)', action: 'G_UI.alihModeRingan()' },
   { icon: '🗺', label: 'Peta Spot',      action: "G_UI.openPanel('map-panel')" },
   { icon: '💻', label: 'Developer Hub',  action: "G_UI.openPanel('dev-panel')" },
   { icon: '🪙', label: 'Mighan Coin',    action: "G_UI.openPanel('token-panel')" },

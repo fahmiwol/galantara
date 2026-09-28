@@ -27,6 +27,10 @@ const LOCAL = process.argv.includes('--local');
 const app    = express();
 const server = http.createServer(app);
 
+// Runtime Galantara World, same-origin di /rt/api/* (dev; di produksi nginx). Lihat proxyRuntime.js.
+const RUNTIME_URL = process.env.RUNTIME_URL || (LOCAL ? 'http://localhost:9800' : '');
+if (RUNTIME_URL) app.use(require('./proxyRuntime.js').buatProxyRuntime({ runtimeUrl: RUNTIME_URL }));
+
 const GRACE_MS = 8000; // ms sebelum disconnect benar-benar dianggap pergi
 
 const pemverifikasi = buatPemverifikasi(process.env);

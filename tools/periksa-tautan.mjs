@@ -41,11 +41,21 @@ const berkas = kumpulkan('.');
 let diperiksa = 0;
 const rusak = [];
 
+// Kode bukan tautan: `World[method](x,y,z,id)` di dalam backtick atau blok ``` pernah dibaca
+// sebagai tautan rusak. Buang span kode inline dan lewati blok berpagar sebelum mencari tautan.
+const tanpaKodeInline = (s) => s.replace(/(`+)[^`]*?\1/g, '');
+
 for (const f of berkas) {
   const isi = fs.readFileSync(f, 'utf8');
   const baris = isi.split('\n');
+  let dalamBlok = false;
   for (let i = 0; i < baris.length; i++) {
-    for (const m of baris[i].matchAll(TAUTAN)) {
+    if (/^\s*(```|~~~)/.test(baris[i])) {
+      dalamBlok = !dalamBlok;
+      continue;
+    }
+    if (dalamBlok) continue;
+    for (const m of tanpaKodeInline(baris[i]).matchAll(TAUTAN)) {
       const mentah = m[1];
       if (/^(https?:|mailto:|#)/i.test(mentah)) continue;
       diperiksa++;

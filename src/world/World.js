@@ -10,6 +10,8 @@ import { InteractionVolume } from '../interaction/InteractionVolume.js';
 import { cincinTepi } from '../fisika/Fisika.js';
 import { ISLAND_R } from '../data/config.js';
 import { UKURAN_KAPSUL } from '../fisika/Karakter.js';
+import { bangunMarkas, lepasMarkas, perbaruiIkonStatus } from './markas/index.js';
+import { pasangUkurBilaDiminta, jumlahPartyUkur, pasangPartyUkur } from './ukur.js';
 
 /** Kelompok collider Oola di dunia fisika — dilepas utuh saat pindah Spot. */
 export const KELOMPOK_OOLA = 'oola';
@@ -29,6 +31,8 @@ export class World {
    * @param {{ fisika?: import('../fisika/Fisika.js').Fisika }} [opsi]
    */
   constructor(scene, { fisika = null } = {}) {
+    // `?ukur` di URL: panel FPS / draw call / segitiga untuk HP acuan (world/ukur.js).
+    pasangUkurBilaDiminta({ adegan: scene });
     this.scene     = scene;
     /** Dunia fisika. Boleh belum siap — pendaftaran masuk antrean. */
     this.fisika    = fisika;
@@ -42,6 +46,9 @@ export class World {
     this.worldRoot = null; // isi Oola — bisa di-dispose saat ganti Spot visual
     this.objects   = []; // mesh di island (raycast MapBuilder) — tidak pakai scene.traverse()
     this.mapData   = null;
+    /** Markas Penjelajah (src/world/markas), kalau peta memasangnya.
+     *  @type {import('./markas/MarkasPenjelajah.js').MarkasPenjelajah | null} */
+    this.markas    = null;
   }
 
   async init(mapPath = 'src/data/maps/default_oola.json') {
@@ -76,6 +83,10 @@ export class World {
     }
     this.halo       = null;
     this.warpPortal = null;
+    // Status agen dan gulungan tetap tersimpan di keadaan Markas; yang dilepas
+    // hanya tampilannya, jadi kembali ke Oola menggambar ulang hal yang sama.
+    lepasMarkas(this.markas);
+    this.markas     = null;
     this.objects    = [];
     this.lampu      = [];
     // Collider ikut dilepas, dengan kelompoknya — bukan disapu dari dunia fisika.
@@ -126,7 +137,9 @@ export class World {
     if (this.mapData && this.mapData.objects) {
       this.mapData.objects.forEach((obj) => {
         if (obj.type === 'native' && typeof this[obj.method] === 'function') {
-          this[obj.method](obj.pos.x, obj.pos.y, obj.pos.z, obj.id);
+          // Entri utuh ikut diteruskan (argumen ke-5) supaya bangunan yang perlu
+          // diputar bisa membaca `rotationY` — metode lama cukup mengabaikannya.
+          this[obj.method](obj.pos.x, obj.pos.y, obj.pos.z, obj.id, obj);
         }
       });
     } else {
@@ -508,6 +521,28 @@ export class World {
     this._buildSign(x, y + 2.5, z, '💻 Dev Hub', 0x7C3AED);
   }
 
+  // ── MARKAS PENJELAJAH ─────────────────────────────
+  /**
+   * Markas party di Oola (docs/riset/2026-09-26-pivot, laporan 3D §6.9). Bangunan,
+   * collider, titik kerja, suar, dan gulungan hidup di src/world/markas; di sini
+   * hanya didaftarkan: grup lewat addObject (collider dari userData.fisika),
+   * volume interaksi, dan Markas aktif yang mengikuti keadaan party.
+   */
+  _buildMarkas(x = -3, y = 0, z = -12.5, id = 'markas_penjelajah', obj = {}) {
+    this._ensureWorldRoot();
+    this.markas = bangunMarkas(this, {
+      id,
+      x, y, z,
+      rotasiY: Number.isFinite(obj?.rotationY) ? obj.rotationY : undefined,
+    });
+    // `?ukur&party=N`: worst-case party + full Markas for the measurement page (ukur.js).
+    if (jumlahPartyUkur()) {
+      Promise.all([import('./pendamping/index.js'), import('./markas/index.js')])
+        .then(([P, M]) => pasangPartyUkur(this, P, M))
+        .catch((e) => console.warn('[ukur] party ukur gagal', e));
+    }
+  }
+
   // ── DECORATIONS (benches, flowers, rocks) ─────────
   _buildBench(x, y, z, id = 'bench') {
     const bench = new THREE.Mesh(
@@ -561,6 +596,9 @@ export class World {
   // ── ANIMATE (portal pulse) ─────────────────────────
   // Halo tidak lagi berputar — lihat _buildPurpleTree.
   animate(t) {
+    this.markas?.animate(t);
+    // Status icons / edge arrows of the party (no-op until pasangLapisanIkon ran).
+    perbaruiIkonStatus();
     if (this.warpPortal) {
       this.warpPortal.rotation.y = t * 0.8;
       this.warpPortal.material.color.setHSL(0.75 + Math.sin(t) * 0.05, 0.8, 0.5);

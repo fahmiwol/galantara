@@ -40,7 +40,8 @@ test('kemajuan hanya dihitung untuk tantangan yang sedang aktif', () => {
 });
 
 test('kunci unik mencegah hal yang sama dihitung dua kali', (t) => {
-  // Tanggal dipatok: tantangan hari lain bisa ber-target 1 dan selesai di langkah pertama.
+  // Pin the clock to a day whose challenge needs >= 2 steps (2026-09-14 = jelajah_spot, target 3).
+  // On target-1 days the second count is capped at 1 and this test failed on 2 of every 5 days.
   t.mock.timers.enable({ apis: ['Date'], now: new Date(2026, 8, 14, 12, 0) });
   const dc = new DailyChallenge();
   const aktif = dc.status().tantangan.id;

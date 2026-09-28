@@ -30,10 +30,12 @@ function buatElemen() {
     offsetWidth: 0,
     offsetHeight: 0,
     classList: {
-      add: (c) => kelas.add(c),
-      remove: (c) => kelas.delete(c),
+      add: (...c) => c.forEach((x) => kelas.add(x)),
+      remove: (...c) => c.forEach((x) => kelas.delete(x)),
       contains: (c) => kelas.has(c),
     },
+    children: [],
+    appendChild(anak) { this.children.push(anak); return anak; },
     remove() { this._dibuang = true; },
   };
 }
@@ -372,4 +374,57 @@ test('viewport 0 tidak boleh membuat semua bubble hilang diam-diam', () => {
   // Menyembunyikan atas dasar data yang tidak diketahui = chat diam-diam
   // kosong. Lebih baik satu bubble salah tempat daripada fitur mati.
   assert.equal(L.terlihat('a'), true);
+});
+
+// ── Balon tetap: plakat nama & status agen (M1) ───────
+test('balon "tetap" tidak pernah kedaluwarsa, dan buang() membersihkannya', () => {
+  pasangLingkungan();
+  const L = new ChatBubbleLayer();
+  const cam = kameraDi(10);
+  L.ucap('status:sari', 'bekerja', diTitikAsal, { tetap: true });
+  const asli = performance.now.bind(performance);
+  try {
+    performance.now = () => asli() + 24 * 3600 * 1000; // sehari kemudian
+    L.update(cam);
+    L.update(cam);
+  } finally {
+    delete performance.now;
+  }
+  assert.equal(L.ada('status:sari'), true);
+  assert.equal(L._bubble.get('status:sari').keluar, false);
+  L.buang('status:sari');
+  assert.equal(L.ada('status:sari'), false);
+});
+
+test('balon tetap tetap tunduk pada aturan 24 px (satu jalur proyeksi)', () => {
+  pasangLingkungan({ tinggi: 720 });
+  const L = new ChatBubbleLayer();
+  L.ucap('plakat:sari', 'Sari', diTitikAsal, { tetap: true, kelas: 'plakat-agen' });
+  L.update(kameraDi(200));
+  assert.equal(L.terlihat('plakat:sari'), false);
+  L.update(kameraDi(30));
+  assert.equal(L.terlihat('plakat:sari'), true);
+});
+
+test('isi berpotongan dirakit dengan textContent, berkelas, dan tetap dipotong 100 huruf', () => {
+  pasangLingkungan();
+  const L = new ChatBubbleLayer();
+  L.ucap('plakat:sari', '', diTitikAsal, {
+    tetap: true,
+    kelas: 'plakat-agen',
+    isi: [{ teks: '✦', kelas: 'pk-bintang' }, { teks: '<b>Sari</b>' }, { teks: 'AI', kelas: 'pk-ai' }, { teks: 'x'.repeat(200) }],
+  });
+  const el = L._bubble.get('plakat:sari').el;
+  assert.equal(el.classList.contains('plakat-agen'), true);
+  assert.deepEqual(el.children.slice(0, 3).map((c) => [c.className ?? '', c.textContent]), [
+    ['pk-bintang', '✦'], ['', '<b>Sari</b>'], ['pk-ai', 'AI'],
+  ]);
+  const total = el.children.reduce((n, c) => n + Array.from(c.textContent).length, 0);
+  assert.equal(total, 100);
+  // Ganti kelas tanpa sisa kelas lama.
+  L.ucap('plakat:sari', 'Sari', diTitikAsal, { tetap: true, kelas: 'plakat-agen redup' });
+  L.ucap('plakat:sari', 'Sari', diTitikAsal, { tetap: true, kelas: 'status-agen' });
+  assert.equal(el.classList.contains('plakat-agen'), false);
+  assert.equal(el.classList.contains('redup'), false);
+  assert.equal(el.classList.contains('status-agen'), true);
 });

@@ -21,7 +21,7 @@
 set -euo pipefail
 MODE="${1:-}"
 SSH_ALIAS="${GALANTARA_SSH:-trx-alt}"
-ISI=(galantara-server/index.js galantara-server/penjaga.cjs galantara-server/identitas.cjs galantara-server/package.json galantara-server/package-lock.json)
+ISI=(galantara-server/index.js galantara-server/penjaga.cjs galantara-server/identitas.cjs galantara-server/package.json galantara-server/package-lock.json galantara-server/proxyRuntime.js)
 SHA=-; PAKET_REMOTE=-; PULIH=-; KERJA=
 SSH_OPSI=(-o BatchMode=yes -o ConnectTimeout=20)
 gagal() { printf '!! %s\n' "$*" >&2; exit 1; }

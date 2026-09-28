@@ -21,8 +21,10 @@ export class Chat {
     this._input  = document.getElementById('chat-input');
     this._tab    = document.getElementById('chat-tab');
 
-    // Sidebar mulai terbuka
-    this._open = true;
+    // Desktop: panel starts open. Phone: a folded sheet behind the Chat tab, so the world stays
+    // visible (it covered ~half the screen, design report §5 #3).
+    this._open = !(typeof window !== 'undefined' && window.matchMedia?.('(max-width: 650px)').matches);
+    if (!this._open) this._panel?.classList.add('collapsed');
 
     // Enter = kirim, stopPropagation biar WASD tidak trigger avatar
     this._input?.addEventListener('keydown', (e) => {

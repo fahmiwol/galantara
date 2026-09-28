@@ -1,0 +1,464 @@
+// ═══════════════════════════════════════════════════════
+// PartyKlien.js — roster (hired agents) and party, as the world sees them.
+//
+// The runtime is the source of truth (GET/PUT /api/party with `versi`, POST /api/agen/rekrut).
+// This module never decides who is in the party on its own; it:
+// - validates a party with the SAME contract as the server before sending it (vendored copy,
+//   tools/test/party-vendor.test.mjs), so the player gets a clear message without a round trip;
+// - retries once on a version conflict (the Kantor may have changed the party meanwhile);
+// - keeps a small localStorage copy ONLY as a preview for the next page load, built from an
+//   allowlist of fields and refused outright if findSecrets() sees anything (AGENTS.md §2).
+// ═══════════════════════════════════════════════════════
+
+import { validateParty, emptyParty, memberCount, MAX_SLOTS } from '../../vendor/party-contract/party.js';
+import { validateAgent } from '../../vendor/party-contract/agen.js';
+import { findSecrets, jenisOtak, ID } from '../../vendor/party-contract/umum.js';
+import { GalatRuntime, segmen } from './apiRuntime.js';
+import { kodeSah } from '../core/kodeHandoff.js';
+
+export const KUNCI_CACHE = 'galantara_party_v2';
+/** Party the world creates when the player has none yet. The Kantor reads the same one. */
+export const ID_PARTY_BAWAAN = 'party-utama';
+/** Nickname length (packages/party-contract agen.js NICKNAME_MAX; validateAgent is the real check). */
+export const MAKS_JULUKAN = 24;
+const PESAN_KUNCI_JULUKAN = 'Julukan itu terlihat seperti kunci API. Pakai nama biasa; kunci disimpan di Kantor.';
+/** Anchored credential patterns miss a key in the middle of a phrase: check each word too. */
+const adaKunciDi = (teks) => findSecrets([teks, ...teks.split(/[\s"'`<>()[\]{},;|?&=#/]+/).filter(Boolean)]).length > 0;
+
+const galat = (kode, pesan, data = null) => new GalatRuntime({ kode, pesan, data });
+
+/**
+ * Galantara's guest id is `guest:<uuid>`, which the contract refuses as an owner/tenant id.
+ * `guest-<uuid>` is accepted. Returns null when nothing valid remains.
+ */
+export function normalisasiPemilik(id) {
+  const bersih = String(id ?? '')
+    .trim()
+    .toLowerCase()
+    .replace(/^guest:/, 'guest-')
+    .replace(/[^a-z0-9_-]/g, '')
+    .slice(0, 64);
+  return ID.test(bersih) ? bersih : null;
+}
+
+/**
+ * Label shown next to a brain (ADR-0007): "Milik sendiri", "GPU sewaan · <model>" (the operator's
+ * rented GPU, never called MiganCore) or "Cloud pihak lain". Never omitted: a brain that is not the
+ * player's own is always named as such. SIMULASI (demo/tests) keeps its own label.
+ */
+export function labelOtak(brain) {
+  const provider = String(brain?.provider ?? '');
+  if (!provider) return { teks: 'Belum ada otak', jenis: 'kosong' };
+  if (provider.toLowerCase() === 'simulasi') return { teks: 'SIMULASI', jenis: 'simulasi' };
+  const jenis = jenisOtak(provider);
+  if (jenis === 'sendiri') return { teks: 'Milik sendiri', jenis: 'sendiri' };
+  if (jenis === 'gpu_sewaan') {
+    const model = typeof brain?.model === 'string' && brain.model.trim() ? brain.model.trim() : null;
+    return { teks: model ? `GPU sewaan · ${model}` : 'GPU sewaan', jenis: 'gpu' };
+  }
+  return { teks: 'Cloud pihak lain', jenis: 'cloud' };
+}
+
+function itemRoster(mentah) {
+  const agen = mentah?.agen ?? null;
+  if (!agen || typeof agen.instance_id !== 'string') return null;
+  return {
+    agen,
+    versi: Number(mentah.version ?? mentah.versi ?? 0),
+    status_kerja: mentah.status_kerja ?? agen.status_kerja ?? null,
+    // Beside the agent like status_kerja (SPRINT-02): only from verified, approved missions.
+    pengalaman: mentah.pengalaman && typeof mentah.pengalaman === 'object' ? mentah.pengalaman : null,
+  };
+}
+
+function lengkapiSlot(party) {
+  const slots = Array.isArray(party?.slots) ? party.slots.slice(0, MAX_SLOTS) : [];
+  while (slots.length < MAX_SLOTS) slots.push(null);
+  return { ...party, slots };
+}
+
+export class PartyKlien {
+  /**
+   * @param {{api: ReturnType<import('./apiRuntime.js').buatApiRuntime>, penyimpanan?: Storage|null}} p
+   */
+  constructor({ api, penyimpanan = null }) {
+    this.api = api;
+    this.penyimpanan = penyimpanan;
+    this.masuk = false;
+    this.termuat = false;
+    this.pemain = null;
+    /** @type {Map<string, any>} species id → species (galantara.spesies/v1) */
+    this.spesies = new Map();
+    /** @type {{agen:any, versi:number, status_kerja:string|null}[]} */
+    this.roster = [];
+    this.party = null;
+    this.versiParty = 0;
+    /** Cached party from the last visit; shown until the runtime answers. */
+    this.pratinjau = null;
+    this._pendengar = new Set();
+  }
+
+  /** @param {(k: PartyKlien) => void} fn @returns {() => void} */
+  onUbah(fn) {
+    this._pendengar.add(fn);
+    return () => this._pendengar.delete(fn);
+  }
+
+  _umumkan() {
+    for (const fn of this._pendengar) {
+      try { fn(this); } catch (err) { console.warn('[party] pendengar gagal', err); }
+    }
+  }
+
+  // ── Loading ────────────────────────────────────────────
+
+  async muat() {
+    // Species are public (no session needed): the world can mark who is recruitable even for guests.
+    const sp = await this.api.get('/spesies').catch(() => null);
+    if (sp?.spesies) this.spesies = new Map(sp.spesies.map((s) => [s.id, s]));
+    try {
+      const saya = await this.api.get('/saya');
+      // A runtime may answer guests with {pemain: null} instead of 401 (asked in PERMINTAAN B-P2).
+      if (!saya?.pemain) throw new GalatRuntime({ kode: 'BELUM_MASUK', pesan: 'Kamu belum masuk.' });
+      this.pemain = saya.pemain;
+      this.masuk = true;
+    } catch (err) {
+      if (err.kode !== 'BELUM_MASUK') throw err;
+      this.masuk = false;
+      this.pemain = null;
+      this.roster = [];
+      this.party = null;
+      this.versiParty = 0;
+      this.termuat = true;
+      this._umumkan();
+      return this;
+    }
+    await Promise.all([this._muatRoster(), this._muatParty()]);
+    this.termuat = true;
+    this.pratinjau = null;
+    this._simpanCache();
+    this._umumkan();
+    return this;
+  }
+
+  async _muatRoster() {
+    const r = await this.api.get('/agen');
+    this.roster = (r.agen ?? []).map(itemRoster).filter(Boolean);
+  }
+
+  async _muatParty() {
+    const r = await this.api.get('/party');
+    const daftar = (r.party ?? []).filter((p) => p?.party);
+    const pilih = daftar.find((p) => p.party.id === ID_PARTY_BAWAAN) ?? daftar[0] ?? null;
+    if (pilih) {
+      this.party = lengkapiSlot(pilih.party);
+      this.versiParty = Number(pilih.version ?? pilih.versi ?? 0);
+    } else {
+      this.party = emptyParty({ id: ID_PARTY_BAWAAN, owner_id: this.pemain });
+      this.versiParty = 0; // created on the first save
+    }
+  }
+
+  /**
+   * Production sign-in (ADR-0011): a one-time invitation code from the Galantara team. The code is
+   * sent once and not kept (not in this object, not in storage). Empty input is answered here.
+   */
+  async masukUndangan(kode) {
+    const teks = typeof kode === 'string' ? kode.trim() : '';
+    if (!teks) throw galat('KODE_UNDANGAN_KOSONG', 'Ketik kode undangan dulu.');
+    try {
+      await this.api.post('/masuk/undangan', { kode: teks });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') throw galat('MASUK_BELUM_ADA', 'Masuk dari dunia belum tersedia di server ini.');
+      throw err;
+    }
+    return this.muat();
+  }
+
+  /** Development sign-in (RUNTIME_DEV=1 on localhost). */
+  async masukDev(pemain) {
+    const nama = normalisasiPemilik(pemain);
+    if (!nama) throw galat('PEMAIN_TIDAK_SAH', 'Nama pemain tidak sah untuk masuk.');
+    try {
+      await this.api.post('/dev/masuk', { pemain: nama });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') {
+        throw galat('MASUK_BELUM_ADA', 'Masuk dari dunia belum tersedia di server ini.');
+      }
+      throw err;
+    }
+    return this.muat();
+  }
+
+  // ── Handoff world ↔ Kantor (D-12) ──────────────────────
+
+  /**
+   * Redeem a Kantor → world code (already stripped from the URL). The runtime answers with a session
+   * cookie; the caller loads the party afterwards. The code is sent once and not kept.
+   */
+  async tukarKode(kode) {
+    if (!kodeSah(kode)) throw galat('KODE_DITOLAK', 'Kode dari Kantor tidak terbaca. Buka dunia dari Kantor sekali lagi, atau masuk dari sini.');
+    try {
+      await this.api.post('/handoff/tukar-dunia', { kode });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') {
+        throw galat('HANDOFF_BELUM_ADA', 'Masuk lewat Kantor belum tersedia di server ini (segera hadir). Kamu tetap bisa jalan-jalan, atau masuk dari dunia.');
+      }
+      throw err;
+    }
+  }
+
+  /** A world → Kantor code for this party, issued at click time only. Returns the code (never stored). */
+  async terbitkanKode() {
+    this._pastikanMasuk();
+    let r;
+    try {
+      r = await this.api.post('/handoff/terbitkan-dunia', { party_id: this.party?.id ?? ID_PARTY_BAWAAN });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') throw galat('HANDOFF_BELUM_ADA', 'Membawa sesi ke Kantor belum tersedia di server ini (segera hadir). Masuk sekali lagi di Kantor.');
+      throw err;
+    }
+    if (!kodeSah(r?.kode)) throw galat('GALAT_SERVER', 'Server tidak memberi kode yang sah. Kantor dibuka tanpa kode; masuk di sana.');
+    return r.kode;
+  }
+
+  // ── Reading ────────────────────────────────────────────
+
+  agenDariSpesies(templateId) {
+    return this.roster.find((r) => r.agen.template?.id === templateId) ?? null;
+  }
+
+  agenDariId(instanceId) {
+    return this.roster.find((r) => r.agen.instance_id === instanceId) ?? null;
+  }
+
+  _slotDari(instanceId) {
+    return this.party?.slots?.indexOf(instanceId) ?? -1;
+  }
+
+  diParty(templateId) {
+    const item = this.agenDariSpesies(templateId);
+    return Boolean(item && this._slotDari(item.agen.instance_id) >= 0);
+  }
+
+  jumlah() {
+    return this.party ? memberCount(this.party) : 0;
+  }
+
+  get maks() {
+    return MAX_SLOTS;
+  }
+
+  /** Hired agents not in the party: the Markas box (design §6b M2). */
+  diMarkas() {
+    return this.roster.filter((r) => this._slotDari(r.agen.instance_id) < 0);
+  }
+
+  /** Party slots resolved to roster items (null = "Slot kosong"). */
+  anggota() {
+    const slots = this.party?.slots ?? Array(MAX_SLOTS).fill(null);
+    return slots.map((id) => (id ? this.agenDariId(id) ?? { agen: { instance_id: id }, versi: 0, status_kerja: null, hilang: true } : null));
+  }
+
+  /** Local status update from the mission client, until the next roster load. */
+  setelStatus(instanceId, status) {
+    const item = this.agenDariId(instanceId);
+    if (!item || item.status_kerja === status) return;
+    item.status_kerja = status;
+    this._umumkan();
+  }
+
+  // ── Changing ───────────────────────────────────────────
+
+  _pastikanMasuk() {
+    if (!this.masuk) throw galat('BELUM_MASUK', 'Kamu belum masuk. Party disimpan di akunmu.');
+  }
+
+  _petaAgen() {
+    return Object.fromEntries(this.roster.map((r) => [r.agen.instance_id, r.agen]));
+  }
+
+  /**
+   * Hire a species (if not yet hired) and put the agent in the party.
+   * @returns {Promise<{agen:any, baru:boolean, jumlah:number}>}
+   */
+  async rekrut(templateId) {
+    this._pastikanMasuk();
+    const ada = this.agenDariSpesies(templateId);
+    if (ada && this._slotDari(ada.agen.instance_id) >= 0) {
+      return { agen: ada.agen, baru: false, jumlah: this.jumlah() };
+    }
+    if (this.jumlah() >= MAX_SLOTS) {
+      throw galat('PARTY_PENUH', `Party sudah penuh (${MAX_SLOTS}/${MAX_SLOTS}). Keluarkan satu anggota dulu di Markas.`);
+    }
+    let item = ada;
+    if (!item) {
+      try {
+        const r = await this.api.post('/agen/rekrut', { template_id: templateId });
+        item = itemRoster({ agen: r.agen, versi: r.versi, status_kerja: r.status_kerja });
+        if (!item) throw galat('GALAT_SERVER', 'Server tidak mengembalikan agen yang direkrut. Coba lagi.');
+        this.roster.push(item);
+      } catch (err) {
+        // Hired earlier (another tab, the Kantor): not an error, just put it in the party.
+        if (err.kode !== 'SUDAH_DIREKRUT') throw err;
+        await this._muatRoster();
+        item = this.agenDariSpesies(templateId);
+        if (!item) throw err;
+      }
+    }
+    const id = item.agen.instance_id;
+    await this._simpanParty((p) => {
+      if (p.slots.includes(id)) return;
+      const kosong = p.slots.indexOf(null);
+      if (kosong < 0) {
+        throw galat('PARTY_PENUH', `Party sudah penuh (${MAX_SLOTS}/${MAX_SLOTS}). Keluarkan satu anggota dulu di Markas.`);
+      }
+      p.slots[kosong] = id;
+    });
+    return { agen: item.agen, baru: true, jumlah: this.jumlah() };
+  }
+
+  /** Bring an agent from the Markas box into the party (no second hire). */
+  async bawa(instanceId) {
+    this._pastikanMasuk();
+    if (!this.agenDariId(instanceId)) throw galat('AGEN_TIDAK_ADA', 'Agen ini tidak ada di Markas-mu lagi. Muat ulang dulu.');
+    if (this._slotDari(instanceId) >= 0) return { jumlah: this.jumlah() };
+    const penuh = () => galat('PARTY_PENUH', `Party sudah penuh (${MAX_SLOTS}/${MAX_SLOTS}). Keluarkan satu anggota dulu di Markas.`);
+    await this._simpanParty((p) => {
+      if (p.slots.includes(instanceId)) return;
+      const kosong = p.slots.indexOf(null);
+      if (kosong < 0) throw penuh();
+      p.slots[kosong] = instanceId;
+    });
+    return { jumlah: this.jumlah() };
+  }
+
+  /**
+   * Give an agent a nickname ('' removes it). Checked with the shared contract before sending; a
+   * key-shaped nickname is refused outright (it would end up in the preview cache and on screen).
+   * On a version conflict (the Kantor changed the agent) the roster is reloaded and it is tried once more.
+   */
+  async setelJulukan(instanceId, julukan) {
+    this._pastikanMasuk();
+    const bersih = typeof julukan === 'string' ? julukan.trim().replace(/\s+/g, ' ') : '';
+    if (bersih && adaKunciDi(bersih)) throw galat('KUNCI_DITEMPEL', PESAN_KUNCI_JULUKAN);
+    if (bersih.length > MAKS_JULUKAN) throw galat('JULUKAN_TIDAK_SAH', `Julukan maksimal ${MAKS_JULUKAN} huruf (sekarang ${bersih.length}).`);
+    const simpan = async (sisaUlang) => {
+      const item = this.agenDariId(instanceId);
+      if (!item) throw galat('AGEN_TIDAK_ADA', 'Agen ini tidak ada di Markas-mu lagi. Muat ulang dulu.');
+      const agen = structuredClone(item.agen);
+      if (bersih) agen.julukan = bersih;
+      else delete agen.julukan;
+      const vonis = validateAgent(agen);
+      if (!vonis.ok) throw galat('JULUKAN_TIDAK_SAH', vonis.errors[0]?.pesan ?? 'Julukan belum bisa disimpan.', { errors: vonis.errors });
+      try {
+        const r = await this.api.put(`/agen/${segmen('agen', instanceId)}`, { agen, versi: item.versi });
+        item.agen = agen;
+        item.versi = Number(r.versi ?? item.versi + 1);
+      } catch (err) {
+        if (err.kode === 'VERSI_BENTROK' && sisaUlang > 0) {
+          await this._muatRoster();
+          return simpan(sisaUlang - 1);
+        }
+        throw err;
+      }
+      return undefined;
+    };
+    await simpan(1);
+    this._simpanCache();
+    this._umumkan();
+    return bersih || null;
+  }
+
+  /** Take an agent out of the party. It stays hired (in the Markas roster). */
+  async keluarkan(instanceId) {
+    this._pastikanMasuk();
+    await this._simpanParty((p) => {
+      const i = p.slots.indexOf(instanceId);
+      if (i >= 0) p.slots[i] = null;
+    });
+  }
+
+  /**
+   * Apply `ubah` to a copy of the party, validate it with the shared contract, then save.
+   * On a version conflict the party is reloaded and `ubah` applied again, once.
+   */
+  async _simpanParty(ubah, sisaUlang = 1) {
+    const calon = lengkapiSlot(this.party ?? emptyParty({ id: ID_PARTY_BAWAAN, owner_id: this.pemain }));
+    ubah(calon);
+    const vonis = validateParty(calon, { agents: this._petaAgen() });
+    if (!vonis.ok) {
+      throw galat('PARTY_TIDAK_SAH', vonis.errors[0]?.pesan ?? 'Party belum bisa disimpan.', { errors: vonis.errors });
+    }
+    try {
+      const r = await this.api.put(`/party/${segmen('party', calon.id)}`, { party: calon, versi: this.versiParty });
+      this.party = calon;
+      this.versiParty = Number(r.versi ?? this.versiParty + 1);
+    } catch (err) {
+      if (err.kode === 'VERSI_BENTROK' && sisaUlang > 0) {
+        await Promise.all([this._muatRoster(), this._muatParty()]);
+        return this._simpanParty(ubah, sisaUlang - 1);
+      }
+      throw err;
+    }
+    this._simpanCache();
+    this._umumkan();
+  }
+
+  // ── Preview cache (localStorage) ───────────────────────
+
+  /** Allowlisted copy: ids, species and nicknames only. No loadout, no vault reference. */
+  _isiCache() {
+    const agen = (this.party?.slots ?? []).filter(Boolean).map((id) => {
+      const item = this.agenDariId(id);
+      const a = { instance_id: id, template: { id: item?.agen.template?.id ?? null } };
+      if (typeof item?.agen.julukan === 'string') a.julukan = item.agen.julukan;
+      return a;
+    });
+    return {
+      v: 1,
+      pemain: this.pemain,
+      party: this.party ? { schema: this.party.schema, id: this.party.id, owner_id: this.party.owner_id, slots: [...this.party.slots] } : null,
+      agen,
+    };
+  }
+
+  _hapusCache() {
+    try { this.penyimpanan?.removeItem(KUNCI_CACHE); } catch { /* storage blocked */ }
+  }
+
+  /** @returns {boolean} whether a copy was written */
+  _simpanCache() {
+    if (!this.penyimpanan) return false;
+    const isi = this._isiCache();
+    if (findSecrets(isi).length) {
+      // Never write anything that looks like a credential; drop the old copy as well.
+      this._hapusCache();
+      return false;
+    }
+    try {
+      this.penyimpanan.setItem(KUNCI_CACHE, JSON.stringify(isi));
+      return true;
+    } catch {
+      return false;
+    }
+  }
+
+  /** Load last visit's party as a preview (labelled as such by the UI). */
+  muatCache() {
+    if (!this.penyimpanan) return null;
+    let isi = null;
+    try {
+      isi = JSON.parse(this.penyimpanan.getItem(KUNCI_CACHE) ?? 'null');
+    } catch {
+      isi = null;
+    }
+    if (!isi || isi.v !== 1 || !isi.party || findSecrets(isi).length || !validateParty(isi.party).ok) {
+      if (isi) this._hapusCache();
+      return null;
+    }
+    this.pratinjau = isi;
+    this._umumkan();
+    return isi;
+  }
+}

@@ -12,6 +12,22 @@ export class Panels {
     this._user    = null;
     this._getName = null;
     this._dialogState = {};
+    /** Dialog actions (config.js `aksi`) go here, e.g. DuniaParty.aksiDialog. */
+    this._onAksi = null;
+    /** Choice filter for `syarat` (e.g. 'di_party'); without one, conditional choices stay hidden. */
+    this._syarat = null;
+    this._dialogNpc = null;
+  }
+
+  /** @param {(aksi: string, npc: object) => void} fn */
+  onAksi(fn) { this._onAksi = fn; return this; }
+
+  /** @param {(syarat: string, npc: object) => boolean} fn */
+  saringSyarat(fn) { this._syarat = fn; return this; }
+
+  /** Id of the NPC whose dialog is open right now, else null (NPCs stop while talking). */
+  get dialogNpcId() {
+    return document.getElementById('npc-panel')?.classList.contains('on') ? this._dialogNpc : null;
   }
 
   init(avatar, getName) {
@@ -133,6 +149,7 @@ export class Panels {
 
   // ── NPC DIALOG ────────────────────────────────────────
   openDialog(npcData) {
+    this._dialogNpc = npcData.id;
     if (this._dialogState[npcData.id] === undefined) {
       this._dialogState[npcData.id] = 0;
     }
@@ -153,14 +170,31 @@ export class Panels {
     if (msgEl)   msgEl.textContent  = node.msg;
 
     if (choicesEl) {
-      choicesEl.innerHTML = '';
-      node.choices.forEach(choice => {
+      choicesEl.replaceChildren();
+      const tampil = node.choices.filter((c) => {
+        if (!c.syarat) return true;
+        try { return this._syarat ? Boolean(this._syarat(c.syarat, npcData)) : false; }
+        catch (_) { return false; }
+      });
+      tampil.forEach(choice => {
         const btn = document.createElement('button');
-        btn.className = 'btn-p btn-sec';
+        btn.className = choice.aksi ? 'btn-p gw-pilihan-aksi' : 'btn-p btn-sec';
         btn.style.textAlign = 'left';
         btn.style.marginBottom = '4px';
         btn.textContent = choice.text;
         btn.addEventListener('click', () => {
+          if (choice.aksi) {
+            // An action leaves the conversation: close it, then hand over (Rekrut, Markas, …).
+            delete this._dialogState[npcData.id];
+            this._closeDialog();
+            try {
+              if (this._onAksi) this._onAksi(choice.aksi, npcData);
+              else console.warn(`[dialog] aksi "${choice.aksi}" belum ada penanganannya`);
+            } catch (err) {
+              console.warn(`[dialog] aksi "${choice.aksi}" gagal`, err);
+            }
+            return;
+          }
           if (choice.next === -1) {
             delete this._dialogState[npcData.id];
             this._closeDialog();
