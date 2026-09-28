@@ -39,6 +39,18 @@ const TAUTAN = /\[[^\]]*\]\(([^)\s]+)\)/g;
 
 const berkas = kumpulkan('.');
 let diperiksa = 0;
+
+// Biner besar (GLB, .blend, PNG konsep) disimpan di GitHub Release, bukan di git. Manifest di tools/aset/manifest/
+// mencatat path aslinya, jadi tautan ke path itu sah walau berkasnya belum diunduh (node tools/aset/ambil-aset.mjs).
+const diRilis = new Set();
+const dirManifest = path.join('tools', 'aset', 'manifest');
+if (fs.existsSync(dirManifest)) {
+  for (const n of fs.readdirSync(dirManifest)) {
+    if (!n.endsWith('.json')) continue;
+    const m = JSON.parse(fs.readFileSync(path.join(dirManifest, n), 'utf8'));
+    for (const b of m.berkas ?? []) diRilis.add(path.resolve(b.path));
+  }
+}
 const rusak = [];
 
 // Kode bukan tautan: `World[method](x,y,z,id)` di dalam backtick atau blok ``` pernah dibaca
@@ -65,7 +77,7 @@ for (const f of berkas) {
       const abs = tujuan.startsWith('/')
         ? path.join('.', tujuan)
         : path.resolve(path.dirname(f), tujuan);
-      if (!fs.existsSync(abs)) {
+      if (!fs.existsSync(abs) && !diRilis.has(abs)) {
         rusak.push({ dari: f.replace(/\\/g, '/'), baris: i + 1, tujuan: mentah });
       }
     }

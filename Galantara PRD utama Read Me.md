@@ -1,5 +1,9 @@
 # GALANTARA - Master Product Requirements Document (PRD)
 
+> **USANG untuk model bisnis dan ekonomi (28 Sep 2026).** Empat koin, fee perjalanan, sewa lahan dengan kelangkaan buatan,
+> dan taruhan koin di dokumen ini **tidak berlaku**. Acuan yang berlaku: `docs/BISNIS.md` dan `docs/VISI.md` di repo
+> `fahmiwol/galantara_world` (satu sumber kebenaran: `docs/SUMBER-KEBENARAN.md`). Bagian lain disimpan sebagai sejarah.
+
 **Versi:** 4.0
 **Terakhir diperbarui:** April 2026
 **Domain:** galantara.io
