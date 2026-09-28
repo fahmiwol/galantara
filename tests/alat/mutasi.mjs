@@ -136,6 +136,13 @@ export const MUTASI = [
   { id: 'm2-ringan-mati', pengaman: 'Mode Ringan: pilihan mati dihormati', berkas: 'src/core/ModeRingan.js', cari: "if (this.pilihan !== 'otomatis' || this.nyala) return false;", ganti: 'if (this.nyala) return false;', tes: TES('modeRingan.test.mjs') },
   { id: 'm2-avatar-nyata', pengaman: 'avatar berjalan waktu nyata di FPS rendah', berkas: 'src/entities/Avatar.js', cari: 'maks: WAKTU_AVATAR_MAKS });', ganti: 'maks: 0.05 });', tes: TES('langkah.test.mjs') },
   { id: 'm2-avatar-langkah', pengaman: 'langkah avatar ≤ 0,05 dtk', berkas: 'src/entities/Avatar.js', cari: 'pecahLangkah(dtMentah, { langkah: LANGKAH_MAKS,', ganti: 'pecahLangkah(dtMentah, { langkah: 1,', tes: TES('langkah.test.mjs') },
+  // Invitation sign-in (ADR-0011).
+  { id: 'undangan-kosong', pengaman: 'kode kosong dijawab di klien, tanpa permintaan', berkas: 'src/party/PartyKlien.js', cari: "    if (!teks) throw galat('KODE_UNDANGAN_KOSONG', 'Ketik kode undangan dulu.');", ganti: '', tes: TES('masukUndangan.test.mjs') },
+  { id: 'undangan-bukan-dev', pengaman: 'produksi masuk dengan kode, bukan login dev', berkas: 'src/party/DuniaParty.js', cari: '        await this.party.masukUndangan(kode);', ganti: '        await this.party.masukDev(normalisasiPemilik(getOrCreateGuestId()));', tes: TES('masukUndangan.test.mjs') },
+  { id: 'undangan-tak-disimpan', pengaman: 'kode tidak disimpan di objek klien', berkas: 'src/party/PartyKlien.js', cari: "    const teks = typeof kode === 'string' ? kode.trim() : '';", ganti: "    const teks = typeof kode === 'string' ? kode.trim() : ''; this.kodeTerakhir = teks;", tes: TES('masukUndangan.test.mjs') },
+  { id: 'undangan-tak-ke-storage', pengaman: 'kode tidak ditulis ke penyimpanan peramban', berkas: 'src/party/PartyKlien.js', cari: "    const teks = typeof kode === 'string' ? kode.trim() : '';", ganti: "    const teks = typeof kode === 'string' ? kode.trim() : ''; try { this.penyimpanan?.setItem('gw-undangan', teks); } catch { /* */ }", tes: TES('masukUndangan.test.mjs') },
+  { id: 'undangan-kartu-form', pengaman: 'tombol Masuk di kartu membuka formulir kode (produksi)', berkas: 'src/party/DuniaParty.js', cari: "      case 'masuk': return this.lokal ? this.masuk() : this.bukaMasuk();", ganti: "      case 'masuk': return this.masuk();", tes: TES('masukUndangan.test.mjs') },
+  { id: 'undangan-nama-isian', pengaman: 'isian bernama undangan (dibaca saat kirim)', berkas: 'src/ui/gw/tampilan.js', cari: "type: 'text', name: 'undangan',", ganti: "type: 'text', name: 'kode',", tes: TES('masukUndangan.test.mjs') },
 ];
 
 function jalankan(files, cwd) {
@@ -160,13 +167,17 @@ function main(filter) {
     const jalur = join(APP, m.berkas);
     const asli = readFileSync(jalur);
     const teks = asli.toString('utf8');
-    const n = teks.split(m.cari).length - 1;
+    // Windows checkouts are CRLF (core.autocrlf) while this list is written with \n (R25-4).
+    const crlf = teks.includes('\r\n');
+    const cari = crlf ? m.cari.replaceAll('\n', '\r\n') : m.cari;
+    const ganti = crlf ? m.ganti.replaceAll('\n', '\r\n') : m.ganti;
+    const n = teks.split(cari).length - 1;
     if (n !== 1) {
       console.log(`| ${m.id} | ${m.pengaman} | BASI: pola ditemukan ${n}× (perbarui daftar mutasi) |`);
       continue;
     }
     try {
-      writeFileSync(jalur, teks.replace(m.cari, m.ganti));
+      writeFileSync(jalur, teks.replace(cari, () => ganti));
       const h = jalankan(m.tes, APP);
       const merah = h.code !== 0;
       if (merah) lolos++;

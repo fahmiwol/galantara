@@ -41,10 +41,12 @@ const gagal = (status, kode, pesan, extra = {}) => json(status, { ok: false, kod
 let urut = 0;
 const idBaru = (awal) => `${awal}${(++urut).toString(36).padStart(8, '0')}`;
 
-export function buatRuntimePalsu({ masuk = null, devLogin = true, misiAda = true, m2 = false } = {}) {
+export function buatRuntimePalsu({ masuk = null, devLogin = true, misiAda = true, m2 = false, undangan = null } = {}) {
   const r = {
     pemain: masuk,
     devLogin,
+    /** ADR-0011 invitation codes the fake accepts once: normalized code -> pemain; null = no route */
+    undangan,
     misiAda,
     /** SPRINT-02 routes and rules (mission kinds, rujuk_misi, persetujuan, handoff dua arah). */
     m2,
@@ -108,6 +110,15 @@ export function buatRuntimePalsu({ masuk = null, devLogin = true, misiAda = true
       const kode = KODE_PALSU(r.kodeTerbit.length + 7);
       r.kodeTerbit.push({ kode, party_id: isi?.party_id ?? null });
       return json(200, { ok: true, kode, berlaku_detik: 60 });
+    }
+    if (metode === 'POST' && jalur === '/masuk/undangan') {
+      if (!r.undangan) return gagal(404, 'TIDAK_ADA', 'Rute tidak ditemukan.');
+      const kode = typeof isi?.kode === 'string' ? isi.kode.toUpperCase().replace(/[\s-]+/g, '') : '';
+      const pemain = r.undangan.get(kode);
+      if (!pemain) return gagal(400, 'UNDANGAN_DITOLAK', 'Kode undangan tidak berlaku: salah ketik, sudah dipakai, atau kedaluwarsa. Periksa lagi, atau minta kode baru ke tim Galantara.');
+      r.undangan.delete(kode);
+      r.pemain = pemain;
+      return json(200, { ok: true, pemain });
     }
     if (metode === 'POST' && jalur === '/dev/masuk') {
       if (!r.devLogin) return gagal(404, 'TIDAK_ADA', 'Rute tidak ditemukan.');

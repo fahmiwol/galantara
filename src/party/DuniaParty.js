@@ -424,18 +424,20 @@ export class DuniaParty {
     this._lanjutSetelahMasuk = lanjut;
     this.sheet.buka('masuk', tampilanMasuk({ nama: namaAgen, dev: this.lokal }, {
       ...this._aksiUmum(),
-      masuk: () => this.masuk(),
+      masuk: (kode) => this.masuk(kode),
     }));
   }
 
-  async masuk() {
-    if (!this.lokal) {
-      this._kartuDiSheet('masuk', kartuGalat({ kode: 'MASUK_BELUM_ADA' }));
-      return;
-    }
+  /** Localhost: the dev sign-in. Production (ADR-0011): the invitation code typed in the sheet. */
+  async masuk(kode = '') {
     try {
-      await this.party.masukDev(normalisasiPemilik(getOrCreateGuestId()));
-      this.game.toast?.show(`Masuk sebagai ${this.party.pemain} (mode pengembang).`, 'g');
+      if (this.lokal) {
+        await this.party.masukDev(normalisasiPemilik(getOrCreateGuestId()));
+        this.game.toast?.show(`Masuk sebagai ${this.party.pemain} (mode pengembang).`, 'g');
+      } else {
+        await this.party.masukUndangan(kode);
+        this.game.toast?.show(`Masuk sebagai ${this.party.pemain}.`, 'g');
+      }
       await this._lanjutkanMisi();
       const lanjut = this._lanjutSetelahMasuk;
       this._lanjutSetelahMasuk = null;
@@ -972,7 +974,8 @@ export class DuniaParty {
   aksiKartu(aksi) {
     switch (aksi) {
       case 'tutup': return this.sheet.tutup();
-      case 'masuk': return this.masuk();
+      // In production signing in needs the code field, so the card opens the sheet that has it.
+      case 'masuk': return this.lokal ? this.masuk() : this.bukaMasuk();
       case 'bukaMarkas': return this.bukaMarkas();
       case 'muatUlang': return this.muat().then(() => this.bukaMarkas());
       case 'cobaLagi':

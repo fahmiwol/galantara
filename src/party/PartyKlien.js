@@ -159,6 +159,22 @@ export class PartyKlien {
     }
   }
 
+  /**
+   * Production sign-in (ADR-0011): a one-time invitation code from the Galantara team. The code is
+   * sent once and not kept (not in this object, not in storage). Empty input is answered here.
+   */
+  async masukUndangan(kode) {
+    const teks = typeof kode === 'string' ? kode.trim() : '';
+    if (!teks) throw galat('KODE_UNDANGAN_KOSONG', 'Ketik kode undangan dulu.');
+    try {
+      await this.api.post('/masuk/undangan', { kode: teks });
+    } catch (err) {
+      if (err.kode === 'TIDAK_ADA') throw galat('MASUK_BELUM_ADA', 'Masuk dari dunia belum tersedia di server ini.');
+      throw err;
+    }
+    return this.muat();
+  }
+
   /** Development sign-in (RUNTIME_DEV=1 on localhost). */
   async masukDev(pemain) {
     const nama = normalisasiPemilik(pemain);

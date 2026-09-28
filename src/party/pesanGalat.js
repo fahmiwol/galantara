@@ -19,6 +19,8 @@ export const KARTU = Object.freeze({
   // ── Account & party ──
   BELUM_MASUK: { judul: 'Masuk dulu, ya', pesan: 'Party disimpan di akunmu, supaya {nama} tetap ada besok.', tombol: [T('Masuk', 'masuk', true), T('Lanjut jalan-jalan', 'tutup')] },
   MASUK_BELUM_ADA: { pesan: 'Masuk dari dunia belum tersedia di server ini. Jalur masuk akun untuk party menyusul.', tombol: [T('Lanjut jalan-jalan', 'tutup', true)] },
+  UNDANGAN_DITOLAK: { judul: 'Kode tidak berlaku', pesan: 'Kodenya salah ketik, sudah dipakai, atau kedaluwarsa. Periksa lagi di kolom atas, atau minta kode baru ke tim Galantara.', tombol: [T('Lanjut jalan-jalan', 'tutup')] },
+  KODE_UNDANGAN_KOSONG: { pesan: 'Ketik kode undangan dari tim Galantara dulu, bentuknya XXXXX-XXXXX-XXXXX.', tombol: [T('Lanjut jalan-jalan', 'tutup')] },
   PARTY_PENUH: { pesan: 'Party sudah penuh (4/4). Keluarkan satu anggota dulu di Markas.', tombol: [T('Buka Markas', 'bukaMarkas', true)] },
   VERSI_BENTROK: { pesan: 'Party baru saja diubah di tempat lain (dunia atau Kantor). Muat ulang dulu, lalu ulangi.', tombol: [T('Muat ulang', 'muatUlang', true)] },
   PARTY_TIDAK_SAH: { pesan: '{pesan}', tombol: [T('Muat ulang', 'muatUlang', true), T('Tutup', 'tutup')] },

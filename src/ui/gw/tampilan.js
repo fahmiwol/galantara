@@ -154,14 +154,32 @@ function potret(nama, jenisStatus) {
 
 // ── Sheets ────────────────────────────────────────────
 
-/** "Masuk dulu, ya" (design §9.8). */
+/**
+ * "Masuk dulu, ya" (design §9.8). On localhost: the dev sign-in. In production (ADR-0011): the
+ * invitation code from the Galantara team, a plain text field (typed from a message, not a password),
+ * never kept by the page.
+ */
 export function tampilanMasuk({ nama = 'agenmu', dev = false } = {}, aksi = {}) {
+  const sub = h('p', { kelas: 'gw-sub', teks: `Party disimpan di akunmu, supaya ${nama} tetap ada besok.` });
+  if (dev) {
+    return h('div', { kelas: 'gw-isi' },
+      kepala('Masuk dulu, ya', { onTutup: aksi.tutup }),
+      sub,
+      h('p', { kelas: 'gw-meta', teks: 'Mode pengembang: masuk dengan nama tamu di perangkat ini.' }),
+      cta('Masuk (mode pengembang)', aksi.masuk),
+      tombolTeks('Lanjut jalan-jalan', aksi.tutup),
+    );
+  }
   return h('div', { kelas: 'gw-isi' },
     kepala('Masuk dulu, ya', { onTutup: aksi.tutup }),
-    h('p', { kelas: 'gw-sub', teks: `Party disimpan di akunmu, supaya ${nama} tetap ada besok.` }),
-    dev ? h('p', { kelas: 'gw-meta', teks: 'Mode pengembang: masuk dengan nama tamu di perangkat ini.' }) : null,
-    cta(dev ? 'Masuk (mode pengembang)' : 'Masuk', aksi.masuk),
-    tombolTeks('Lanjut jalan-jalan', aksi.tutup),
+    sub,
+    h('form', { kelas: 'gw-form', attr: { novalidate: true }, on: { submit: (e) => { e.preventDefault(); aksi.masuk?.(e.target?.elements?.undangan?.value ?? ''); } } },
+      h('label', { kelas: 'gw-label', attr: { for: 'gw-undangan' }, teks: 'Kode undangan' }),
+      h('input', { id: 'gw-undangan', kelas: 'gw-input', attr: { type: 'text', name: 'undangan', maxlength: 24, placeholder: 'XXXXX-XXXXX-XXXXX', autocomplete: 'one-time-code', autocapitalize: 'characters', spellcheck: 'false' } }),
+      h('div', { kelas: 'gw-meta', teks: 'Galantara World masih uji terbatas. Kodenya dari tim Galantara dan hanya bisa dipakai sekali.' }),
+      h('button', { kelas: 'gw-cta', attr: { type: 'submit' }, teks: 'Masuk' }),
+      tombolTeks('Lanjut jalan-jalan', aksi.tutup),
+    ),
   );
 }
 
