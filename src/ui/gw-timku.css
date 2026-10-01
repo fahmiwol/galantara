@@ -35,12 +35,17 @@ html body #harian-kartu{top:174px}
 .gw-timku-kosong{text-align:center;padding:4px 6px 8px;display:grid;gap:8px}
 .gw-timku-benih{font-size:28px;color:var(--gw-emas-tua)}
 .gw-timku-peringatan{color:var(--st-gagal);font-weight:800}
-@media(max-width:767px){
-  #gw-timku{left:12px;right:auto;top:52px;width:min(245px,calc(100vw - 130px));border-radius:15px}
+@media(max-width:650px){
+  /* The folded button sits in the gap above the orbit controls, left of the D-pad.
+     A full-width rail at y=52 also intercepted wandering NPCs (including first recruitment).
+     Opening deliberately reveals the existing top card; closing restores the small dock. */
+  #gw-timku{left:12px;right:auto;top:auto;bottom:180px;width:min(210px,calc(100vw - 180px));border-radius:15px}
+  #gw-timku.terbuka{top:52px;bottom:auto;width:min(245px,calc(100vw - 130px))}
+  #gw-timku:not(.terbuka) .gw-timku-ringkas{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   html body #arena-door{top:52px;right:12px}
   html body #harian-kartu{top:104px}
   /* Keep transient hints away from the fold button and the first recruit's hit target. */
-  html body #toast{top:auto;bottom:190px}
+  html body #toast{top:104px;bottom:auto}
   .gw-timku-kepala{min-height:44px;padding:5px 9px;gap:6px}
   .gw-timku-lambang{display:none}
   .gw-timku-ringkas{font-size:10px}
