@@ -14,6 +14,8 @@
 // that loops back on itself can still cross. Pure: no THREE, DOM or wall clock (caller passes dt).
 // ═══════════════════════════════════════════════════════
 
+import { KECEPATAN } from '../fisika/Karakter.js';
+
 /** Seconds between companions along the trail (report §6b). */
 export const JEDA_PENDAMPING = 0.35;
 /** Trail length kept, seconds of movement: 4 companions × 0.35 s plus slack. */
@@ -69,7 +71,10 @@ export class JejakPemilik {
       return 'lompat';
     }
     if (d < DIAM || !(dt > 0)) return 'diam';
-    this.t += Math.min(dt, 0.25);
+    // Avatar advances real time; the party caller caps dt at 0.25 s. A slow frame must not
+    // record an impossible speed and stretch the line. Reuse the avatar's canonical speed;
+    // smaller/sliding steps still keep the caller's time and the minimum path spacing below.
+    this.t += Math.max(Math.min(dt, 0.25), d / KECEPATAN);
     this.s += d;
     this.titik.push({ t: this.t, s: this.s, x: pos.x, z: pos.z });
     // Keep both windows and one older sample for interpolation. DIAM bounds crawl history too:
