@@ -1,0 +1,49 @@
+/* World-only paper HUD. No new textures, canvas, animation loop or 3D geometry. */
+#gw-timku{position:fixed;top:112px;right:16px;width:264px;z-index:48;color:var(--gw-tinta);font-family:var(--gw-font);border:1px solid var(--gw-garis);border-radius:20px;background:var(--gw-kertas);box-shadow:0 8px 28px #30201020;overflow:hidden}
+/* Keep the existing Benteng entrance, but reserve the right rail for the player's team.
+   The left rail belongs to social chat; overlaying it makes both interfaces unusable. */
+html body #arena-door{top:64px;right:16px;width:auto;height:36px;padding:0 12px;border-radius:18px;display:flex;align-items:center}
+html body #arena-door span,html body #arena-door small,html body #arena-door b{display:none}
+html body #arena-door strong{font-size:14px;line-height:1}
+html body #arena-door strong::after{content:' →';color:#fde68a}
+/* Daily challenges share the right rail. Timku folds when that card opens. */
+html body #harian-kartu{top:174px}
+.gw-timku-kepala{display:flex;align-items:center;gap:9px;width:100%;min-height:52px;padding:8px 12px;color:var(--gw-tinta);background:var(--gw-kertas);border:0;cursor:pointer;text-align:left;font:800 14px var(--gw-font)}
+.gw-timku-kepala::after{content:'+';font-size:20px;margin-left:auto;color:var(--gw-tinta-3)}
+.terbuka>.gw-timku-kepala::after{content:'−'}
+.gw-timku-lambang{display:grid;place-items:center;width:28px;height:28px;border-radius:10px;background:var(--gw-kertas-2);color:var(--gw-emas-tua);font-size:21px}
+.gw-timku-ringkas{font-size:11px;font-weight:700;color:var(--gw-tinta-2)}
+#gw-timku-isi{max-height:max(80px,min(52vh,calc(100dvh - 410px)));overflow:auto;overscroll-behavior:contain;scrollbar-width:thin}
+#gw-timku-isi[hidden]{display:none}
+.gw-timku-isi{display:flex;flex-direction:column;gap:10px;padding:0 12px 12px}
+.gw-timku-daftar{list-style:none;display:flex;flex-direction:column;gap:10px;margin:0;padding:0}
+.gw-timku-agen{padding:12px;border-radius:14px;border:1px solid var(--gw-garis);background:#fffdf8}
+.gw-timku-identitas{display:flex;gap:8px;align-items:center}
+.gw-timku-potret{flex:none;display:grid;place-items:center;width:38px;height:42px;border-radius:15px 15px 12px 12px;background:var(--gw-kertas-2);border-bottom:3px solid var(--gw-garis);font-size:20px;font-weight:900;color:var(--gw-emas-tua)}
+.gw-timku-nama{min-width:0;display:flex;flex:1;flex-direction:column;gap:2px;overflow-wrap:anywhere}
+.gw-timku-nama strong{font-size:14px}
+.gw-timku-ai{flex:none;padding:3px 5px;border:1px solid var(--gw-tinta-3);border-radius:6px;font-size:10px;font-weight:900}
+.gw-timku-meta{margin:0;color:var(--gw-tinta-2);font:600 11px/1.5 var(--gw-font);overflow-wrap:anywhere}
+.gw-timku-status{display:flex;align-items:baseline;gap:6px;margin:9px 0 5px;font:800 12px/1.45 var(--gw-font)}
+.gw-timku-status b{color:var(--ci,var(--c,var(--gw-tinta-3)))}
+.gw-timku-aksi{width:100%;min-height:44px;padding:8px;border:1px solid var(--gw-garis);border-radius:11px;background:var(--gw-kertas-2);color:var(--gw-tinta);font:800 12px/1.4 var(--gw-font);cursor:pointer;touch-action:manipulation}
+.gw-timku-agen .gw-timku-aksi{margin-top:10px;background:transparent}
+.gw-timku-aksi:hover,.gw-timku-kepala:hover{background:var(--gw-kertas-2)}
+.gw-timku-aksi.utama{background:var(--gw-emas)}
+.gw-timku-aksi:focus-visible,.gw-timku-kepala:focus-visible{outline:3px solid var(--st-info);outline-offset:-3px}
+.gw-timku-ajakan{margin:0;font:800 14px/1.45 var(--gw-font)}
+.gw-timku-kosong{text-align:center;padding:4px 6px 8px;display:grid;gap:8px}
+.gw-timku-benih{font-size:28px;color:var(--gw-emas-tua)}
+.gw-timku-peringatan{color:var(--st-gagal);font-weight:800}
+@media(max-width:767px){
+  #gw-timku{left:12px;right:auto;top:52px;width:min(245px,calc(100vw - 130px));border-radius:15px}
+  html body #arena-door{top:52px;right:12px}
+  html body #harian-kartu{top:104px}
+  /* Keep transient hints away from the fold button and the first recruit's hit target. */
+  html body #toast{top:auto;bottom:190px}
+  .gw-timku-kepala{min-height:44px;padding:5px 9px;gap:6px}
+  .gw-timku-lambang{display:none}
+  .gw-timku-ringkas{font-size:10px}
+  #gw-timku-isi{max-height:42vh}
+}
+@media(max-height:580px){#gw-timku-isi{max-height:36vh}}

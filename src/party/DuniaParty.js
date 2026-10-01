@@ -16,6 +16,7 @@ import {
   ruteKerja, posisiMarkas, statusKe3D, statusTerlihat, gulungan, gulunganDibaca, buangGulungan, pasangPenanda, lepasAgen,
 } from './kaitDunia.js';
 import { Sheet } from '../ui/Sheet.js';
+import { Timku } from '../ui/gw/Timku.js';
 import { PenandaAgen } from '../ui/PenandaAgen.js';
 import { ArahkanSaya } from '../ui/ArahkanSaya.js';
 import {
@@ -135,6 +136,11 @@ export class DuniaParty {
       if (npc) pasangPenanda(id, npc.mesh);
     }
     this.doc.getElementById('bb-party-btn')?.addEventListener('click', () => this.bukaMarkas());
+    this.timku = new Timku(this.doc, {
+      markas: () => this.bukaMarkas(), buku: () => this.bukaBukuWarga(),
+      misi: id => this.bukaMisi(id), hasil: id => this.bukaHasil(id),
+      izin: id => this.bukaIzin(id), otak: id => this.bukaOtak(id),
+    }, { terbuka: globalThis.matchMedia?.('(min-width: 1100px)').matches ?? false });
     this.party.onUbah(() => this._segarkan());
     this.party.muatCache();
     this._segarkan();
@@ -158,6 +164,7 @@ export class DuniaParty {
     }
     try {
       await this.party.muat();
+      this._galatMuat = null;
       this._terputus = false;
       await this._lanjutkanMisi();
     } catch (err) {
@@ -1047,6 +1054,15 @@ export class DuniaParty {
       lencana.textContent = '!';
     }
     d.getElementById('bb-party-btn')?.setAttribute('aria-label', `Party, ${jumlah} dari ${maks}${perlu ? `, ${perlu} perlu perhatianmu` : ''}`);
+    this.timku?.perbarui({
+      ...this._keadaanMarkas(), masuk: this.party.masuk, termuat: this.party.termuat,
+      terputus: this._terputus, gagalMuat: Boolean(this._galatMuat),
+      galatAgen: [...this._galatPantau.keys()],
+      simulasiAgen: [...this._misiTerakhir].filter(([, m]) =>
+        m.laporan?.otak?.provider === 'simulasi' ||
+        String(m.laporan?.otak?.label ?? m.label_otak ?? '').toUpperCase() === 'SIMULASI'
+      ).map(([id]) => id),
+    });
     if (this.sheet.terbuka && this.sheet.nama === 'markas') this.sheet.ganti('markas', this._pohonMarkas());
     this._jedaPenanda = 0;
     this._jedaIkut = 0;
