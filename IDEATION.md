@@ -1,4 +1,7 @@
 # GALANTARA — Ideation & Vision Notes
+
+> **USANG sebagai acuan (28 Sep 2026).** Ide di sini adalah catatan lama. Acuan yang berlaku: `docs/BISNIS.md`,
+> `docs/VISI.md`, dan `docs/SUMBER-KEBENARAN.md` di repo `fahmiwol/galantara_world`.
 > Tempat menampung semua ide yang belum siap jadi task tapi penting untuk dicatat.
 > Ide bisa dipromosikan ke TODO.md atau dibuang kalau tidak relevan.
 > Update terakhir: **2026-04-13**
